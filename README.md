@@ -13,7 +13,7 @@ This package provides a set of tools for the analysis of methylation patterns.
 #### Installing misha package:
 ```
 #!r
-install.packages("http://www.wisdom.weizmann.ac.il/~aviezerl/gpattrenrs/misha_3.5.4.tar.gz", repos=NULL) # Download and install misha package
+install.packages("http://www.wisdom.weizmann.ac.il/~aviezerl/gpattrerns/misha_3.5.4.tar.gz", repos=NULL) # Download and install misha package
 ```
 
 #### Installing gpatterns package:
