@@ -5,14 +5,27 @@
 \title{Apply a function on tidy cpgs (internally separated by coordinates)}
 \usage{
 gpatterns.apply_tidy_cpgs(track, f,
-  parallel = getOption("gpatterns.parallel"))
+  parallel = getOption("gpatterns.parallel"), use_sge = FALSE,
+  max_jobs = 300, verbose = FALSE, ...)
 }
 \arguments{
 \item{track}{name of track}
 
-\item{f}{function to apply}
+\item{f}{function to apply (needs to return a data frame)}
 
 \item{parallel}{execute parallely}
+
+\item{use_sge}{use sge cluster for parallelization}
+
+\item{verbose}{print jobs status}
+
+\item{...}{additonal parameters for gcluster.run2}
+
+\item{max_jobsmaximal}{number of jobs for sge}
+}
+\value{
+a data frame with \code{f} applied to every genomic bin of tidy_cpgs
+of \code{track}
 }
 \description{
 Apply a function on tidy cpgs (internally separated by coordinates)

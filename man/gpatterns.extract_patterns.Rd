@@ -4,7 +4,7 @@
 \alias{gpatterns.extract_patterns}
 \title{Extract patterns of a track}
 \usage{
-gpatterns.extract_patterns(track, fids = NULL, tidy = TRUE)
+gpatterns.extract_patterns(track, fids = NULL, tidy = TRUE, dsn = NULL)
 }
 \arguments{
 \item{track}{name of track}
@@ -12,6 +12,8 @@ gpatterns.extract_patterns(track, fids = NULL, tidy = TRUE)
 \item{fids}{extract for specific fragments}
 
 \item{tidy}{if TRUE: returns tidy format, else - a list}
+
+\item{dsn}{extract downsampled patterns}
 }
 \description{
 Extract patterns of a track

@@ -45,8 +45,9 @@ gpatterns.set_parallel <- function(thread_num) {
 
 
 # Tracks and table names
-.gpatterns.cov_track_name <- function(track) { paste0(track, ".cov") }
-.gpatterns.avg_track_name <- function(track) { paste0(track, ".avg") }
+.gpatterns.downsampled_track_name <- function(track, dsn) {qqu('@{track}.ds@{dsn}') }
+.gpatterns.cov_track_name <- function(track) { qqu('@{track}.cov') }
+.gpatterns.avg_track_name <- function(track) { qqu('@{track}.avg') }
 .gpatterns.pat_cov_track_name <- function(track, pat_len) { paste0(track, '.pat_cov', pat_len) }
 .gpatterns.fid_track_name     <- function(track) { qqu('@{track}.fid')}
 .gpatterns.ncpg_track_name    <- function(track) { qqu('@{track}.ncpg')}

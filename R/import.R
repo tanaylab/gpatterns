@@ -45,11 +45,11 @@ gpatterns.import_from_bam <- function(bams,
 #' (output of gpatterns.tracks_to_pat_space or gpatterns.intervs_to_pat_space)
 #' needs to have the following fields: chrom,start,end,fid
 #' @param patterns_tab table with patterns (output of gpatterns.tidy_cpgs_to_pats)
-#' needs to have the folloing fields: fid,pattern
+#' needs to have the following fields: fid,pattern
 #' @param add_read_id save the read_id together with the patterns
 #' @param noise_threshold threshold to consider pattern as 'noise'
 #' @param overwrite overwrite existing tracks
-#' @param canonize convert to canonic form (see: misha::gintervals.canonic).
+#' @param canonize convert to canonic form (see: \code{\link[gintervals.canonic]{misha}}).
 #' warning: may lose data
 #' @param add_biploar_stats run mixture model and add bipolaritly stats.
 #' (warning: heavy computation)
@@ -85,7 +85,86 @@ gpatterns.create_patterns_track <- function(track,
     dir.create(.gpatterns.base_dir(track), showWarnings=FALSE, recursive=TRUE)
 
     message("creating tables...")
-    # Sort patterns table
+
+    # Create a table mapping pattern positions to the fid
+    loci_tab <- pat_space %>%
+        group_by(fid, chrom) %>%
+        summarize(start=min(start), end=max(start)+1) %>%
+        ungroup() %>%
+        select(chrom, start, end, fid)
+
+    .gpatterns.create_tracks(
+        track = track,
+        description = description,
+        patterns_tab = patterns_tab,
+        loci_tab = loci_tab,
+        overwrite = overwrite,
+        add_read_id = add_read_id,
+        noise_threshold = noise_threshold,
+        add_biploar_stats = add_biploar_stats,
+        canonize = canonize,
+        ...)
+}
+
+########################################################################
+gpatterns.create_downsampled_track <- function(track,                                   
+                                   dsn,
+                                   description = NULL,
+                                   patterns_tab = NULL,
+                                   add_read_id = TRUE,
+                                   noise_threshold = 0.20,
+                                   overwrite = TRUE,
+                                   canonize = FALSE,
+                                   add_biploar_stats = FALSE,
+                                   ...){ 
+    
+    stopifnot(gtrack.exists(.gpatterns.fid_track_name(track)))
+    
+    if (is.null(patterns_tab)){
+        patterns_tab <- gpatterns.extract_patterns(track)
+    }
+    
+    patterns_tab <- patterns_tab %>% gpatterns.downsample_patterns(dsn)    
+    
+    
+    track_ds <- gpatterns.downsampled_track_name(track, dsn)
+    
+    # Create base dir for tracks
+    dir.create(.gpatterns.base_dir(track_ds), showWarnings=FALSE, recursive=TRUE)
+
+    message("creating tables...")
+    loci_tab <- .gpatterns.load_fids_tab(track) %>% select(chrom, start, end, fid)
+    if (is.null(description)){
+        description <- gtrack.attr.get(.gpatterns.fid_track_name(track), 'description')
+    }
+    
+    .gpatterns.create_tracks(
+        track = track_ds,
+        description = description,
+        patterns_tab = patterns_tab,
+        loci_tab = loci_tab,
+        overwrite = overwrite,
+        add_read_id = add_read_id,
+        noise_threshold = noise_threshold,
+        add_biploar_stats = add_biploar_stats,
+        canonize = canonize,
+        ...)
+}
+
+
+########################################################################
+.gpatterns.create_tracks <- function(track,
+                                     description,
+                                     patterns_tab,
+                                     loci_tab,
+                                     overwrite = FALSE,
+                                     add_read_id = FALSE,
+                                     add_biploar_stats = FALSE,
+                                     noise_threshold = 0.2,
+                                     canonize = FALSE,
+                                     ...) {
+
+     # Sort patterns table
     patterns_tab <- patterns_tab %>%
         mutate(cpgs=nchar(pattern), ones=cpgs-nchar(gsub('1', '', pattern))) %>%
         arrange(fid, cpgs, ones, pattern)
@@ -100,13 +179,6 @@ gpatterns.create_patterns_track <- function(track,
                               file=.gpatterns.patterns_file_name(track))
     }
 
-
-    # Create a table mapping pattern positions to the fid
-    loci_tab <- pat_space %>%
-        group_by(fid, chrom) %>%
-        summarize(start=min(start), end=max(start)+1) %>%
-        ungroup() %>%
-        select(chrom, start, end, fid)
 
     # Create table tracks holding per fid statistics -
     # number of covered CpGs, read depth, pattern counts, avg methylation and noise
@@ -164,5 +236,4 @@ gpatterns.create_patterns_track <- function(track,
                                   ...)
     }
 }
-
 

@@ -6,7 +6,7 @@
 \usage{
 gpatterns.tidy_cpgs_to_pats(track, pattern_space = NULL,
   pattern_space_file = NULL, max_missing = Inf, min_cov = 1,
-  by_coord_bin = TRUE, parallel = getOption("gpatterns.parallel"))
+  by_coord_bin = TRUE, parallel = getOption("gpatterns.parallel"), ...)
 }
 \arguments{
 \item{track}{name of track}
@@ -23,6 +23,8 @@ needs to have the following fields: chrom,start,end,fid}
 
 \item{by_coord_bin}{execute separatly for each coordinates bin
 (for tracks that do not fit into memory)}
+
+\item{...}{additional parameters to gpatterns.apply_tidy_cpgs}
 }
 \description{
 Extracts patterns given pattern space

@@ -5,7 +5,7 @@
 \title{Effiecient implementation of kmeans++ algorithm}
 \usage{
 TGL_kmeans(tab, K, id_column = FALSE, allow_nas = TRUE, verbose = FALSE,
-  fn = NULL, tab_file = FALSE, TGL.kmeans.bin = sprintf("\%s/\%s",
+  fn = NULL, tab_file = FALSE, TGL_kmeans_bin = sprintf("\%s/\%s",
   system.file("bin", package = "gpatterns"), "TGLKMeans_static"))
 }
 \arguments{
@@ -23,7 +23,7 @@ TGL_kmeans(tab, K, id_column = FALSE, allow_nas = TRUE, verbose = FALSE,
 
 \item{tab_file}{tab_file}
 
-\item{TGL.kmeans.bin}{TGL.kmeans.bin}
+\item{TGL_kmeans_bin}{TGL_kmeans_bin}
 }
 \description{
 Effiecient implementation of kmeans++ algorithm

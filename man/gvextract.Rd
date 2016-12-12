@@ -9,7 +9,23 @@ gvextract(tracks, intervals, colnames = NULL, iterator = NULL,
   params = NULL)
 }
 \arguments{
-\item{params}{}
+\item{tracks}{tracks}
+
+\item{intervals}{intervals}
+
+\item{colnames}{colnames}
+
+\item{iterator}{iterator}
+
+\item{band}{band}
+
+\item{file}{file}
+
+\item{intervals.set.out}{intervals.set.out}
+
+\item{func}{func}
+
+\item{params}{params}
 }
 \description{
 Creates a virtual track and runs gextract
