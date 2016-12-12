@@ -8,7 +8,7 @@
 #' @param verbose verbose
 #' @param fn fn
 #' @param tab_file tab_file
-#' @param TGL.kmeans.bin TGL.kmeans.bin
+#' @param TGL_kmeans_bin TGL_kmeans_bin
 #'
 #' @return
 #' @export
@@ -21,7 +21,7 @@ TGL_kmeans <- function(tab,
                         verbose = FALSE,
                         fn = NULL,
                         tab_file = FALSE,
-                        TGL.kmeans.bin = sprintf("%s/%s",
+                        TGL_kmeans_bin = sprintf("%s/%s",
                                                  system.file("bin", package="gpatterns"),
                                                  'TGLKMeans_static')){
     if(!tab_file){
@@ -43,7 +43,7 @@ TGL_kmeans <- function(tab,
 
     message("clustering...")
     system(
-        qq('@{TGL.kmeans.bin} @{fn} @{K} euclid -allow_nas=@{as.numeric(allow_nas)}'),
+        qq('@{TGL_kmeans_bin} @{fn} @{K} euclid -allow_nas=@{as.numeric(allow_nas)}'),
         ignore.stdout = !verbose,
         ignore.stderr = !verbose)
 
@@ -75,9 +75,10 @@ TGL_kmeans2 <- function(data,
                         k,
                         keep.log=FALSE,
                         tmpdir=NULL, tmpfn=NULL,
-                        TGL.kmeans.bin = "inst/bin/TGLKMeans_static")
+                        TGL.kmeans.bin = sprintf("%s/%s",
+                                                 system.file("bin", package="gpatterns"),
+                                                 'TGLKMeans_static'))
 {
-    library(data.table)
 
     tmpfile <- ''
     if (is.null(tmpdir)) {

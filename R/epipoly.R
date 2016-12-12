@@ -25,7 +25,7 @@ gpatterns.calc_epipoly <- function(patterns){
 #'
 #' @examples
 gpatterns.border_pattern <- function(pattern){
-    !str_detect(pattern, '01+0|10+1') & !gpatterns.clean_pattern(pattern)
+    !stringr::str_detect(pattern, '01+0|10+1') & !gpatterns.clean_pattern(pattern)
 }
 
 ########################################################################
@@ -38,7 +38,7 @@ gpatterns.border_pattern <- function(pattern){
 #'
 #' @examples
 gpatterns.clean_pattern <- function(pattern){
-    str_count(pattern, '1') == 0 | str_count(pattern, '0') == 0
+    stringr::str_count(pattern, '1') == 0 | stringr::str_count(pattern, '0') == 0
 }
 
 ########################################################################
@@ -174,6 +174,26 @@ gpatterns.epipoly_plot <- function(
 
 # Bipolar model Functions ------------------------------------------------
 
+#' Run bipolar model
+#'
+#' @param track           track
+#' @param uniform_mix     uniform_mix
+#' @param max_sampling_n  max_sampling_n
+#' @param min_sampling_n  min_sampling_n
+#' @param init_num        init_num
+#' @param min_pat_cov     min_pat_cov
+#' @param save_tab        save_tab
+#' @param parallel        parallel
+#' @param thread_num      thread_num
+#' @param verbose         verbose
+#' @param use_sge         use_sge
+#' @param max_jobs        max_jobs
+#' @param ...             ...
+#'
+#' @return
+#' @export
+#'
+#' @examples
 gpatterns.run_bipolar_model <- function(track,
                             uniform_mix = 0.05,
                             max_sampling_n = 1000,
@@ -185,7 +205,8 @@ gpatterns.run_bipolar_model <- function(track,
                             thread_num = getOption('gpatterns.parallel.thread_num'),
                             verbose = FALSE,
                             use_sge = FALSE,
-                            job_num = 300){
+                            max_jobs = 300,
+                            ...){
 
     if (use_sge){
         tmp_dirname <- tempfile(pattern = "", tmpdir = paste(get("GROOT"),
@@ -196,7 +217,7 @@ gpatterns.run_bipolar_model <- function(track,
         }
 
         fn <- tempfile(tmpdir = tmp_dirname)
-        group_num <- job_num
+        group_num <- max_jobs
     } else{
         fn <- tempfile()
         group_num <- thread_num
@@ -231,11 +252,12 @@ gpatterns.run_bipolar_model <- function(track,
             )
 
         res <- gcluster.run2(command_list = commands,
-                             max.jobs = job_num,
+                             max.jobs = max_jobs,
                              debug = verbose,
-                             pacakges = 'gpatterns',
+                             packages = 'gpatterns',
                              jobs_title = 'gpatterns.bipolar_model',
-                             collapse_results = TRUE)
+                             collapse_results = TRUE,
+                             ...)
 
         unlink(tmp_dirname, recursive = TRUE)
 

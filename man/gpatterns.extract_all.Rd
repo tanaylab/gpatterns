@@ -5,7 +5,8 @@
 \title{Extract pattern data from tracks without specifying coordinates}
 \usage{
 gpatterns.extract_all(..., samples = NULL, elements = c("fid", "ncpg", "n",
-  "n0", "n1", "nx", "meth", "epipoly"), add_bipolar_stats = FALSE)
+  "n0", "n1", "nx", "pat_meth", "epipoly"), add_bipolar_stats = FALSE,
+  dsn = NULL, na.rm = FALSE)
 }
 \arguments{
 \item{...}{tracks (comma separated)}
@@ -15,6 +16,10 @@ gpatterns.extract_all(..., samples = NULL, elements = c("fid", "ncpg", "n",
 \item{elements}{elements to extract}
 
 \item{add_bipolar_stats}{add bipolar stats}
+
+\item{na.rm}{remove rows with missing data}
+
+\item{extract}{downsampled data}
 }
 \description{
 Extract pattern data from tracks without specifying coordinates

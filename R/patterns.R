@@ -10,28 +10,33 @@
 #' @export
 #'
 #' @examples
-gpatterns.get_tidy_cpgs <- function(track, intervals=NULL){
+gpatterns.get_tidy_cpgs <- function(track,
+                                    intervals = NULL){
     files <- .gpatterns.tidy_cpgs_files(track)
 
     .get_tcpgs <- function(files){
-        files %>%
+        res <- files %>%
             map_df(function(f) fread(
                 qq('gzip -d -c @{f}'),
                 colClasses = c(
-                    read_id='character',
-                    chrom='character',
-                    start='numeric',
-                    end='character',
-                    strand='character',
-                    umi1='character',
-                    umi2='character',
-                    insert_len='numeric',
-                    num='numeric',
-                    cg_pos='numeric',
-                    meth='character',
-                    qual='numeric')) %>%
+                    read_id = 'character',
+                    chrom = 'character',
+                    start = 'numeric',
+                    end = 'character',
+                    strand = 'character',
+                    umi1 = 'character',
+                    umi2 = 'character',
+                    insert_len = 'numeric',
+                    num = 'numeric',
+                    cg_pos = 'numeric',
+                    meth = 'character',
+                    qual = 'numeric')) %>%
                     tbl_df %>%
                     mutate(cg_pos = cg_pos, meth = ifelse(meth == 'Z', 1, 0)))
+        if (0 == nrow(res)){
+            return(NULL)
+        }
+        return(res)
     }
 
     .intervals2files <- function(intervals, files){
@@ -69,22 +74,59 @@ gpatterns.get_tidy_cpgs <- function(track, intervals=NULL){
 #' Apply a function on tidy cpgs (internally separated by coordinates)
 #'
 #' @param track name of track
-#' @param f function to apply
+#' @param f function to apply (needs to return a data frame)
 #' @param parallel execute parallely
+#' @param use_sge use sge cluster for parallelization
+#' @param max_jobsmaximal number of jobs for sge
+#' @param verbose print jobs status
+#' @param ... additonal parameters for gcluster.run2
 #'
-#' @return
+#' @return a data frame with \code{f} applied to every genomic bin of tidy_cpgs
+#' of \code{track}
+#'
 #' @export
 #'
 #' @examples
 gpatterns.apply_tidy_cpgs <- function(track,
                                       f,
-                                      parallel = getOption("gpatterns.parallel")){
+                                      parallel = getOption("gpatterns.parallel"),
+                                      use_sge = FALSE,
+                                      max_jobs = 300,
+                                      verbose = FALSE,
+                                      ...){
     coords <- .gpatterns.get_tidy_cpgs_intervals(track)
-    plyr::adply(coords, 1, function(cr) {
-        gpatterns.get_tidy_cpgs(track, intervals=cr) %>% f
-        },
-        .parallel=parallel,
+
+    # make sure that empty intervals would return NULL
+    f_null <- function(track, intervals){
+        tcpgs <- gpatterns.get_tidy_cpgs(track, intervals=intervals)
+        if (is.null(tcpgs)){
+            return(NULL)
+        }
+        return(f(tcpgs))
+    }
+
+    if (use_sge){
+        commands <- plyr::alply(coords, 1, function(cr)
+            qq('f_null(track,
+               intervals = gintervals("@{cr$chrom}", @{cr$start}, @{cr$end}))') %>%
+                gsub('\n', ' ', .))
+
+        res <- gcluster.run2(command_list = commands,
+                             max.jobs = max_jobs,
+                             debug = verbose,
+                             packages = c('stringr', 'gpatterns'),
+                             jobs_title = 'gpatterns.apply_tidy_cpgs',
+                             collapse_results = FALSE,
+                             ...)
+        res <- map_df(res, function(x) x$retv)
+    } else {
+        res <- plyr::adply(coords, 1, function(cr) {
+            f_null(track, intervals=cr)
+        }, .parallel=parallel,
         .progress='text')
+    }
+
+    return(res)
 }
 
 
@@ -93,10 +135,8 @@ gpatterns.apply_tidy_cpgs <- function(track,
     .gpatterns.tidy_cpgs_files(track) %>%
         basename %>%
         gsub('\\.tcpgs\\.gz$', '', .) %>%
-        str_split('_', simplify=T) %>%
-        as.data.frame %>%
-        rename(chrom=V1, start=V2, end=V3) %>%
-        mutate(start=as.numeric(start), end=as.numeric(end))
+        strsplit('_') %>%
+        map_df(function(x) tibble(chrom=x[1], start=as.numeric(x[2]), end=as.numeric(x[3])))
 }
 
 # Pattern generation Functions ------------------------------------------------
@@ -147,6 +187,7 @@ gpatterns.get_pat_cov <- function(track,
 #' @param min_cov minimal pattern coverage
 #' @param by_coord_bin execute separatly for each coordinates bin
 #'        (for tracks that do not fit into memory)
+#' @param ... additional parameters to gpatterns.apply_tidy_cpgs
 #' @return
 #' @export
 #'
@@ -157,7 +198,8 @@ gpatterns.tidy_cpgs_to_pats <- function(track,
                                         max_missing = Inf,
                                         min_cov = 1,
                                         by_coord_bin=TRUE,
-                                        parallel = getOption("gpatterns.parallel")){
+                                        parallel = getOption("gpatterns.parallel"),
+                                        ...){
     if (!is.null(pattern_space_file)){
         pattern_space <- fread(pattern_space_file)
     } else if (is.null(pattern_space)){
@@ -188,7 +230,7 @@ gpatterns.tidy_cpgs_to_pats <- function(track,
 
     if (by_coord_bin){
         pats <- track %>% gpatterns.apply_tidy_cpgs(function(x) .cpgs_to_pats(x),
-                                                    parallel=parallel)
+                                                    parallel=parallel, ...)
     } else {
         pats <- track %>% gpatterns.get_tidy_cpgs() %>% .cpgs_to_pats()
     }
@@ -404,6 +446,26 @@ gpatterns.intervs_to_pat_space <- function(tracks,
 # Pattern utility Functions ------------------------------------------------
 
 ########################################################################
+#' Downsample patterns table
+#'
+#' @param patterns patterns table
+#' @param dsn downsampling n
+#'
+#' @return
+#' @export
+#'
+#' @examples
+gpatterns.downsample_patterns <- function(patterns, dsn){
+    patterns %>%
+        group_by(fid) %>%
+        filter(n() >= dsn) %>%
+        sample_n(dsn) %>%
+        ungroup
+}
+
+
+
+########################################################################
 #' transforms patterns to summary statistics: n,n0,n1,nx,nc,meth and epipoly
 #'
 #' @param patterns_tab patterns table (needs to have 'fid' and 'pattern' fields)
@@ -434,13 +496,18 @@ gpatterns.frag_stats <- function(patterns_tab, noise_threshold=0.2){
 #' @param track name of track
 #' @param fids extract for specific fragments
 #' @param tidy if TRUE: returns tidy format, else - a list
+#' @param dsn extract downsampled patterns
 #'
 #' @return
 #' @export
 #'
 #' @examples
-gpatterns.extract_patterns <- function(track, fids=NULL, tidy=TRUE)
+gpatterns.extract_patterns <- function(track, fids = NULL, tidy = TRUE, dsn = NULL)
 {
+    if (!is.null(dsn)){
+        track <- .gpatterns.downsampled_track_name(track, dsn)
+    }
+
     if (!.gpatterns.patterns_exist(track)){
         stop(sprintf('no patterns available for %s', track))
     }
@@ -475,6 +542,8 @@ gpatterns.extract_patterns <- function(track, fids=NULL, tidy=TRUE)
 #' @param samples name for each track
 #' @param elements elements to extract
 #' @param add_bipolar_stats add bipolar stats
+#' @param extract downsampled data
+#' @param na.rm remove rows with missing data
 #'
 #' @return
 #' @export
@@ -482,8 +551,10 @@ gpatterns.extract_patterns <- function(track, fids=NULL, tidy=TRUE)
 #' @examples
 gpatterns.extract_all <- function(...,
                                   samples=NULL,
-                                  elements = c('fid', 'ncpg', 'n', 'n0', 'n1', 'nx', 'meth', 'epipoly'),
-                                  add_bipolar_stats = FALSE){
+                                  elements = c('fid', 'ncpg', 'n', 'n0', 'n1', 'nx', 'pat_meth', 'epipoly'),
+                                  add_bipolar_stats = FALSE,
+                                  dsn = NULL,
+                                  na.rm = FALSE){
     if (!('fid' %in% elements)){
         elements <- c('fid', elements)
     }
@@ -497,14 +568,18 @@ gpatterns.extract_all <- function(...,
         samples <- tracks
     }
 
+    if (!is.null(dsn)){
+        tracks <- .gpatterns.downsampled_track_name(tracks, dsn)
+    }
+
     tab <- map2_df(
         tracks,
         samples,
         function(track, name)
             .gpatterns.load_table(
                 saved_name = .gpatterns.fids_tab_name(track),
-                file=.gpatterns.fids_file_name(track))
-        %>% mutate(track=name))
+                file = .gpatterns.fids_file_name(track))
+        %>% mutate(track = name))
 
     if (any(elements %in% .gpatterns.bipolar_model_stats)){
         mix_tab <- map2_df(
@@ -520,6 +595,9 @@ gpatterns.extract_all <- function(...,
     }
 
     tab <- tab %>% select_(.dots=c('chrom', 'start', 'end', 'track', elements))
+    if (na.rm){
+        tab <- tab %>% na.omit()
+    }
     return(tab)
 }
 
@@ -536,6 +614,8 @@ gpatterns.extract_all <- function(...,
 #' @param cpg_nhood scope for centered cpg content (in bp)
 #' @param add_coordinates add chrom,start,end for fragments
 #' @param tidy return tidy output
+#' @param dsn extract downsampled data
+#' @param na.rm remove rows with missing data
 #'
 #' @return
 #' @export
@@ -550,8 +630,11 @@ gpatterns.extract <- function(...,
                               add_cpg_content = FALSE,
                               cpg_nhood=500,
                               add_coordinates = TRUE,
-                              tidy = TRUE)
+                              tidy = TRUE,
+                              dsn = NULL,
+                              na.rm = TRUE)
 {
+
     if (add_coordinates && any(!(c('chrom', 'start', 'end') %in% elements))){
         elements <- c('chrom', 'start', 'end', elements)
     }
@@ -574,7 +657,11 @@ gpatterns.extract <- function(...,
     tracks <- sapply(list(...), as.character)
     if (is.null(colnames)) {
         colnames <- tracks
-    }    
+    }
+
+    if (!is.null(dsn)){
+        tracks <- .gpatterns.downsampled_track_name(tracks, dsn)
+    }
 
     add_cpg_content <- function(fids_tab, cpg_nhood){
         cg_cont <- fids_tab %>%
@@ -610,6 +697,10 @@ gpatterns.extract <- function(...,
             select_(.dots=c('samp', elements, 'intervalID'))
     })
 
+    if (na.rm){
+        tab <- tab %>% na.omit()
+    }
+
     if (tidy){
         return(tab)
     }
@@ -634,6 +725,7 @@ gpatterns.extract <- function(...,
         untidy_tab1 <- untidy_tab %>% add_element_suffix(untidy_tab1, element)
         untidy_tab <- suppressMessages(untidy_tab %>% full_join(untidy_tab1))
     }
+
     return(untidy_tab)
 }
 

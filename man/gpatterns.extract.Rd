@@ -4,26 +4,35 @@
 \alias{gpatterns.extract}
 \title{Extract pattern data}
 \usage{
-gpatterns.extract(..., intervals, colnames = NULL, iterator = NULL,
-  cpg.nhood = 500, elements = c("cpg.content", "fid", "ncpg", "n", "n0",
-  "n1", "nx", "meth"), add_bipolar_stats = FALSE, tidy = TRUE)
+gpatterns.extract(..., intervals, colnames = NULL, elements = c("fid",
+  "ncpg", "n", "n0", "n1", "nx", "nc", "pat_meth"), add_bipolar_stats = FALSE,
+  add_patterns = FALSE, add_cpg_content = FALSE, cpg_nhood = 500,
+  add_coordinates = TRUE, tidy = TRUE, dsn = NULL, na.rm = TRUE)
 }
 \arguments{
-\item{...}{track names}
+\item{...}{tracks to extract}
 
-\item{intervals}{intervals}
+\item{intervals}{genomic scope to extract from intervals}
 
-\item{colnames}{colnames}
+\item{colnames}{names for the tracks}
 
-\item{iterator}{iterator}
+\item{elements}{elements to extract. default: fid,ncpg,n,n0,n1,nx,nc,pat_meth}
 
-\item{cpg.nhood}{cpg.nhood}
+\item{add_bipolar_stats}{add stats from bipolar model (if computed)}
 
-\item{elements}{elements}
+\item{add_patterns}{add patterns}
 
-\item{add_bipolar_stats}{add_bipolar_stats}
+\item{add_cpg_content}{add centered cpg content}
 
-\item{tidy}{tidy}
+\item{cpg_nhood}{scope for centered cpg content (in bp)}
+
+\item{add_coordinates}{add chrom,start,end for fragments}
+
+\item{tidy}{return tidy output}
+
+\item{dsn}{extract downsampled data}
+
+\item{na.rm}{remove rows with missing data}
 }
 \description{
 Extract pattern data
