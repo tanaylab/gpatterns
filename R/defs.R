@@ -50,6 +50,8 @@ gpatterns.set_parallel <- function(thread_num) {
 .gpatterns.downsampled_track_name <- function(track, dsn) {qqv('@{track}.ds@{dsn}') }
 .gpatterns.cov_track_name <- function(track) { qqv('@{track}.cov') }
 .gpatterns.avg_track_name <- function(track) { qqv('@{track}.avg') }
+.gpatterns.meth_track_name <- function(track) { qqv('@{track}.meth') }
+.gpatterns.unmeth_track_name <- function(track) { qqv('@{track}.unmeth') }
 .gpatterns.pat_cov_track_name <- function(track, pat_len) { paste0(track, '.pat_cov', pat_len) }
 .gpatterns.fid_track_name     <- function(track) { qqv('@{track}.fid')}
 .gpatterns.ncpg_track_name    <- function(track) { qqv('@{track}.ncpg')}

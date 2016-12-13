@@ -5,9 +5,9 @@
 \title{Extract average methylation}
 \usage{
 gpatterns.get_avg_meth(tracks, intervals, iterator = NULL, min_cov = NULL,
-  mask_by_cov = FALSE, use_cpgs = FALSE, min_samples = 1,
+  mask_by_cov = FALSE, use_cpgs = FALSE, min_samples = NULL,
   min_cpgs = NULL, min_var = NULL, var_quantile = NULL, names = NULL,
-  tidy = TRUE)
+  tidy = TRUE, pre_screen = FALSE)
 }
 \arguments{
 \item{tracks}{methylation tracks}
@@ -19,26 +19,34 @@ would be set to CpGs}
 
 \item{min_cov}{minimal coverage for iterator interval}
 
-\item{mask_by_cov}{change loci with coverage < min_cov to NA}
+\item{mask_by_cov}{change loci with coverage < min_cov to NA. Not relevant in
+pre_screen or tidy mode}
 
 \item{use_cpgs}{use CpGs as iterator}
 
 \item{min_samples}{minimal number of samples with cov >= min_cov. if min_cov
 is NULL it would be set to 1.}
 
-\item{min_cpgs}{minimal number of CpGs per iterator interval}
+\item{min_cpgs}{minimal number of CpGs per iterator interval. note that the
+intervalID column may be incorrect.}
 
 \item{min_var}{minimal variance (across samples) per iterator interval}
 
 \item{var_quantile}{minimal quantile of variance per iterator interval}
 
 \item{names}{alternative names to tracks. similar to colnames in
-\code{\link[gextract]{misha}} if tidy == FALSE.}
+\code{\link[gextract]{misha}} if tidy == FALSE. Note that names should be
+shorter than the maximal length of R data frame column name}
 
 \item{tidy}{if TRUE returns a tidy data frame with the following fields:
 chrom, start, end, intervalID, samp, meth, unmeth, avg, cov.
 if FALSE returns a data frame with average methylation,
-similar to \code{\link[gextract]{misha}}'}
+similar to \code{\link[gextract]{misha}}'. Note that for a large number of
+intervals tidy == FALSE may be the only memory feasable option.}
+
+\item{pre_screen}{pre screen for min_samples and min_cov (for large number of
+tracks / large number of intervals). Note that the intervalID column may be incorrect
+and if use_cpgs is TRUE, the intervals set would become the cpgs.}
 }
 \description{
 Extract average methylation
