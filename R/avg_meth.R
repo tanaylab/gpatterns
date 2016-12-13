@@ -12,15 +12,22 @@
 #' @param use_cpgs use CpGs as iterator
 #' @param min_samples minimal number of samples with cov >= min_cov. if min_cov
 #' is NULL it would be set to 1.
-#' @param min_cpgs minimal number of CpGs per iterator interval
+#' @param min_cpgs minimal number of CpGs per iterator interval. note that the
+#' intervalID column may be incorrect.
 #' @param min_var minimal variance (across samples) per iterator interval
 #' @param var_quantile minimal quantile of variance per iterator interval
 #' @param names alternative names to tracks. similar to colnames in
-#' \code{\link[gextract]{misha}} if tidy == FALSE.
+#' \code{\link[gextract]{misha}} if tidy == FALSE. Note that names should be
+#' shorter than the maximal length of R data frame column name
 #' @param tidy if TRUE returns a tidy data frame with the following fields:
 #' chrom, start, end, intervalID, samp, meth, unmeth, avg, cov.
 #' if FALSE returns a data frame with average methylation,
 #' similar to \code{\link[gextract]{misha}}'
+#' @param pre_screen pre screen for min_samples and min_cov (for large number of
+#' tracks / large number of intervals). Note that if use_cpgs is TRUE, the intervals
+#' set would become the cpgs. In addition, the intervalID column may be incorrect.
+#'
+#'
 #'
 #' @return
 #' @export
@@ -33,12 +40,13 @@ gpatterns.get_avg_meth <- function(
     min_cov = NULL,
     mask_by_cov = FALSE,
     use_cpgs = FALSE,
-    min_samples = 1,
+    min_samples = NULL,
     min_cpgs = NULL,
     min_var = NULL,
     var_quantile = NULL,
-    names=NULL,
-    tidy=TRUE) {
+    names = NULL,
+    tidy = TRUE,
+    pre_screen = FALSE) {
 
     .check_tracks_exist(tracks, c('meth', 'unmeth'))
 
@@ -48,6 +56,22 @@ gpatterns.get_avg_meth <- function(
     } else if (!is.null(min_cpgs)) {
         message(qq('Taking only intervals with at least @{min_cpgs} CpGs'))
         intervals <- gpatterns.filter_cpgs(intervals, min_cpgs)
+    }
+
+    if(is.null(names)){
+        names <- tracks
+    }
+
+    if (pre_screen){
+        message(qq("Taking only intervals with coverage >= @{min_cov} in at least @{min_samples} samples"))
+        intervals <-
+            gpatterns.screen_by_coverage(
+                tracks = tracks,
+                intervals = intervals,
+                iterator = iterator,
+                min_cov = min_cov,
+                min_samples = min_samples
+            )
     }
 
     message('extracting...')
@@ -75,7 +99,7 @@ gpatterns.get_avg_meth <- function(
     avgs <- avgs %>%
         mutate(avg = meth / (meth + unmeth), cov = meth + unmeth)
 
-    if (!is.null(min_cov) || !is.null(min_samples)) {
+    if ((!is.null(min_cov) || !is.null(min_samples)) && !pre_screen) {
         if (is.null(min_cov)){
             min_cov <- 1
             warning('Did not provide minimal coverage (min_cov). Setting to 1')
@@ -103,12 +127,13 @@ gpatterns.get_avg_meth <- function(
             filter(v >= min_var)
     }
 
-    n_intervals <- count(avgs, chrom, start, end) %>% nrow
+    n_intervals <- distinct(avgs, chrom, start, end) %>% nrow
     message(qq('number of intervals: @{scales::comma(n_intervals)}'))
 
     if (tidy){
         return(avgs %>%
-                   select(chrom, start, end, intervalID, samp, meth, unmeth, avg, cov))
+                   select(chrom, start, end, intervalID, samp, meth, unmeth, avg, cov) %>%
+                   tbl_df())
     } else {
         return(avgs %>%
                    select(chrom, start, end, intervalID, samp, avg) %>%
@@ -116,6 +141,33 @@ gpatterns.get_avg_meth <- function(
                    .[, c('chrom', 'start', 'end', names, 'intervalID')]
                )
     }
+}
+
+#############################################################################
+#' screen intervals by coverage in multiple tracks
+#'
+#' @param tracks methylation tracks
+#' @param intervals genomic scope for which the function is applied
+#' @param iterator see iterator in \code{\link[gextract]{misha}}. if NULL iterator
+#' would be set to CpGs
+#' @param min_cov minimal coverage for iterator interval
+#' @param min_samples minimal number of samples with cov >= min_cov. if min_cov
+#' is NULL it would be set to 1.
+#'
+#' @return
+#' @export
+#'
+#' @examples
+gpatterns.screen_by_coverage <- function(tracks,
+                                         intervals,
+                                         iterator,
+                                         min_cov,
+                                         min_samples){
+    cov_tracks <- .gpatterns.cov_track_name(tracks)
+    expr <- paste(qqv('(@{cov_tracks} >= min_cov)'), collapse = ', ')
+    expr <- qq('sum(@{expr}, na.rm=T) >= @{min_samples}')
+    intervs <- gscreen(expr, intervals=intervals, iterator=iterator)
+    return(intervs)
 }
 
 #############################################################################

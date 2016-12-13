@@ -5,16 +5,11 @@
 \title{Wrapper around gintervals.neighbours that does not return conflicting colnames}
 \usage{
 gintervals.neighbors1(intervals1 = NULL, intervals2 = NULL, suffix = "1",
-  ...)
+  maxneighbors = 1, mindist = -1e+09, maxdist = 1e+09,
+  na.if.notfound = FALSE)
 }
 \arguments{
-\item{intervals1}{first intervals set}
-
-\item{intervals2}{second intervals set}
-
 \item{suffix}{suffix for conflicting colnames}
-
-\item{...}{other gintervals.neighbours parameters}
 }
 \description{
 Wrapper around gintervals.neighbours that does not return conflicting colnames
