@@ -89,7 +89,7 @@ gpatterns.create_patterns_track <- function(track,
     # Create a table mapping pattern positions to the fid
     loci_tab <- pat_space %>%
         group_by(fid, chrom) %>%
-        summarize(start=min(start), end=max(start)+1) %>%
+        summarize(start=min(start), end=max(end)+1) %>%
         ungroup() %>%
         select(chrom, start, end, fid)
 
