@@ -144,17 +144,11 @@ gpatterns.get_avg_meth <- function(
     n_intervals <- distinct(avgs, chrom, start, end) %>% nrow
     message(qq('number of intervals: @{scales::comma(n_intervals)}'))
 
-    if (tidy){
-        return(avgs %>%
-                   select(chrom, start, end, intervalID, samp, meth, unmeth, avg, cov) %>%
-                   tbl_df())
-    } else {
-        return(avgs %>%
-                   select(chrom, start, end, intervalID, samp, avg) %>%
-                   spread(samp, avg) %>%
-                   .[, c('chrom', 'start', 'end', names, 'intervalID')]
-               )
-    }
+
+    return(avgs %>%
+               select(chrom, start, end, intervalID, samp, meth, unmeth, avg, cov) %>%
+               tbl_df())
+
 }
 
 ########################################################################
@@ -173,8 +167,8 @@ gpatterns.get_avg_meth <- function(
     vtracks_meth <- paste0(vtracks_pref, '_', 1:length(tracks), '_meth')
     vtracks_unmeth <- paste0(vtracks_pref, '_', 1:length(tracks), '_unmeth')
 
-    walk2(vtracks_meth, tracks, gvtrack.create, func='sum')
-    walk2(vtracks_unmeth, tracks, gvtrack.create, func='sum')
+    walk2(vtracks_meth, .gpatterns.meth_track_name(tracks), gvtrack.create, func='sum')
+    walk2(vtracks_unmeth, .gpatterns.unmeth_track_name(tracks), gvtrack.create, func='sum')
 
     expr <- qqv('@{vtracks_meth} / ( @{vtracks_meth} + @{vtracks_unmeth} )')
     avgs <- gextract(expr, intervals=intervals, iterator=iterator, colnames=names)
