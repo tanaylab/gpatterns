@@ -8,7 +8,8 @@
 #' @param iterator see iterator in \code{\link[gextract]{misha}}. if NULL iterator
 #' would be set to CpGs
 #' @param min_cov minimal coverage for iterator interval
-#' @param mask_by_cov change loci with coverage < min_cov to NA
+#' @param mask_by_cov change loci with coverage < min_cov to NA. Not relevant in
+#' pre_screen or tidy mode
 #' @param use_cpgs use CpGs as iterator
 #' @param min_samples minimal number of samples with cov >= min_cov. if min_cov
 #' is NULL it would be set to 1.
@@ -22,10 +23,11 @@
 #' @param tidy if TRUE returns a tidy data frame with the following fields:
 #' chrom, start, end, intervalID, samp, meth, unmeth, avg, cov.
 #' if FALSE returns a data frame with average methylation,
-#' similar to \code{\link[gextract]{misha}}'
+#' similar to \code{\link[gextract]{misha}}'. Note that for a large number of
+#' intervals tidy == FALSE may be the only memory feasable option.
 #' @param pre_screen pre screen for min_samples and min_cov (for large number of
-#' tracks / large number of intervals). Note that if use_cpgs is TRUE, the intervals
-#' set would become the cpgs. In addition, the intervalID column may be incorrect.
+#' tracks / large number of intervals). Note that the intervalID column may be incorrect
+#' and if use_cpgs is TRUE, the intervals set would become the cpgs.
 #'
 #'
 #'
@@ -62,7 +64,7 @@ gpatterns.get_avg_meth <- function(
         names <- tracks
     }
 
-    if (pre_screen){
+    if (pre_screen || !tidy){
         message(qq("Taking only intervals with coverage >= @{min_cov} in at least @{min_samples} samples"))
         intervals <-
             gpatterns.screen_by_coverage(
@@ -72,6 +74,18 @@ gpatterns.get_avg_meth <- function(
                 min_cov = min_cov,
                 min_samples = min_samples
             )
+    }
+
+    if (!tidy){
+        return(
+            .gpatterns.get_avg_meth_not_tidy(
+                tracks,
+                intervals,
+                iterator = iterator,
+                min_var = min_var,
+                var_quantile = var_quantile,
+                names = names)
+        )
     }
 
     message('extracting...')
@@ -141,6 +155,45 @@ gpatterns.get_avg_meth <- function(
                    .[, c('chrom', 'start', 'end', names, 'intervalID')]
                )
     }
+}
+
+########################################################################
+.gpatterns.get_avg_meth_not_tidy <- function(tracks,
+                                             intervals,
+                                             iterator = NULL,
+                                             min_var = NULL,
+                                             var_quantile = NULL,
+                                             names = NULL) {
+
+    if (is.null(names)){
+        names <- tracks
+    }
+
+    vtracks_pref <- .random_track_name()
+    vtracks_meth <- paste0(vtracks_pref, '_', 1:length(tracks), '_meth')
+    vtracks_unmeth <- paste0(vtracks_pref, '_', 1:length(tracks), '_unmeth')
+
+    walk2(vtracks_meth, tracks, gvtrack.create, func='sum')
+    walk2(vtracks_unmeth, tracks, gvtrack.create, func='sum')
+
+    expr <- qqv('@{vtracks_meth} / ( @{vtracks_meth} + @{vtracks_unmeth} )')
+    avgs <- gextract(expr, intervals=intervals, iterator=iterator, colnames=names)
+
+    if (!is.null(min_var) || !is.null(var_quantile)) {
+        vars <- apply(avgs %>% select(-(chrom:end), -intervalID), 1, function(x) var(x, na.rm=T))
+        if (!is.null(var_quantile)) {
+            min_var <- quantile(vars, probs = 1 - var_quantile, na.rm=T)
+        }
+
+        message(qq('Taking only intervals with variance >= @{round(min_var, digits = 2)}'))
+        vars <- avgs %>% filter(vars >= min_var)
+    }
+
+    n_intervals <- nrow(avgs)
+    message(qq('number of intervals: @{scales::comma(n_intervals)}'))
+
+    walk(c(vtracks_meth, vtracks_unmeth), gvtrack.rm)
+    return(avgs %>% tbl_df)
 }
 
 #############################################################################
