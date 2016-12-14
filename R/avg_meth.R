@@ -25,9 +25,13 @@
 #' if FALSE returns a data frame with average methylation,
 #' similar to \code{\link[gextract]{misha}}'. Note that for a large number of
 #' intervals tidy == FALSE may be the only memory feasable option.
-#' @param pre_screen pre screen for min_samples and min_cov (for large number of
+#' @param pre screen for min_samples and min_cov (for large number of
 #' tracks / large number of intervals). Note that the intervalID column may be incorrect
 #' and if use_cpgs is TRUE, the intervals set would become the cpgs.
+#' @use_disk for really big datasets - save intermediates on disk.
+#' @param file save output to file (only in non tidy mode, would not filer by variance)
+#' @param intervals.set.out save output big intervals set (only in tidy mode,
+#' would not filter by variance)
 #'
 #'
 #'
@@ -48,7 +52,10 @@ gpatterns.get_avg_meth <- function(
     var_quantile = NULL,
     names = NULL,
     tidy = TRUE,
-    pre_screen = FALSE) {
+    pre_screen = FALSE,
+    use_disk = FALSE,
+    file = NULL,
+    intervals.set.out = NULL) {
 
     .check_tracks_exist(tracks, c('meth', 'unmeth'))
 
@@ -59,21 +66,26 @@ gpatterns.get_avg_meth <- function(
         message(qq('Taking only intervals with at least @{min_cpgs} CpGs'))
         intervals <- gpatterns.filter_cpgs(intervals, min_cpgs)
     }
+    
+    names <- names %||% tracks
 
-    if(is.null(names)){
-        names <- tracks
-    }
-
-    if (pre_screen || !tidy){
+    if (pre_screen || (!tidy & (!is.null(min_samples) || !is.null(min_cov)))){
         message(qq("Taking only intervals with coverage >= @{min_cov} in at least @{min_samples} samples"))
-        intervals <-
-            gpatterns.screen_by_coverage(
-                tracks = tracks,
-                intervals = intervals,
-                iterator = iterator,
-                min_cov = min_cov,
-                min_samples = min_samples
-            )
+        if (use_disk){
+            f_intervs <- .random_track_name()
+        } else {
+            f_intervs <- NULL
+        }
+        intervals <- gpatterns.screen_by_coverage(tracks = tracks,
+                                                  intervals = intervals,
+                                                  iterator = iterator,
+                                                  min_cov = min_cov,
+                                                  min_samples = min_samples,
+                                                  intervals.set.out = f_intervs)
+        if (use_disk){
+            intervals <- f_intervs
+        }
+
     }
 
     if (!tidy){
@@ -84,16 +96,19 @@ gpatterns.get_avg_meth <- function(
                 iterator = iterator,
                 min_var = min_var,
                 var_quantile = var_quantile,
-                names = names)
+                names = names,
+                file = file,
+                intervals.set.out = intervals.set.out,
+                rm_intervals = !is.null(f_intervs))
         )
     }
 
     message('extracting...')
     avgs <- gvextract(
         c(qq('@{tracks}.meth', collapse=F), qq('@{tracks}.unmeth', collapse=F)),
-        intervals=intervals,
-        iterator=iterator,
-        colnames=c(qq('@{names}.meth', collapse=F), qq('@{names}.unmeth', collapse=F)),
+        intervals = intervals,
+        iterator = iterator,
+        colnames = c(qq('@{names}.meth', collapse=F), qq('@{names}.unmeth', collapse=F)),
         func='sum')
 
     meth_cols <- grep('\\.meth$', colnames(avgs), value=T)
@@ -157,11 +172,12 @@ gpatterns.get_avg_meth <- function(
                                              iterator = NULL,
                                              min_var = NULL,
                                              var_quantile = NULL,
-                                             names = NULL) {
+                                             names = NULL,
+                                             file = NULL,
+                                             intervals.set.out = NULL,
+                                             rm_intervals = FALSE) {
 
-    if (is.null(names)){
-        names <- tracks
-    }
+    names <- names %||% tracks    
 
     vtracks_pref <- .random_track_name()
     vtracks_meth <- paste0(vtracks_pref, '_', 1:length(tracks), '_meth')
@@ -171,7 +187,11 @@ gpatterns.get_avg_meth <- function(
     walk2(vtracks_unmeth, .gpatterns.unmeth_track_name(tracks), gvtrack.create, func='sum')
 
     expr <- qqv('@{vtracks_meth} / ( @{vtracks_meth} + @{vtracks_unmeth} )')
-    avgs <- gextract(expr, intervals=intervals, iterator=iterator, colnames=names)
+    avgs <- gextract(expr, intervals=intervals, iterator=iterator, colnames=names, file=file, intervals.set.out = intervals.set.out)
+
+    if (!is.null(file) || !is.null(intervals.set.out)){
+        return(NULL)
+    }
 
     if (!is.null(min_var) || !is.null(var_quantile)) {
         vars <- apply(avgs %>% select(-(chrom:end), -intervalID), 1, function(x) var(x, na.rm=T))
@@ -187,6 +207,11 @@ gpatterns.get_avg_meth <- function(
     message(qq('number of intervals: @{scales::comma(n_intervals)}'))
 
     walk(c(vtracks_meth, vtracks_unmeth), gvtrack.rm)
+
+    if (rm_intervals){
+        gintervals.rm(intervals, force = TRUE)
+    }
+
     return(avgs %>% tbl_df)
 }
 
@@ -200,6 +225,7 @@ gpatterns.get_avg_meth <- function(
 #' @param min_cov minimal coverage for iterator interval
 #' @param min_samples minimal number of samples with cov >= min_cov. if min_cov
 #' is NULL it would be set to 1.
+#' @param intervals.set.out intervals.set.out
 #'
 #' @return
 #' @export
@@ -209,11 +235,15 @@ gpatterns.screen_by_coverage <- function(tracks,
                                          intervals,
                                          iterator,
                                          min_cov,
-                                         min_samples){
+                                         min_samples,
+                                         intervals.set.out = NULL){
     cov_tracks <- .gpatterns.cov_track_name(tracks)
     expr <- paste(qqv('(@{cov_tracks} >= min_cov)'), collapse = ', ')
     expr <- qq('sum(@{expr}, na.rm=T) >= @{min_samples}')
-    intervs <- gscreen(expr, intervals=intervals, iterator=iterator)
+    intervs <- gscreen(expr,
+                       intervals = intervals,
+                       iterator = iterator,
+                       intervals.set.out = intervals.set.out)
     return(intervs)
 }
 
@@ -489,18 +519,17 @@ gpatterns.smoothScatter <- function(
     title_text = NULL,
     add_n = TRUE,
     ...) {
-    if (is.null(avgs)) {
-        avgs <- .do.call_ellipsis(gpatterns.get_avg_meth, list(tracks=samples, tidy=TRUE), ...)
-    }
+    
+    avgs <- avgs %||% .do.call_ellipsis(gpatterns.get_avg_meth, list(tracks=samples, tidy=TRUE), ...)
+    
 
     if (length(samples) != 2) {
         stop("Please provide 2 samples")
     }
     d <- avgs %>% filter(samp %in% samples) %>% select(chrom, start, end, samp, avg) %>% spread(samp, avg)
-
-    if (is.null(sample_names)){
-        sample_names <- samples
-    }
+    
+    sample_names <- sample_names %||% samples
+    
     stopifnot(length(sample_names) == 2)
 
     if (!is.null(fig_ofn)) {

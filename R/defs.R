@@ -2,49 +2,8 @@
 #' @import dplyr
 #' @import purrr
 #' @import ggplot2
-
-
-# Function defs
-
-#' @export
-qq <- GetoptLong::qq
-
-#' @export
-qqv <- function(text) {GetoptLong::qq(text, envir=parent.frame(), collapse=FALSE)}
-
-#' @export
-fwrite <- function(...) data.table::fwrite(...)
-
-#' @export
-fread <- function(...) data.table::fread(..., data.table=FALSE)
-
-.gpatterns.base_dir <- function(track)
-{
-    base_path <- c(gdir.cwd(), strsplit(track, '.', fixed=TRUE)[[1]])
-    return(do.call(file.path, as.list(base_path)))
-}
-
-############################################################################# functions
-#' Set parallel threads
-#'
-#' @param thread_num number of threads. use '1' for non parallel behaviour
-#'
-#' @return None
-#'
-#' @examples
-#' gpatterns.set_parallel(8)
-#'
-#' @export
-gpatterns.set_parallel <- function(thread_num) {
-    if (1 == thread_num) {
-        options(gpatterns.parallel = FALSE)
-    } else {
-        doMC::registerDoMC(thread_num)
-        options(gpatterns.parallel = TRUE)
-        options(gpatterns.parallel.thread_num = thread_num)
-    }
-}
-
+#' @importFrom data.table fwrite
+#' @importFrom GetoptLong qq
 
 # Tracks and table names
 .gpatterns.downsampled_track_name <- function(track, dsn) {qqv('@{track}.ds@{dsn}') }

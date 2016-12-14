@@ -7,7 +7,8 @@
 gpatterns.get_avg_meth(tracks, intervals, iterator = NULL, min_cov = NULL,
   mask_by_cov = FALSE, use_cpgs = FALSE, min_samples = NULL,
   min_cpgs = NULL, min_var = NULL, var_quantile = NULL, names = NULL,
-  tidy = TRUE, pre_screen = FALSE)
+  tidy = TRUE, pre_screen = FALSE, use_disk = FALSE, file = NULL,
+  intervals.set.out = NULL)
 }
 \arguments{
 \item{tracks}{methylation tracks}
@@ -44,7 +45,12 @@ if FALSE returns a data frame with average methylation,
 similar to \code{\link[gextract]{misha}}'. Note that for a large number of
 intervals tidy == FALSE may be the only memory feasable option.}
 
-\item{pre_screen}{pre screen for min_samples and min_cov (for large number of
+\item{file}{save output to file (only in non tidy mode, would not filer by variance)}
+
+\item{intervals.set.out}{save output big intervals set (only in tidy mode,
+would not filter by variance)}
+
+\item{pre}{screen for min_samples and min_cov (for large number of
 tracks / large number of intervals). Note that the intervalID column may be incorrect
 and if use_cpgs is TRUE, the intervals set would become the cpgs.}
 }
