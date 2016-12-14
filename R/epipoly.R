@@ -124,12 +124,8 @@ gpatterns.epipoly_plot <- function(
                 ggtitle(x$samp[1])
 
             if (!is.null(fig_ofn)) {
-                if (is.null(width)) {
-                  width <- 4
-                }
-                if (is.null(height)) {
-                  height <- 4
-                }
+                width <- width %||% 4
+                height <- height %||% 4                
                 p <- p + ggsave(sprintf("%s_%s.png", fig_ofn, x$samp[1]), width = width,
                   height = height)
             }
@@ -159,12 +155,9 @@ gpatterns.epipoly_plot <- function(
                   panel.margin = unit(2,"lines"))
 
         if (!is.null(fig_ofn)) {
-            if (is.null(width)) {
-                width <- 1.6 * ncolumns
-            }
-            if (is.null(height)) {
-                height <- 2.3 * ceiling(length(unique(tab$samp))/ncolumns)
-            }
+            width <- width %||% 1.6 * ncolumns
+            width <- width %||% 1.6 * 2.3 * ceiling(length(unique(tab$samp))/ncolumns)          
+            
             p <- p + ggsave(fig_ofn, width = width, height = height)
         }
         return(p)

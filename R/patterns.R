@@ -564,10 +564,9 @@ gpatterns.extract_all <- function(...,
     }
 
     tracks <- sapply(list(...), as.character)
-    if (is.null(samples)) {
-        samples <- tracks
-    }
-
+    
+    samples <- samples %||% tracks
+    
     if (!is.null(dsn)){
         tracks <- .gpatterns.downsampled_track_name(tracks, dsn)
     }
@@ -655,10 +654,8 @@ gpatterns.extract <- function(...,
     }
 
     tracks <- sapply(list(...), as.character)
-    if (is.null(colnames)) {
-        colnames <- tracks
-    }
-
+    colnames <- colnames %||% tracks
+    
     if (!is.null(dsn)){
         tracks <- .gpatterns.downsampled_track_name(tracks, dsn)
     }

@@ -4,7 +4,8 @@
 \alias{gpatterns.screen_by_coverage}
 \title{screen intervals by coverage in multiple tracks}
 \usage{
-gpatterns.screen_by_coverage(tracks, intervals, iterator, min_cov, min_samples)
+gpatterns.screen_by_coverage(tracks, intervals, iterator, min_cov, min_samples,
+  intervals.set.out = NULL)
 }
 \arguments{
 \item{tracks}{methylation tracks}
@@ -18,6 +19,8 @@ would be set to CpGs}
 
 \item{min_samples}{minimal number of samples with cov >= min_cov. if min_cov
 is NULL it would be set to 1.}
+
+\item{intervals.set.out}{intervals.set.out}
 }
 \description{
 screen intervals by coverage in multiple tracks
