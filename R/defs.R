@@ -41,7 +41,7 @@
 .gpatterns.fids_file_name     <- function(track) { file.path(.gpatterns.base_dir(track), 'fids.RData') }
 
 .gpatterns.tidy_cpgs_files <- function(track) {
-    list.files(paste0(.gpatterns.base_dir(track), '/tidy_cpgs'), full.names=TRUE)
+    list.files(paste0(.gpatterns.base_dir(track), '/tidy_cpgs'), full.names=TRUE, pattern='tcpgs.gz')
 }
 
 .gpatterns.bipolar_model_tab_name     <- function(track) { 'mix' }
@@ -56,6 +56,13 @@
                                        system.file("bin", package="gpatterns"),
                                        'mpms')
 
+# import defs
+.gpatterns.bam2tidy_cpgs_bin <- sprintf("%s/%s",
+                                       system.file("import", package="gpatterns"),
+                                       'tidy_cpgs.py')
+.gpatterns.filter_dups_bin <- sprintf("%s/%s",
+                                       system.file("import", package="gpatterns"),
+                                       'filter_dups_cpgs.py')
 
 # Color palettes
 .blue_red_pal <- colorRampPalette(c("#87FFFF", "black", "#FF413D"))(1000)

@@ -4,7 +4,7 @@
 qq <- GetoptLong::qq
 
 #' @export
-qqv <- partial(GetoptLong::qq, collapse = TRUE)
+qqv <- function(text) {GetoptLong::qq(text, envir=parent.frame(), collapse=FALSE)}
 
 #' @export
 fread <- partial(data.table::fread, data.table=FALSE)
@@ -18,6 +18,13 @@ comify <- scales::comma
 {
     base_path <- c(gdir.cwd(), strsplit(track, '.', fixed=TRUE)[[1]])
     return(do.call(file.path, as.list(base_path)))
+}
+
+########################################################################
+.gpatterns.intervals2files <- function(intervals, files, dir){
+        intervals %>% unite('coord', chrom:end, sep='_') %>%
+            mutate(coord = paste0(dir, coord, '.tcpgs.gz')) %>%
+            filter(coord %in% files) %>% .$coord
 }
 
 #############################################################################
