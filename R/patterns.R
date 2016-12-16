@@ -39,11 +39,8 @@ gpatterns.get_tidy_cpgs <- function(track,
         return(res)
     }
 
-    .intervals2files <- function(intervals, files){
-        intervals %>% unite('coord', chrom:end, sep='_') %>%
-            mutate(coord = paste0(.gpatterns.base_dir(track), '/tidy_cpgs/', coord, '.tcpgs.gz')) %>%
-            filter(coord %in% files) %>% .$coord
-    }
+    .intervals2files <- function(intervals, files) .gpatterns.intervals2files(intervals=intervals, files=files, dir = paste0(.gpatterns.base_dir(track), '/tidy_cpgs/'))
+
 
     if (!is.null(intervals)){
         tidy_intervals <- .gpatterns.get_tidy_cpgs_intervals(track)
@@ -118,13 +115,14 @@ gpatterns.apply_tidy_cpgs <- function(track,
                              jobs_title = 'gpatterns.apply_tidy_cpgs',
                              collapse_results = FALSE,
                              ...)
-        res <- map_df(res, function(x) x$retv)
+        res <- map(res, function(x) x$retv)
     } else {
-        res <- plyr::adply(coords, 1, function(cr) {
+        res <- plyr::alply(coords, 1, function(cr) {
             f_null(track, intervals=cr)
         }, .parallel=parallel,
         .progress='text')
     }
+    res <- res %>% compact %>% map_df(~ .)
 
     return(res)
 }
@@ -407,8 +405,6 @@ gpatterns.intervs_to_pat_space <- function(tracks,
 }
 
 
-
-
 ########################################################################
 .gpatterns.tidy_cpgs_2_pat_cov  <- function(calls, pat_len, max_span){
     calls <- calls %>%
@@ -441,6 +437,146 @@ gpatterns.intervs_to_pat_space <- function(tracks,
 
     res <- calls %>% distinct(chrom, start, end) %>% left_join(res, by=c('chrom', 'start', 'end')) %>% replace_na(list(pat_cov=0))
     return(res)
+}
+
+########################################################################
+#' Generate CpG pattern frequency from tidy_cpgs
+#'
+#' @param calls tidy_cpgs
+#' @param pat_length length of the pattern, e.g. for pat_lenth == 2 patterns would
+#' be 00,01,10,11
+#' @param min_cov minimal coverage
+#' @param tidy tidy
+#'
+#' @return
+#' @export
+#'
+#' @examples
+gpatterns.tidy_cpgs_2_pat_freq <- function(calls, pat_length = 2, min_cov = 1, tidy=TRUE){
+        gen_pats <- function(calls, cgs, min_cov, pat_length=2){
+            message(qq('cpg num: 1'))
+            for (i in 1:(pat_length - 1)){
+                message(qq('cpg num: @{i+1}'))
+                calls <- calls %>%
+                    mutate(next_meth = lead(meth, i)) %>%
+                    group_by(read_id) %>%
+                    mutate(next_pos = lead(start, i)) %>%
+                    ungroup %>%
+                    filter(!is.na(next_pos)) %>%
+                    left_join(cgs %>%
+                                  mutate(next_cg=lead(start, i)),
+                              by=c('chrom', 'start', 'end')) %>%
+                    filter(next_pos == next_cg) %>%
+                    select(-next_pos, -next_cg) %>%
+                    rename_(.dots = setNames('next_meth', paste0('next_', i, '_meth')))
+            }
+
+            pats_dist <- calls %>%
+                unite('pat', ends_with('meth'), sep='') %>%
+                group_by(chrom, start, end, pat) %>%
+                summarise(n_pat = n()) %>%
+                group_by(chrom, start, end) %>%
+                filter(sum(n_pat) >= min_cov) %>%
+                mutate(p_pat = n_pat / sum(n_pat)) %>%
+                ungroup %>%
+                mutate(pat = factor(pat))
+
+            return(pats_dist)
+        }
+
+        fill_columns <- function(pats_dist, pat_length){
+            possible_pats <- apply(expand.grid(rep(list(0:1), pat_length)), 1,
+                                   function(x) paste0(x, collapse='')) %>%
+                paste0('pat_', .)
+
+            for (column in possible_pats){
+                if (!(column %in% colnames(pats_dist))){
+                    if (nrow(pats_dist) == 0){
+                        pats_dist[, column] <- numeric()
+                    } else {
+                        pats_dist[, column] <- 0
+                    }
+                }
+            }
+            return(pats_dist[, c('chrom', 'start', 'end', possible_pats)])
+        }
+
+        calls <-  calls %>%
+            mutate(start = cg_pos, end = start + 1) %>%
+            select(chrom, start, end, read_id, meth)
+
+        message('reading genomic CpGs..')
+        intervs <- calls %>%
+            group_by(chrom) %>%
+            summarise(start = min(start), end = max(end))
+
+        cgs <- gextract(.gpatterns.genome_cpgs_track, intervals=intervs) %>% select(chrom, start, end) %>% tbl_df
+
+        message('generating pats...')
+        pats_dist <- gen_pats(calls, cgs, min_cov=min_cov, pat_length=pat_length)
+
+        if (nrow(pats_dist) == 0){
+            return(fill_columns(pats_dist[, c('chrom', 'start', 'end')], pat_length))
+        }
+
+        if (tidy){
+            pats_dist <- k %>%
+                tidyr::complete(nesting(chrom, start, end), pat, fill=list(p_pat=0, n_pat=0))
+        } else {
+            pats_dist <- pats_dist %>%
+                select(-p_pat) %>%
+                mutate(pat = paste0('pat_', pat)) %>% spread('pat', 'n_pat')
+            pats_dist[is.na(pats_dist)] <- 0
+            pats_dist <- fill_columns(pats_dist, pat_length)
+        }
+
+        return(pats_dist)
+}
+
+
+
+
+########################################################################
+#' Generate pileup form tidy_cpgs
+#'
+#' @param calls tidy_cpgs
+#' @param dsn downsampling n
+#'
+#' @return data frame with chrom,start,end,meth,unmeth,cov,avg
+#' @export
+#'
+#' @examples
+gpatterns.tidy_cpgs_2_pileup <- function(calls, dsn = NULL){
+    pileup <- calls %>%
+        select(chrom, start=cg_pos, call=meth) %>%
+        mutate(call = ifelse(call == 1, 'meth', 'unmeth'))
+
+    if (!is.null(dsn)) {
+        pileup <- pileup %>%
+            group_by(chrom, start) %>%
+            filter(n() >= dsn) %>%
+            sample_n(dsn)
+    }
+
+    pileup <- pileup %>%
+        group_by(chrom, start, call) %>%
+        summarise(n = n()) %>%
+        mutate(end = start + 1) %>%
+        select(chrom, start, end, call, n) %>%
+        spread('call', 'n', fill=0)
+
+    if (!('meth' %in% colnames(pileup))){
+        pileup$meth <- 0
+    }
+    if (!('unmeth' %in% colnames(pileup))){
+        pileup$unmeth <- 0
+    }
+
+    pileup <- pileup %>%
+        mutate(cov = meth + unmeth, avg = meth / cov) %>%
+        select(chrom, start, end, meth, unmeth, cov, avg)
+
+    return(pileup)
 }
 
 # Pattern utility Functions ------------------------------------------------
@@ -564,9 +700,9 @@ gpatterns.extract_all <- function(...,
     }
 
     tracks <- sapply(list(...), as.character)
-    
+
     samples <- samples %||% tracks
-    
+
     if (!is.null(dsn)){
         tracks <- .gpatterns.downsampled_track_name(tracks, dsn)
     }
@@ -655,7 +791,7 @@ gpatterns.extract <- function(...,
 
     tracks <- sapply(list(...), as.character)
     colnames <- colnames %||% tracks
-    
+
     if (!is.null(dsn)){
         tracks <- .gpatterns.downsampled_track_name(tracks, dsn)
     }
