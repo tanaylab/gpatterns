@@ -5,33 +5,53 @@
 \title{Creates a track from bam files.}
 \usage{
 gpatterns.import_from_bam(bams, workdir, track, description,
-  conversion = "CT", paired_end = TRUE, downsample = FALSE, dsn = NULL,
-  pat_cov_tracks = c(3, 5, 7), pat_freq_len = 2)
+  steps = c("bam2tidy_cpgs", "filter_dups", "bind_tidy_cpgs", "pileup",
+  "pat_freq", "pat_cov"), conversion = "ct", paired_end = TRUE,
+  dsn = NULL, pat_cov_lens = c(3, 5, 7), max_span = 500,
+  pat_freq_len = 2, nbins = nrow(gintervals.all()), groot = GROOT,
+  use_sge = FALSE, max_jobs = 400,
+  parallel = getOption("gpatterns.parallel"))
 }
 \arguments{
-\item{bams}{bams}
+\item{bams}{character vector with path of bam files}
 
-\item{workdir}{workdir}
+\item{workdir}{directory in which the files would be saved}
 
-\item{track}{track}
+\item{track}{name of the track to generate}
 
-\item{description}{description}
+\item{description}{description of the track to generate}
 
-\item{conversion}{conversion}
+\item{steps}{steps of the pipeline to do. Possible options are:
+'bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov'}
 
-\item{paired_end}{paired_end}
+\item{conversion}{bisulfite conversion. could be 'ct' or 'ga'}
 
-\item{downsample}{downsample}
+\item{paired_end}{bam files are paired end, with R1 and R2 interleaved}
 
-\item{dsn}{dsn}
+\item{dsn}{downsampling n. Leave NULL for no downsampling}
 
-\item{pat_cov_tracks}{pat_cov_tracks}
+\item{pat_cov_lens}{lengthes of patterns to calculate pattern coverage track for}
 
-\item{pat_freq_len}{pat_freq_len}
+\item{max_span}{maximal span to look for patterns (usually the maximal insert length)}
+
+\item{pat_freq_len}{lengthes of patterns to calculate pattern frequency track for}
+
+\item{nbins}{number of genomic bins to separate the analysis.}
+
+\item{groot}{root of misha genomic database to save the tracks}
+
+\item{use_sge}{use sun grid engine for parallelization}
+
+\item{max_jobs}{maximal number of jobs for sge parallelization}
+
+\item{parallel}{parallelize using threads (number of threads is determined by gpatterns.set_parallel)}
+}
+\value{
+if 'stats' is one of the steps - data frame with statistics. Otherwise none.
 }
 \description{
 Creates a track from bam files for a specific sample.
-Using this method is discouraged: if you have large dataset use the
-Snakemake pipeline instead.
+Use this methods only for small datasets. For large datasets please
+the Snakemake pipeline.
 }
 
