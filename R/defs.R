@@ -1,3 +1,4 @@
+# library imports ------------------------------------------------
 #' @import tidyr
 #' @import dplyr
 #' @import purrr
@@ -5,7 +6,7 @@
 #' @importFrom data.table fwrite
 #' @importFrom GetoptLong qq
 
-# Tracks and table names
+# Tracks and table names ------------------------------------------------
 .gpatterns.downsampled_track_name <- function(track, dsn) {qqv('@{track}.ds@{dsn}') }
 .gpatterns.cov_track_name <- function(track) { qqv('@{track}.cov') }
 .gpatterns.avg_track_name <- function(track) { qqv('@{track}.avg') }
@@ -52,19 +53,26 @@
 
 .gpatterns.genome_cpgs_track <- 'seq.CG'
 .gpatterns.genome_cpgs_intervals <- 'intervs.global.seq_CG'
-.gpatterns.bipolar_model_bin <- sprintf("%s/%s",
-                                       system.file("bin", package="gpatterns"),
-                                       'mpms')
 
-# import defs
+
+# Import defs ------------------------------------------------
 .gpatterns.bam2tidy_cpgs_bin <- sprintf("%s/%s",
                                        system.file("import", package="gpatterns"),
                                        'tidy_cpgs.py')
 .gpatterns.filter_dups_bin <- sprintf("%s/%s",
                                        system.file("import", package="gpatterns"),
                                        'filter_dups_cpgs.py')
+.gpatterns.bissli2_bin <-  sprintf("%s/%s",
+                                       system.file("bissli2", package="gpatterns"),
+                                       'bissli2-align.pl')
+.gpatterns.bissli2_build_bin <-  sprintf("%s/%s",
+                                       system.file("bissli2", package="gpatterns"),
+                                       'bissli2-build.pl')
+.gpatterns.bipolar_model_bin <- sprintf("%s/%s",
+                                        system.file("bin", package="gpatterns"),
+                                        'mpms')
 
-# Color palettes
+# Color palettes ------------------------------------------------
 .blue_red_pal <- colorRampPalette(c("#87FFFF", "black", "#FF413D"))(1000)
 .blue_black_red_yellow_pal <- colorRampPalette(c("white", "blue",  "black", "red", "yellow"))(1000)
 .red_blue_pal <- rev(colorRampPalette(c("#87FFFF", "black", "#FF413D"))(1000))

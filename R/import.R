@@ -1,5 +1,81 @@
-# import Functions ------------------------------------------------
+# Bissli Functions ------------------------------------------------
 
+#' Align bisulfite converted reads to a reference genome using bowtie2
+#'
+#' @param r1_fastq a vector of FASTQ files to align (read1)
+#' @param out_bam bam output file with aligned reads
+#' @param genome_seq A directory holding the reference genome, one FASTA file per
+#' chromosome
+#' @param bissli2_idx The basename of the index to be searched. The index is created using
+#' gpatterns.bissli2_build
+#' @param r2_fastq a vector of FASTQ files to align (read2)
+#' @param bissli2_bin path for bissli2-align
+#' @param bowtie2 path for bowtie2
+#' @param samtools path for samtools
+#' @param maxins maximum fragment length (bowtie2 maxins argument)
+#' @param threads number of threads to use
+#' @param genome_type ct/ga. if 'ct' - Assume that the reads to be aligned underwent C->T conversion. If
+#' paired-end reads are aligned, then assume read 1 underwent C->T
+#' conversion while read 2 underwent G->A conversion. The --ct and --ga
+#' options are mutually exclusive. if 'ga' - Assume that the reads to be aligned underwent G->A conversion. If
+#' paired-end reads are aligned, then assume read 1 underwent G->A
+#' conversion while read 2 underwent C->T conversion. The --ct and --ga
+#' options are mutually exclusive.
+#' @param tmp_dir Directorhy for storing temporary files
+#' @param bissli2_params additional parameters to bissli2/bowtie2
+#'
+#' @return
+#' @export
+#'
+#' @examples
+gpatterns.bissli2 <- function(r1_fastq,
+                              out_bam,
+                              genome_seq,
+                              bissli2_idx,
+                              r2_fastq=NULL,
+                              bissli2_bin=.gpatterns.bissli2_bin,
+                              bowtie2='bowtie2',
+                              samtools = 'samtools',
+                              maxins=1000,
+                              threads=10,
+                              genome_type='ct',
+                              tmp_dir = NULL,
+                              bissli2_params = ''){
+    tmp_dir <- tmp_dir %||% tempdir()
+    r1_fastq <- paste(r1_fastq, collapse=',')
+    if (is.null(r2_fastq)){
+        command <- qq('@{bissli2_bin} @{bissli2_params} --tmp-dir @{tmp_dir} --bowtie2 @{bowtie2} --@{genome_type} -g @{genome_seq} -x @{bissli2_idx} -U @{r1_fastq} --threads @{threads} | @{samtools} view -b -S -h -o @{out_bam} -')
+    } else {
+        r2_fastq <- paste(r2_fastq, collapse=',')
+        command <- qq('@{bissli2_bin} @{bissli2_params} --tmp-dir @{tmp_dir} --bowtie2 @{bowtie2} --maxins @{maxins} --@{genome_type} -g @{genome_seq} -x @{bissli2_idx} -1 @{r1_fastq} -2 @{r2_fastq} --threads @{threads} | @{samtools} view -b -S -h -o @{out_bam} -')
+    }
+    system(command)
+}
+
+#' Create an bowtie2 index for a bisulfite converted genome
+#'
+#' @param reference a vector of FASTA file names holding the reference genome.
+#' @param idx_base The basename of the index files that will be created.
+#' @param bowtie2_build_bin The path of the bowtie2-build executable. [bowtie2-build]
+#' @param bowtie2_options Any unknown options are passed transparently to bowtie2-build.
+#' Note that bissli2-build can only handle FASTA files as input. Therefore the '-f' option is always passed to bowtie2-build
+#' @param bissli2_build_bin binary of bissli2-build
+#'
+#' @return
+#' @export
+#'
+#' @examples
+gpatterns.bissli2_build <- function(reference,
+                                    idx_base,
+                                    bowtie2_options,
+                                    bowtie2_build_bin='bowtie2-build',
+                                    bissli2_build_bin=.gpatterns.bissli2_build_bin){
+    reference <- paste(reference, collapse=',')
+    command <- qq('@{bissli2_build_bin} --bowtie2-build @{bowtie2_build_bin} @{reference} @{idx_base} @{bowtie2_options}')
+    system(command)
+}
+
+# import Functions ------------------------------------------------
 ########################################################################
 .step_invoke <- function(step, steps, f, ...){
     if (step %in% steps){
@@ -10,56 +86,46 @@
     }
 }
 
+
+
 ########################################################################
-#' Creates a track from bam files.
+#' Create a track from bam files.
 #'
 #' @description Creates a track from bam files for a specific sample.
-#' Use this methods only for small datasets. For large datasets please
+#' Use this methods only for small datasets. For large datasets please use
 #' the Snakemake pipeline.
 #'
 #' @param bams character vector with path of bam files
 #' @param workdir directory in which the files would be saved
-#' @param track name of the track to generate
-#' @param description description of the track to generate
 #' @param steps steps of the pipeline to do. Possible options are:
 #' 'bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov'
 #' @param conversion bisulfite conversion. could be 'ct' or 'ga'
 #' @param paired_end bam files are paired end, with R1 and R2 interleaved
-#' @param dsn downsampling n. Leave NULL for no downsampling
-#' @param pat_cov_lens lengthes of patterns to calculate pattern coverage track for
-#' @param max_span maximal span to look for patterns (usually the maximal insert length)
-#' @param pat_freq_len lengthes of patterns to calculate pattern frequency track for
 #' @param nbins number of genomic bins to separate the analysis.
-#' @param groot root of misha genomic database to save the tracks
-#' @param use_sge use sun grid engine for parallelization
-#' @param max_jobs maximal number of jobs for sge parallelization
-#' @param parallel parallelize using threads (number of threads is determined by gpatterns.set_parallel)
+#' @param ... gpatterns.import_from_tidy_cpgs parameters
 #'
+#' @inheritParams gpatterns::gpatterns.import_from_tidy_cpgs
 #'
 #' @return if 'stats' is one of the steps - data frame with statistics. Otherwise none.
 #' @export
 #'
 #' @examples
 gpatterns.import_from_bam <- function(bams,
-                                      workdir,
-                                      track,
-                                      description,
-                                      steps = c('bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov'),
+                                      workdir = NULL,
+                                      track = NULL,
+                                      steps = 'all',
                                       conversion = 'ct',
                                       paired_end = TRUE,
-                                      dsn = NULL,
-                                      pat_cov_lens = c(3,5,7),
-                                      max_span = 500,
-                                      pat_freq_len = 2,
                                       nbins = nrow(gintervals.all()),
                                       groot = GROOT,
                                       use_sge = FALSE,
                                       max_jobs = 400,
-                                      parallel = getOption('gpatterns.parallel')){
+                                      parallel = getOption('gpatterns.parallel'),
+                                      ...){
     gsetroot(groot)
     all_steps <- c('bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov', 'stats')
 
-    if (steps == 'all'){
+    if (length(steps) == 1 && steps == 'all'){
         steps <- all_steps
     }
 
@@ -97,12 +163,79 @@ gpatterns.import_from_bam <- function(bams,
         max_jobs = max_jobs,
         parallel = parallel)
 
+    tidy_cpgs_steps <- c('bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov')
+    if (any(steps %in% tidy_cpgs_steps)){
+        gpatterns.import_from_tidy_cpgs(tidy_cpgs_dirs = qq('@{workdir}/tidy_cpgs_uniq'),
+                                        track = track,
+                                        steps = steps[steps %in% tidy_cpgs_steps],
+                                        groot = groot,
+                                        use_sge = use_sge,
+                                        parallel = parallel,
+                                        max_jobs = max_jobs,
+                                        ...)
+    }
+
+    .step_invoke(
+        'stats',
+        steps,
+        gpattens.get_pipeline_stats,
+        track = track,
+        tidy_cpgs_stats_dir = qq('@{workdir}/tidy_cpgs/stats'),
+        uniq_tidy_cpgs_stats_dir = qq('@{workdir}/tidy_cpgs_uniq/stats'))
+}
+
+########################################################################
+#' Create a track from tidy_cpgs files
+#'
+#' @description Creates a track from tidy_cpgs files for a specific sample.
+#' Use this methods only for small datasets. For large datasets please
+#' the Snakemake pipeline.
+#'
+#' @param tidy_cpgs tidy_cpgs object / vector with directories of tidy_cpgs
+#' @param track name of the track to generate
+#' @param description description of the track to generate
+#' @param steps steps of the pipeline. Possible options are:
+#' 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov'
+#' @param dsn downsampling n. Leave NULL for no downsampling
+#' @param pat_cov_lens lengthes of patterns to calculate pattern coverage track for
+#' @param max_span maximal span to look for patterns (usually the maximal insert length)
+#' @param pat_freq_len lengthes of patterns to calculate pattern frequency track for
+#' @param groot root of misha genomic database to save the tracks
+#' @param use_sge use sun grid engine for parallelization
+#' @param max_jobs maximal number of jobs for sge parallelization
+#' @param parallel parallelize using threads (number of threads is determined by gpatterns.set_parallel)
+#'
+#' @return
+#' @export
+#'
+#' @examples
+gpatterns.import_from_tidy_cpgs <- function(tidy_cpgs,
+                                            track,
+                                            description,
+                                            steps = 'all',
+                                            dsn = NULL,
+                                            pat_cov_lens = c(3,5,7),
+                                            max_span = 500,
+                                            pat_freq_len = 2,
+                                            groot = GROOT,
+                                            use_sge = FALSE,
+                                            max_jobs = 400,
+                                            parallel = getOption('gpatterns.parallel')){
+    gsetroot(groot)
+    all_steps <- c('bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov')
+
+    if (steps == 'all'){
+        steps <- all_steps
+    }
+
+    stopifnot(all(steps %in% c(all_steps)))
+
     # bind tidy cpgs
     .step_invoke(
         'bind_tidy_cpgs',
         steps,
         .gpatterns.bind_tidy_cpgs,
-        uniq_tidy_cpgs_dir = qq('@{workdir}/tidy_cpgs_uniq'),
+        tidy_cpgs_dirs=tidy_cpgs_dirs,
         track = track)
 
     # pileup
@@ -113,11 +246,10 @@ gpatterns.import_from_bam <- function(bams,
         track = track,
         description = description,
         genomic_bins = genomic_bins,
-        dsn = NULL,
+        dsn = dsn,
         use_sge = use_sge,
         max_jobs = max_jobs,
         parallel = parallel)
-
 
     # pat_freq
     .step_invoke(
@@ -127,10 +259,10 @@ gpatterns.import_from_bam <- function(bams,
         track = track,
         description = description,
         pat_freq_len = pat_freq_len,
+        nbins = 350,
         use_sge = use_sge,
         max_jobs = max_jobs,
         parallel = parallel)
-
 
     # pat_cov
     .step_invoke(
@@ -145,13 +277,6 @@ gpatterns.import_from_bam <- function(bams,
         max_jobs = max_jobs,
         parallel = parallel)
 
-    .step_invoke(
-        'stats',
-        steps,
-        gpattens.get_pipeline_stats,
-        track = track,
-        tidy_cpgs_stats_dir = qq('@{workdir}/tidy_cpgs/stats'),
-        uniq_tidy_cpgs_stats_dir = qq('@{workdir}/tidy_cpgs_uniq/stats'))
 }
 
 ########################################################################
@@ -187,7 +312,13 @@ gpattens.get_pipeline_stats <- function(track,
     stats[['meth_calls']] <- sm[5]
     stats[['global_avg_meth']] <- gsummary(qq('@{track}.avg'))[6]
 
-    stats <- stats %>% bind_cols(gpatterns.apply_tidy_cpgs(track, function(x) x %>% summarise(insert_len = mean(abs(insert_len), na.rm=T), n = n())) %>% mutate(f = insert_len * n / sum(n)) %>% summarise(insert_len = sum(f)))
+    stats <- stats %>%
+        bind_cols(
+            gpatterns.apply_tidy_cpgs(track,
+                                      function(x) x %>%
+                                          summarise(insert_len = mean(abs(insert_len), na.rm=T),
+                                                    n = n())) %>%
+                mutate(f = insert_len * n / sum(n)) %>% summarise(insert_len = sum(f)))
 
     if (add_mapping_stats){
         stats <- stats %>% bind_cols(tidy_cpgs_stats)
@@ -205,8 +336,7 @@ gpattens.get_pipeline_stats <- function(track,
     commands <- genomic_bins %>% by_row( function(gbins){
         stats_fn <- qq('@{stats_dir}/@{gbins$chrom}_@{gbins$start}_@{gbins$end}.stats')
         output_fn <- qq('@{tidy_cpgs_dir}/@{gbins$chrom}_@{gbins$start}_@{gbins$end}.tcpgs.gz')
-        qq('ulimit -u 16384;
-           @{bam_prefix} @{paste(bams, collapse=\'\')} |
+        qq('@{bam_prefix} @{paste(bams, collapse=\' \')} |
            @{bin} -i - -o - -s @{stats_fn} --conversion @{conversion}
            @{single_end} --chrom @{gbins$chrom}
            --genomic-range @{gbins$start} @{gbins$end} |
@@ -214,7 +344,7 @@ gpattens.get_pipeline_stats <- function(track,
            gzip -c > @{output_fn}') %>%
             gsub('\n', '', .)
         }, .collate =  'cols', .to = 'cmd')
-    .gpatterns.run_command(commands, jobs_title = 'bam2tidy_cpgs', ...)
+    .gpatterns.run_commands(commands, jobs_title = 'bam2tidy_cpgs', ...)
 }
 
 ########################################################################
@@ -233,37 +363,93 @@ gpattens.get_pipeline_stats <- function(track,
         stats_fn <- qq('@{stats_dir}/@{gbins$chrom}_@{gbins$start}_@{gbins$end}.stats')
         input_fn <- qq('@{tidy_cpgs_dir}/@{gbins$chrom}_@{gbins$start}_@{gbins$end}.tcpgs.gz')
         output_fn <- qq('@{uniq_tidy_cpgs_dir}/@{gbins$chrom}_@{gbins$start}_@{gbins$end}.tcpgs.gz')
-        qq('ulimit -u 16384; @{bin} -i @{input_fn} -o - -s @{stats_fn} @{single_end} | gzip -c > @{output_fn}')
+        qq('@{bin} -i @{input_fn} -o - -s @{stats_fn} @{single_end} | gzip -c > @{output_fn}')
         }, .collate =  'cols', .to = 'cmd')
 
-    .gpatterns.run_command(commands, jobs_title = 'filter_dups', ...)
+    .gpatterns.run_commands(commands, jobs_title = 'filter_dups', ...)
 
 }
 
 ########################################################################
-.gpatterns.bind_tidy_cpgs <- function(uniq_tidy_cpgs_dir, track = track, genomic_bins = genomic_bins){
+.gpatterns.bind_tidy_cpgs <- function(tidy_cpgs_dirs, track){
+    .collate_gzips <- function(files, outfile) {
+        if (length (files) == 1){
+            return(system(qq('ln -sf @{files} @{outfile}')))
+        } else {
+            system(qq('cp @{files[1]} @{outfile}'))
+            for (i in 2:length(files)){
+                return(system(qq('cat @{files[i]} | gzip -d -c | tail -n +2 | gzip -c >> @{outfile}')))
+            }
+        }
+    }
     track_path <- .gpatterns.base_dir(track)
     system(qq('mkdir -p @{track_path}'))
-    system(qq('ln -sf @{uniq_tidy_cpgs_dir} @{track_path}/tidy_cpgs'))
+    if (1 == length(tidy_cpgs_dirs)){
+        system(qq('ln -sf @{tidy_cpgs_dirs} @{track_path}/tidy_cpgs'))
+    } else {
+        system(qq('mkdir -p @{track_path}/tidy_cpgs'))
+        tidy_cpgs_dirs %>%
+            map_df(~ tibble(lib=.x, fn=list.files(.x, pattern='.*\\.tcpgs\\.gz$'))) %>%
+            mutate(fn1 = fn) %>%
+            group_by(fn) %>%
+            by_slice(~ .collate_gzips(paste0(.x$lib, '/', .x$fn1[1]),
+                                      qq('@{track_path}/tidy_cpgs/@{.x$fn1[1]}')) )
+    }
 }
 
 ########################################################################
-.gpatterns.pileup <- function(track, description, dsn = NULL, ...){
+#' @export
+.gpatterns.tidy_cpgs_to_files <- function(tidy_cpgs, intervals, track=NULL, outdir=NULL){
+    if (!is.null(track)){
+        outdir <- paste0(.gpatterns.base_dir(track), '/tidy_cpgs')
+    }
+    system(qq('mkdir -p @{outdir}'))
+    tidy_cpgs <- tidy_cpgs %>%
+        bind_cols(tidy_cpgs %>%
+                      select(chrom, start=cg_pos) %>%
+                      mutate(end = start + 1) %>%
+                      gintervals.neighbors1(intervals) %>%
+                      filter(dist == 0) %>%
+                      select(chrom1, start1, end1)
+                  )
+    tidy_cpgs %>% unite('grp', chrom1, start1, end1, remove=F) %>% group_by(grp) %>% by_slice(
+        function(x) {
+        tmp <- tempfile()
+        fwrite(x %>% select(-chrom1, -start1, -end1), tmp, sep=',', row.names=F, col.names=T)
+        system(qq('cat @{tmp} | gzip -c > @{outdir}/@{x$chrom1[1]}_@{x$start1[1]}_@{x$end1[1]}.tcpgs.gz'))
+        system('rm -f @{tmp}')
+    } )
+}
+
+########################################################################
+#' @export
+.gpatterns.pileup <- function(track, description, dsn = NULL, columns = c('meth', 'unmeth', 'cov', 'avg'), ...){
     message('calculating pileup...')
     pileup <- gpatterns.apply_tidy_cpgs(track, function(x) gpatterns.tidy_cpgs_2_pileup(x, dsn=dsn), ...)
     message('importing pileup to misha...')
-    .gpattern.import_intervs_table(track, description, pileup, columns = c('meth', 'unmeth', 'cov', 'avg'))
+    .gpattern.import_intervs_table(track, description, pileup, columns=columns)
 }
 
 ########################################################################
-.gpatterns.pat_freq <- function(track, description, pat_freq_len, ...){
-    message(qq('calculating pattern frequency (@{pat_freq_len})...'))
-    pat_freq <- gpatterns.apply_tidy_cpgs(track,
-                                          function(x)
-                                              gpatterns.tidy_cpgs_2_pat_freq(x,
-                                                                             pat_length=pat_freq_len,
-                                                                             tidy=FALSE),
-                                          ...)
+.gpatterns.pat_freq <- function(track, description, pat_freq_len, nbins=NULL, ...){
+    message(qq('calculating pattern frequency (pattern length: @{pat_freq_len})...'))
+    if (!is.null(nbins)){
+        intervals <- gbin_intervals(intervals = gintervals.all(), nbins)
+    } else {
+        intervals <- nbins
+    }
+
+    pat_freq <- gpatterns.apply_tidy_cpgs(
+        track,
+        function(x)
+            gpatterns.tidy_cpgs_2_pat_freq(x,
+                                           pat_length =
+                                               pat_freq_len,
+                                           tidy =
+                                               FALSE),
+        intervals = intervals,
+        ...)
+
     if (nrow(pat_freq) == 0){
         warning('no patterns were found. Skipping creation of pattern frequency tracks')
     } else {
@@ -307,17 +493,19 @@ gpattens.get_pipeline_stats <- function(track,
 }
 
 ########################################################################
-.gpatterns.run_command <- function(commands, use_sge=FALSE, max_jobs=400, parallel = getOption('gpatterns.parallel'), jobs_title=''){
+.gpatterns.run_commands <- function(commands, use_sge=FALSE, max_jobs=400, parallel = getOption('gpatterns.parallel'), jobs_title='', ...){
       if (use_sge){
         command_list <- 1:length(commands$cmd) %>% map(~ qq('system(commands$cmd[@{.x}])'))
         res <- gcluster.run2(command_list = command_list,
                              max.jobs = max_jobs,
                              packages = 'gpatterns',
                              jobs_title = jobs_title,
-                             collapse_results = FALSE)
+                             collapse_results = FALSE, ....)
         codes <-  res %>% map_int(~ .x$retv)
     } else {
-        res <- commands %>% plyr::alply(1, function(x) system(x$cmd), .parallel=parallel)
+        ulimit <- getOption('gpatterns.ulimit')
+        res <- commands %>% plyr::alply(1, function(x)
+            system(paste(qq('ulimit -u @{ulimit};'), x$cmd)), .parallel=parallel)
         codes <- res
     }
     walk2(codes, commands$cmd, function(code, cmd) if (code != 0) stop(qq('command "@{cmd}" failed')))

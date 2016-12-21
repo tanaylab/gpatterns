@@ -115,6 +115,7 @@ gpatterns.apply_tidy_cpgs <- function(track,
                              jobs_title = 'gpatterns.apply_tidy_cpgs',
                              collapse_results = FALSE,
                              ...)
+
         res <- map(res, function(x) x$retv)
     } else {
         res <- plyr::alply(coords, 1, function(cr) {
@@ -122,13 +123,19 @@ gpatterns.apply_tidy_cpgs <- function(track,
         }, .parallel=parallel,
         .progress='text')
     }
-    res <- res %>% compact %>% map_df(~ .)
+
+    tryCatch(res <- res %>% compact %>% map_df(~ .),
+             error=function(e) {
+                 message('wasn\'t able to collate_results, returning raw output')
+             })
+
 
     return(res)
 }
 
 
 ########################################################################
+#' @export
 .gpatterns.get_tidy_cpgs_intervals <- function(track){
     .gpatterns.tidy_cpgs_files(track) %>%
         basename %>%
@@ -453,6 +460,11 @@ gpatterns.intervs_to_pat_space <- function(tracks,
 #'
 #' @examples
 gpatterns.tidy_cpgs_2_pat_freq <- function(calls, pat_length = 2, min_cov = 1, tidy=TRUE){
+        message(getOption('gmax.data.size'))
+        op <- options()
+        on.exit(options(op))
+        options(gmax.data.size = 1e9)
+        options(gmultitasking = FALSE)
         gen_pats <- function(calls, cgs, min_cov, pat_length=2){
             message(qq('cpg num: 1'))
             for (i in 1:(pat_length - 1)){
