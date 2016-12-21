@@ -11,13 +11,16 @@ fread <- partial(data.table::fread, data.table=FALSE)
 
 
 #############################################################################
+#' @export
 comify <- scales::comma
 
 #############################################################################
 .gpatterns.base_dir <- function(track)
 {
-    base_path <- c(gdir.cwd(), strsplit(track, '.', fixed=TRUE)[[1]])
-    return(do.call(file.path, as.list(base_path)))
+    map(track, ~  c(gdir.cwd(), strsplit(.x, '.', fixed=TRUE)[[1]])) %>%
+        map(~ do.call(file.path, as.list(.x))) %>%
+        as_vector %>%
+        return()
 }
 
 ########################################################################
