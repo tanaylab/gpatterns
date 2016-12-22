@@ -2,7 +2,7 @@
 % Please edit documentation in common/gutils.r
 \name{gcluster.run2}
 \alias{gcluster.run2}
-\title{Runs R commands on a cluster that supports SGE. see \link[misha]{gcluster.run}}
+\title{Runs R commands on a cluster that supports SGE}
 \usage{
 gcluster.run2(..., command_list = NULL, opt.flags = "", max.jobs = 400,
   debug = FALSE, R = paste0(R.home(component = "bin"), "/R"),
@@ -21,7 +21,7 @@ gcluster.run2(..., command_list = NULL, opt.flags = "", max.jobs = 400,
 
 \item{max.jobs}{maximal number of simultaneously submitted jobs}
 
-\item{debug}{if 'TRUE' additional parameters are printed}
+\item{debug}{if 'TRUE', additional reports are printed}
 
 \item{R}{command that launches R}
 
@@ -52,9 +52,12 @@ if collapse_results is TRUE: data frame with the results of all jobs (rbinded).
 if collapse_results is FALSE returns the same as: \link[misha]{gcluster.run}
 }
 \description{
-Runs R commands on a cluster that supports SGE. see \link[misha]{gcluster.run}
+Runs R commands on a cluster that supports SGE
 }
 \examples{
 
+}
+\seealso{
+\code{\link{misha::gcluster.run}}
 }
 

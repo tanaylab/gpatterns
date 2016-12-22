@@ -11,6 +11,27 @@ fread <- partial(data.table::fread, data.table=FALSE)
 
 
 #############################################################################
+.is_tidy_cpgs <- function(obj){
+    return('data.frame' %in% class(obj) &&
+               all(
+                   c(
+                       "read_id",
+                       "chrom",
+                       "start",
+                       "end",
+                       "strand",
+                       "umi1",
+                       "umi2",
+                       "insert_len",
+                       "num",
+                       "cg_pos",
+                       "meth",
+                       "qual"
+                   ) %in% colnames(obj)
+               ))
+}
+
+#############################################################################
 #' @export
 comify <- scales::comma
 
@@ -21,6 +42,12 @@ comify <- scales::comma
         map(~ do.call(file.path, as.list(.x))) %>%
         as_vector %>%
         return()
+}
+
+########################################################################
+#' @export
+gpatterns.track_exists <- function(track){
+    dir.exists(paste0(.gpatterns.base_dir(track), '/tidy_cpgs'))
 }
 
 ########################################################################

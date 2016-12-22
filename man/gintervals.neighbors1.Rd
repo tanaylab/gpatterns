@@ -2,7 +2,7 @@
 % Please edit documentation in common/gutils.r
 \name{gintervals.neighbors1}
 \alias{gintervals.neighbors1}
-\title{Wrapper around gintervals.neighbours that does not return conflicting colnames}
+\title{Finds neighbors between two sets of intervals (and does not return conflicting column names)}
 \usage{
 gintervals.neighbors1(intervals1 = NULL, intervals2 = NULL, suffix = "1",
   maxneighbors = 1, mindist = -1e+09, maxdist = 1e+09,
@@ -12,6 +12,6 @@ gintervals.neighbors1(intervals1 = NULL, intervals2 = NULL, suffix = "1",
 \item{suffix}{suffix for conflicting colnames}
 }
 \description{
-Wrapper around gintervals.neighbours that does not return conflicting colnames
+Finds neighbors between two sets of intervals (and does not return conflicting column names)
 }
 
