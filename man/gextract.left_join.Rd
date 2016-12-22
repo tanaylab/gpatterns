@@ -2,7 +2,8 @@
 % Please edit documentation in common/gutils.r
 \name{gextract.left_join}
 \alias{gextract.left_join}
-\title{Wrapper of gextract the puts the intervals instead of intervalID}
+\title{Returns the result of track expressions evaluation for each of the
+iterator intervals, and cbinds the intervals (instead of intervalID)}
 \usage{
 gextract.left_join(expr, intervals = NULL, colnames = NULL,
   iterator = NULL, band = NULL, file = NULL, intervals.set.out = NULL,
@@ -26,7 +27,8 @@ gextract.left_join(expr, intervals = NULL, colnames = NULL,
 \item{suffix}{suffix for conflicting column names}
 }
 \description{
-Wrapper of gextract the puts the intervals instead of intervalID
+Returns the result of track expressions evaluation for each of the
+iterator intervals, and cbinds the intervals (instead of intervalID)
 }
 \seealso{
 \code{\link{misha::gextract}}

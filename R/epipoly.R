@@ -125,7 +125,7 @@ gpatterns.epipoly_plot <- function(
 
             if (!is.null(fig_ofn)) {
                 width <- width %||% 4
-                height <- height %||% 4                
+                height <- height %||% 4
                 p <- p + ggsave(sprintf("%s_%s.png", fig_ofn, x$samp[1]), width = width,
                   height = height)
             }
@@ -156,8 +156,8 @@ gpatterns.epipoly_plot <- function(
 
         if (!is.null(fig_ofn)) {
             width <- width %||% 1.6 * ncolumns
-            width <- width %||% 1.6 * 2.3 * ceiling(length(unique(tab$samp))/ncolumns)          
-            
+            width <- width %||% 1.6 * 2.3 * ceiling(length(unique(tab$samp))/ncolumns)
+
             p <- p + ggsave(fig_ofn, width = width, height = height)
         }
         return(p)
@@ -560,7 +560,7 @@ gpatterns.theta_distance_sampling <- function(track1, track2, sampling_n, meth_r
 ########################################################################
 .calc_epipoly_sampling_intra <- function(pats, sampling_n, replace=FALSE, similarity=FALSE){
     pats_min2 <- pats %>% group_by(fid) %>% filter(n() >= 2) %>% ungroup
-    res <- adply(1:sampling_n, 1, function(x)
+    res <- plyr::adply(1:sampling_n, 1, function(x)
         pats_min2 %>%
             group_by(fid) %>%
             sample_n(2, replace=replace) %>%
@@ -598,7 +598,7 @@ gpatterns.theta_matrix_sampling <- function(tracks, samples=NULL, parallel=FALSE
             rename(track1=V1, track2=V2) %>%
             bind_rows(data.frame(track1=tracks, track2=tracks))
 
-    theta <- adply(combs, 1, function(x) {
+    theta <- plyr::adply(combs, 1, function(x) {
             a <- gpatterns.theta_distance_sampling(
                 track1=as.character(x$track1),
                 track2=as.character(x$track2),

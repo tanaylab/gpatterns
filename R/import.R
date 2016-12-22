@@ -101,7 +101,6 @@ gpatterns.bissli2_build <- function(reference,
 #' 'bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov'
 #' @param conversion bisulfite conversion. could be 'ct' or 'ga'
 #' @param paired_end bam files are paired end, with R1 and R2 interleaved
-#' @param nbins number of genomic bins to separate the analysis.
 #' @param ... gpatterns.import_from_tidy_cpgs parameters
 #'
 #' @inheritParams gpatterns::gpatterns.import_from_tidy_cpgs
@@ -168,6 +167,7 @@ gpatterns.import_from_bam <- function(bams,
         gpatterns.import_from_tidy_cpgs(tidy_cpgs_dirs = qq('@{workdir}/tidy_cpgs_uniq'),
                                         track = track,
                                         steps = steps[steps %in% tidy_cpgs_steps],
+                                        nbins = nbins,
                                         groot = groot,
                                         use_sge = use_sge,
                                         parallel = parallel,
@@ -199,7 +199,8 @@ gpatterns.import_from_bam <- function(bams,
 #' @param dsn downsampling n. Leave NULL for no downsampling
 #' @param pat_cov_lens lengthes of patterns to calculate pattern coverage track for
 #' @param max_span maximal span to look for patterns (usually the maximal insert length)
-#' @param pat_freq_len lengthes of patterns to calculate pattern frequency track for
+#' @param pat_freq_len lengthes of patterns to calculate pattern frequency track
+#' @param nbins number of genomic bins to separate the analysis.
 #' @param groot root of misha genomic database to save the tracks
 #' @param use_sge use sun grid engine for parallelization
 #' @param max_jobs maximal number of jobs for sge parallelization
@@ -217,6 +218,7 @@ gpatterns.import_from_tidy_cpgs <- function(tidy_cpgs,
                                             pat_cov_lens = c(3,5,7),
                                             max_span = 500,
                                             pat_freq_len = 2,
+                                            nbins = nrow(gintervals.all()),
                                             groot = GROOT,
                                             use_sge = FALSE,
                                             max_jobs = 400,
@@ -230,13 +232,24 @@ gpatterns.import_from_tidy_cpgs <- function(tidy_cpgs,
 
     stopifnot(all(steps %in% c(all_steps)))
 
-    # bind tidy cpgs
-    .step_invoke(
-        'bind_tidy_cpgs',
-        steps,
-        .gpatterns.bind_tidy_cpgs,
-        tidy_cpgs_dirs=tidy_cpgs_dirs,
-        track = track)
+    if (.is_tidy_cpgs(tidy_cpgs)){
+        genomic_bins <- gbin_intervals(intervals = gintervals.all(), nbins)
+        .step_invoke(
+            'bind_tidy_cpgs',
+            steps,
+            .gpatterns.tidy_cpgs_to_files,
+            tidy_cpgs = tidy_cpgs,
+            intervals = genomic_bins,
+            track = track)
+    } else {
+        # bind tidy cpgs
+        .step_invoke(
+            'bind_tidy_cpgs',
+            steps,
+            .gpatterns.bind_tidy_cpgs,
+            tidy_cpgs_dirs=tidy_cpgs_dirs,
+            track = track)
+    }
 
     # pileup
     .step_invoke(
@@ -280,52 +293,42 @@ gpatterns.import_from_tidy_cpgs <- function(tidy_cpgs,
 }
 
 ########################################################################
-#' Get QC statistics for track
+#' Separate a track by strands (for QC purposes)
 #'
-#' @param track track name
-#' @param tidy_cpgs_stats_dir directory with tidy_cpgs stats files
-#' @param uniq_tidy_cpgs_stats_dir directory with filter_dups stats files
-#' @param add_mapping_stats add full mapping statistics (singles, discordant etc.)
+#' @inheritParams gpatterns::gpatterns.import_from_tidy_cpgs
+#' @param out_track output track name if NULL \code{track} would be used
+#' @param intervals intervals to extract from tidy_cpgs
+#' @param minus_suffix suffix for the minus strand track
+#' @param plus_suffix suffix for the plus strand track
+#' @param ... additional parameters for \code{gpatterns.import_from_tidy_cpgs}
 #'
-#' @return
+#' @return none
 #' @export
 #'
 #' @examples
-gpattens.get_pipeline_stats <- function(track,
-                                        tidy_cpgs_stats_dir,
-                                        uniq_tidy_cpgs_stats_dir,
-                                        add_mapping_stats = FALSE){
-    uniq_stats <- list.files(uniq_tidy_cpgs_stats_dir, full.names=T) %>%
-        map_df(~ fread(.x)) %>%
-        summarise(total_reads = sum(total_reads), uniq_reads = sum(uniq_reads)) %>%
-        mutate(uniq_frac = uniq_reads / total_reads)
-    tidy_cpgs_stats <- list.files(tidy_cpgs_stats_dir, full.names=T) %>%
-        map_df(~ fread(.x)) %>%
-        slice(1)
-    stats <- tidy_cpgs_stats %>%
-        summarise(total_reads = sum(.),
-                  mapped_reads = good + single_R1 + single_R2,
-                  mapped_frac = mapped_reads / total_reads) %>%
-        bind_cols(uniq_stats %>% rename(good_reads = total_reads))
-    sm <- gsummary(qq('@{track}.cov'))
-    stats[['cg_num']] <- sm[1]
-    stats[['meth_calls']] <- sm[5]
-    stats[['global_avg_meth']] <- gsummary(qq('@{track}.avg'))[6]
+gpatterns.separate_strands <- function(track, description, out_track=NULL, intervals=NULL, minus_suffix='.minus', plus_suffix='.plus', ...){
+    out_track <- out_track %||% track
+    tcpgs <- gpatterns.get_tidy_cpgs(track, intervals=intervals)
+    tcpgs_plus <- tcpgs %>% filter(strand == '+')
+    tcpgs_minus <- tcpgs %>% filter(strand == '-')
 
-    stats <- stats %>%
-        bind_cols(
-            gpatterns.apply_tidy_cpgs(track,
-                                      function(x) x %>%
-                                          summarise(insert_len = mean(abs(insert_len), na.rm=T),
-                                                    n = n())) %>%
-                mutate(f = insert_len * n / sum(n)) %>% summarise(insert_len = sum(f)))
-
-    if (add_mapping_stats){
-        stats <- stats %>% bind_cols(tidy_cpgs_stats)
-    }
-
-    return(stats)
+    message(qq('doing plus strand, writing to @{out_track}@{plus_suffix}'))
+    gpatterns.import_from_tidy_cpgs(
+        tcpgs_plus,
+        track = qq('@{out_track}@{plus_suffix}'),
+        description = qq('@{description} plus strand'),
+        ...
+    )
+    message(qq('doing minus strand, writing to @{out_track}@{minus_suffix}'))
+    gpatterns.import_from_tidy_cpgs(
+        tcpgs_minus,
+        track = qq('@{out_track}@{minus_suffix}'),
+        description = qq('@{description} minus strand'),
+        ...
+    )
 }
+
+
 
 ########################################################################
 .gpatterns.bam2tidy_cpgs <- function(bams, tidy_cpgs_dir, stats_dir, genomic_bins, conversion, paired_end = TRUE, bin = .gpatterns.bam2tidy_cpgs_bin, ...){
@@ -408,8 +411,7 @@ gpattens.get_pipeline_stats <- function(track,
         bind_cols(tidy_cpgs %>%
                       select(chrom, start=cg_pos) %>%
                       mutate(end = start + 1) %>%
-                      gintervals.neighbors1(intervals) %>%
-                      filter(dist == 0) %>%
+                      gintervals.filter(intervals) %>%
                       select(chrom1, start1, end1)
                   )
     tidy_cpgs %>% unite('grp', chrom1, start1, end1, remove=F) %>% group_by(grp) %>% by_slice(
@@ -431,29 +433,34 @@ gpattens.get_pipeline_stats <- function(track,
 }
 
 ########################################################################
-.gpatterns.pat_freq <- function(track, description, pat_freq_len, nbins=NULL, ...){
+.gpatterns.pat_freq <- function(track, description, pat_freq_len, nbins=NULL, split_by_bin = TRUE, ...){
     message(qq('calculating pattern frequency (pattern length: @{pat_freq_len})...'))
     if (!is.null(nbins)){
         intervals <- gbin_intervals(intervals = gintervals.all(), nbins)
     } else {
         intervals <- nbins
     }
-
-    pat_freq <- gpatterns.apply_tidy_cpgs(
-        track,
-        function(x)
-            gpatterns.tidy_cpgs_2_pat_freq(x,
-                                           pat_length =
-                                               pat_freq_len,
-                                           tidy =
-                                               FALSE),
-        intervals = intervals,
-        ...)
+    if (split_by_bin){
+        pat_freq <- gpatterns.apply_tidy_cpgs(
+            track,
+            function(x)
+                gpatterns.tidy_cpgs_2_pat_freq(x,
+                                               pat_length =
+                                                   pat_freq_len,
+                                               tidy =
+                                                   FALSE),
+            intervals = intervals,
+            ...)
+    } else {        
+        pat_freq <- gpatterns.get_tidy_cpgs(track) %>%
+            gpatterns.tidy_cpgs_2_pat_freq(pat_length = pat_freq_len, tidy = FALSE)                              
+    }
+    
 
     if (nrow(pat_freq) == 0){
         warning('no patterns were found. Skipping creation of pattern frequency tracks')
     } else {
-        message('importing pileup to misha...')
+        message('importing pat_freq to misha...')
         .gpattern.import_intervs_table(track, description, pat_freq, columns = NULL)
     }
 }

@@ -12,6 +12,9 @@
 #' @examples
 gpatterns.get_tidy_cpgs <- function(track,
                                     intervals = NULL){
+    if (!gpatterns.track_exists(track)){
+        stop('track does not exists')
+    }
     files <- .gpatterns.tidy_cpgs_files(track)
 
     .get_tcpgs <- function(files){
@@ -44,15 +47,16 @@ gpatterns.get_tidy_cpgs <- function(track,
 
     if (!is.null(intervals)){
         tidy_intervals <- .gpatterns.get_tidy_cpgs_intervals(track)
-        if (all(
-            unite(intervals, 'coord', (chrom:end))$coord %in%
-            unite(tidy_intervals, 'coord', (chrom:end))$coord)
+        if (!is.character(intervals)){
+            if (all(
+                unite(intervals, 'coord', (chrom:end))$coord %in%
+                unite(tidy_intervals, 'coord', (chrom:end))$coord)
             ){
-            return(.intervals2files(intervals, files) %>% .get_tcpgs)
+                return(.intervals2files(intervals, files) %>% .get_tcpgs)
+            }
         }
         tcpgs <- tidy_intervals %>%
-            gintervals.neighbors1(intervals) %>%
-            filter(dist == 0) %>%
+            gintervals.filter(intervals) %>%
             .intervals2files(files) %>%
             .get_tcpgs()
         f <- tcpgs %>%
@@ -460,12 +464,9 @@ gpatterns.intervs_to_pat_space <- function(tracks,
 #'
 #' @examples
 gpatterns.tidy_cpgs_2_pat_freq <- function(calls, pat_length = 2, min_cov = 1, tidy=TRUE){
-        message(getOption('gmax.data.size'))
-        op <- options()
-        on.exit(options(op))
-        options(gmax.data.size = 1e9)
-        options(gmultitasking = FALSE)
-        gen_pats <- function(calls, cgs, min_cov, pat_length=2){
+
+        #########################################################
+        gen_pats <- function(calls, min_cov, pat_length=2){
             message(qq('cpg num: 1'))
             for (i in 1:(pat_length - 1)){
                 message(qq('cpg num: @{i+1}'))
@@ -475,11 +476,10 @@ gpatterns.tidy_cpgs_2_pat_freq <- function(calls, pat_length = 2, min_cov = 1, t
                     mutate(next_pos = lead(start, i)) %>%
                     ungroup %>%
                     filter(!is.na(next_pos)) %>%
-                    left_join(cgs %>%
-                                  mutate(next_cg=lead(start, i)),
-                              by=c('chrom', 'start', 'end')) %>%
-                    filter(next_pos == next_cg) %>%
-                    select(-next_pos, -next_cg) %>%
+                    gintervals.neighbors1(.gpatterns.genome_cpgs_intervals, maxneighbors=2) %>%
+                    filter(dist != 0) %>%
+                    filter(next_pos == start1) %>%
+                    select(-(next_pos:dist)) %>%
                     rename_(.dots = setNames('next_meth', paste0('next_', i, '_meth')))
             }
 
@@ -496,6 +496,7 @@ gpatterns.tidy_cpgs_2_pat_freq <- function(calls, pat_length = 2, min_cov = 1, t
             return(pats_dist)
         }
 
+        #########################################################
         fill_columns <- function(pats_dist, pat_length){
             possible_pats <- apply(expand.grid(rep(list(0:1), pat_length)), 1,
                                    function(x) paste0(x, collapse='')) %>%
@@ -513,19 +514,13 @@ gpatterns.tidy_cpgs_2_pat_freq <- function(calls, pat_length = 2, min_cov = 1, t
             return(pats_dist[, c('chrom', 'start', 'end', possible_pats)])
         }
 
+        #########################################################
         calls <-  calls %>%
             mutate(start = cg_pos, end = start + 1) %>%
             select(chrom, start, end, read_id, meth)
 
-        message('reading genomic CpGs..')
-        intervs <- calls %>%
-            group_by(chrom) %>%
-            summarise(start = min(start), end = max(end))
-
-        cgs <- gextract(.gpatterns.genome_cpgs_track, intervals=intervs) %>% select(chrom, start, end) %>% tbl_df
-
         message('generating pats...')
-        pats_dist <- gen_pats(calls, cgs, min_cov=min_cov, pat_length=pat_length)
+        pats_dist <- gen_pats(calls, min_cov=min_cov, pat_length=pat_length)
 
         if (nrow(pats_dist) == 0){
             return(fill_columns(pats_dist[, c('chrom', 'start', 'end')], pat_length))

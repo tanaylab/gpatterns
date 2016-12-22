@@ -6,7 +6,8 @@
 \usage{
 gpatterns.import_from_tidy_cpgs(tidy_cpgs, track, description, steps = "all",
   dsn = NULL, pat_cov_lens = c(3, 5, 7), max_span = 500,
-  pat_freq_len = 2, groot = GROOT, use_sge = FALSE, max_jobs = 400,
+  pat_freq_len = 2, nbins = nrow(gintervals.all()), groot = GROOT,
+  use_sge = FALSE, max_jobs = 400,
   parallel = getOption("gpatterns.parallel"))
 }
 \arguments{
@@ -25,7 +26,9 @@ gpatterns.import_from_tidy_cpgs(tidy_cpgs, track, description, steps = "all",
 
 \item{max_span}{maximal span to look for patterns (usually the maximal insert length)}
 
-\item{pat_freq_len}{lengthes of patterns to calculate pattern frequency track for}
+\item{pat_freq_len}{lengthes of patterns to calculate pattern frequency track}
+
+\item{nbins}{number of genomic bins to separate the analysis.}
 
 \item{groot}{root of misha genomic database to save the tracks}
 

@@ -21,8 +21,6 @@ gpatterns.import_from_bam(bams, workdir = NULL, track = NULL,
 
 \item{paired_end}{bam files are paired end, with R1 and R2 interleaved}
 
-\item{nbins}{number of genomic bins to separate the analysis.}
-
 \item{...}{gpatterns.import_from_tidy_cpgs parameters}
 }
 \value{
