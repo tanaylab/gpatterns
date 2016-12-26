@@ -5,9 +5,9 @@
 \title{Create a track from bam files.}
 \usage{
 gpatterns.import_from_bam(bams, workdir = NULL, track = NULL,
-  steps = "all", conversion = "ct", paired_end = TRUE,
-  nbins = nrow(gintervals.all()), groot = GROOT, use_sge = FALSE,
-  max_jobs = 400, parallel = getOption("gpatterns.parallel"), ...)
+  steps = "all", paired_end = TRUE, nbins = nrow(gintervals.all()),
+  groot = GROOT, use_sge = FALSE, max_jobs = 400,
+  parallel = getOption("gpatterns.parallel"), ...)
 }
 \arguments{
 \item{bams}{character vector with path of bam files}
@@ -16,8 +16,6 @@ gpatterns.import_from_bam(bams, workdir = NULL, track = NULL,
 
 \item{steps}{steps of the pipeline to do. Possible options are:
 'bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov'}
-
-\item{conversion}{bisulfite conversion. could be 'ct' or 'ga'}
 
 \item{paired_end}{bam files are paired end, with R1 and R2 interleaved}
 

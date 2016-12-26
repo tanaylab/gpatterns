@@ -76,9 +76,10 @@ gpatterns.get_tidy_cpgs <- function(track,
 #'
 #' @param track name of track
 #' @param f function to apply (needs to return a data frame)
+#' @param split_by_bin apply on each genomic bin separately
 #' @param parallel execute parallely
 #' @param use_sge use sge cluster for parallelization
-#' @param max_jobsmaximal number of jobs for sge
+#' @param max_jobs maximal number of jobs for sge
 #' @param verbose print jobs status
 #' @param ... additonal parameters for gcluster.run2
 #'
@@ -90,21 +91,26 @@ gpatterns.get_tidy_cpgs <- function(track,
 #' @examples
 gpatterns.apply_tidy_cpgs <- function(track,
                                       f,
+                                      split_by_bin = TRUE,
                                       parallel = getOption("gpatterns.parallel"),
                                       use_sge = FALSE,
                                       max_jobs = 300,
                                       verbose = FALSE,
                                       ...){
-    coords <- .gpatterns.get_tidy_cpgs_intervals(track)
-
     # make sure that empty intervals would return NULL
-    f_null <- function(track, intervals){
+    f_null <- function(track, intervals=NULL){
         tcpgs <- gpatterns.get_tidy_cpgs(track, intervals=intervals)
         if (is.null(tcpgs)){
             return(NULL)
         }
         return(f(tcpgs))
     }
+
+    if (!split_by_bin){
+        return(f_null(track))
+    }
+
+    coords <- .gpatterns.get_tidy_cpgs_intervals(track)
 
     if (use_sge){
         commands <- plyr::alply(coords, 1, function(cr)
@@ -476,9 +482,9 @@ gpatterns.tidy_cpgs_2_pat_freq <- function(calls, pat_length = 2, min_cov = 1, t
                     mutate(next_pos = lead(start, i)) %>%
                     ungroup %>%
                     filter(!is.na(next_pos)) %>%
-                    gintervals.neighbors1(.gpatterns.genome_cpgs_intervals, maxneighbors=2) %>%
-                    filter(dist != 0) %>%
-                    filter(next_pos == start1) %>%
+                    gintervals.neighbors1(.gpatterns.genome_next_cpg_intervals) %>%
+                    filter(dist == 0) %>%
+                    filter(next_pos == nextcg) %>%
                     select(-(next_pos:dist)) %>%
                     rename_(.dots = setNames('next_meth', paste0('next_', i, '_meth')))
             }
@@ -521,7 +527,6 @@ gpatterns.tidy_cpgs_2_pat_freq <- function(calls, pat_length = 2, min_cov = 1, t
 
         message('generating pats...')
         pats_dist <- gen_pats(calls, min_cov=min_cov, pat_length=pat_length)
-
         if (nrow(pats_dist) == 0){
             return(fill_columns(pats_dist[, c('chrom', 'start', 'end')], pat_length))
         }

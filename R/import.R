@@ -14,13 +14,15 @@
 #' @param samtools path for samtools
 #' @param maxins maximum fragment length (bowtie2 maxins argument)
 #' @param threads number of threads to use
-#' @param genome_type ct/ga. if 'ct' - Assume that the reads to be aligned underwent C->T conversion. If
+#' @param genome_type ct/ga/ct_ga. if 'ct' - Assume that the reads to be aligned underwent C->T conversion. If
 #' paired-end reads are aligned, then assume read 1 underwent C->T
 #' conversion while read 2 underwent G->A conversion. The --ct and --ga
 #' options are mutually exclusive. if 'ga' - Assume that the reads to be aligned underwent G->A conversion. If
 #' paired-end reads are aligned, then assume read 1 underwent G->A
-#' conversion while read 2 underwent C->T conversion. The --ct and --ga
-#' options are mutually exclusive.
+#' conversion while read 2 underwent C->T conversion.
+#' if 'ct_ga' reads would be aligned to both C->T and G->A, and the best match would
+#' be chosen.
+#'
 #' @param tmp_dir Directorhy for storing temporary files
 #' @param bissli2_params additional parameters to bissli2/bowtie2
 #'
@@ -43,6 +45,9 @@ gpatterns.bissli2 <- function(r1_fastq,
                               bissli2_params = ''){
     tmp_dir <- tmp_dir %||% tempdir()
     r1_fastq <- paste(r1_fastq, collapse=',')
+    if (genome_type == 'ct_ga'){
+        genome_type <- 'ct --ga'
+    }
     if (is.null(r2_fastq)){
         command <- qq('@{bissli2_bin} @{bissli2_params} --tmp-dir @{tmp_dir} --bowtie2 @{bowtie2} --@{genome_type} -g @{genome_seq} -x @{bissli2_idx} -U @{r1_fastq} --threads @{threads} | @{samtools} view -b -S -h -o @{out_bam} -')
     } else {
@@ -99,7 +104,6 @@ gpatterns.bissli2_build <- function(reference,
 #' @param workdir directory in which the files would be saved
 #' @param steps steps of the pipeline to do. Possible options are:
 #' 'bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov'
-#' @param conversion bisulfite conversion. could be 'ct' or 'ga'
 #' @param paired_end bam files are paired end, with R1 and R2 interleaved
 #' @param ... gpatterns.import_from_tidy_cpgs parameters
 #'
@@ -113,7 +117,6 @@ gpatterns.import_from_bam <- function(bams,
                                       workdir = NULL,
                                       track = NULL,
                                       steps = 'all',
-                                      conversion = 'ct',
                                       paired_end = TRUE,
                                       nbins = nrow(gintervals.all()),
                                       groot = GROOT,
@@ -142,7 +145,6 @@ gpatterns.import_from_bam <- function(bams,
         tidy_cpgs_dir = qq('@{workdir}/tidy_cpgs'),
         stats_dir = qq('@{workdir}/tidy_cpgs/stats'),
         genomic_bins = genomic_bins,
-        conversion = conversion,
         paired_end = paired_end,
         use_sge = use_sge,
         max_jobs = max_jobs,
@@ -331,7 +333,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
 
 
 ########################################################################
-.gpatterns.bam2tidy_cpgs <- function(bams, tidy_cpgs_dir, stats_dir, genomic_bins, conversion, paired_end = TRUE, bin = .gpatterns.bam2tidy_cpgs_bin, ...){
+.gpatterns.bam2tidy_cpgs <- function(bams, tidy_cpgs_dir, stats_dir, genomic_bins, paired_end = TRUE, bin = .gpatterns.bam2tidy_cpgs_bin, ...){
     walk(c(tidy_cpgs_dir, stats_dir), ~ system(qq('mkdir -p @{.x}')))
 
     bam_prefix <- if (1 == length(bams)) 'cat' else 'samtools cat'
@@ -340,8 +342,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
         stats_fn <- qq('@{stats_dir}/@{gbins$chrom}_@{gbins$start}_@{gbins$end}.stats')
         output_fn <- qq('@{tidy_cpgs_dir}/@{gbins$chrom}_@{gbins$start}_@{gbins$end}.tcpgs.gz')
         qq('@{bam_prefix} @{paste(bams, collapse=\' \')} |
-           @{bin} -i - -o - -s @{stats_fn} --conversion @{conversion}
-           @{single_end} --chrom @{gbins$chrom}
+           @{bin} -i - -o - -s @{stats_fn} @{single_end} --chrom @{gbins$chrom}
            --genomic-range @{gbins$start} @{gbins$end} |
            awk \'NR==1; NR > 1 {print $0 | "sort --field-separator=, -k2,7 -k1 -k9"}\' |
            gzip -c > @{output_fn}') %>%
@@ -440,8 +441,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
     } else {
         intervals <- nbins
     }
-    if (split_by_bin){
-        pat_freq <- gpatterns.apply_tidy_cpgs(
+    pat_freq <- gpatterns.apply_tidy_cpgs(
             track,
             function(x)
                 gpatterns.tidy_cpgs_2_pat_freq(x,
@@ -450,12 +450,10 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
                                                tidy =
                                                    FALSE),
             intervals = intervals,
+            split_by_bin = split_by_bin,
             ...)
-    } else {        
-        pat_freq <- gpatterns.get_tidy_cpgs(track) %>%
-            gpatterns.tidy_cpgs_2_pat_freq(pat_length = pat_freq_len, tidy = FALSE)                              
-    }
-    
+
+
 
     if (nrow(pat_freq) == 0){
         warning('no patterns were found. Skipping creation of pattern frequency tracks')

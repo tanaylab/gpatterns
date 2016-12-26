@@ -4,7 +4,7 @@
 \alias{gpatterns.apply_tidy_cpgs}
 \title{Apply a function on tidy cpgs (internally separated by coordinates)}
 \usage{
-gpatterns.apply_tidy_cpgs(track, f,
+gpatterns.apply_tidy_cpgs(track, f, split_by_bin = TRUE,
   parallel = getOption("gpatterns.parallel"), use_sge = FALSE,
   max_jobs = 300, verbose = FALSE, ...)
 }
@@ -13,15 +13,17 @@ gpatterns.apply_tidy_cpgs(track, f,
 
 \item{f}{function to apply (needs to return a data frame)}
 
+\item{split_by_bin}{apply on each genomic bin separately}
+
 \item{parallel}{execute parallely}
 
 \item{use_sge}{use sge cluster for parallelization}
 
+\item{max_jobs}{maximal number of jobs for sge}
+
 \item{verbose}{print jobs status}
 
 \item{...}{additonal parameters for gcluster.run2}
-
-\item{max_jobsmaximal}{number of jobs for sge}
 }
 \value{
 a data frame with \code{f} applied to every genomic bin of tidy_cpgs
