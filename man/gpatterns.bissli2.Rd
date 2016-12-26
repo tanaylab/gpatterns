@@ -32,13 +32,14 @@ gpatterns.bissli2_build}
 
 \item{threads}{number of threads to use}
 
-\item{genome_type}{ct/ga. if 'ct' - Assume that the reads to be aligned underwent C->T conversion. If
+\item{genome_type}{ct/ga/ct_ga. if 'ct' - Assume that the reads to be aligned underwent C->T conversion. If
 paired-end reads are aligned, then assume read 1 underwent C->T
 conversion while read 2 underwent G->A conversion. The --ct and --ga
 options are mutually exclusive. if 'ga' - Assume that the reads to be aligned underwent G->A conversion. If
 paired-end reads are aligned, then assume read 1 underwent G->A
-conversion while read 2 underwent C->T conversion. The --ct and --ga
-options are mutually exclusive.}
+conversion while read 2 underwent C->T conversion.
+if 'ct_ga' reads would be aligned to both C->T and G->A, and the best match would
+be chosen.}
 
 \item{tmp_dir}{Directorhy for storing temporary files}
 

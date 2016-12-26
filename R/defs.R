@@ -53,6 +53,7 @@
 
 .gpatterns.genome_cpgs_track <- 'seq.CG'
 .gpatterns.genome_cpgs_intervals <- 'intervs.global.seq_CG'
+.gpatterns.genome_next_cpg_intervals <- 'intervs.global.next_CG'
 
 
 # Import defs ------------------------------------------------
