@@ -5,9 +5,12 @@
 \title{Create a track from bam files.}
 \usage{
 gpatterns.import_from_bam(bams, workdir = NULL, track = NULL,
-  steps = "all", paired_end = TRUE, nbins = nrow(gintervals.all()),
-  groot = GROOT, use_sge = FALSE, max_jobs = 400,
-  parallel = getOption("gpatterns.parallel"), ...)
+  steps = "all", paired_end = TRUE, cgs_mask_file = NULL, trim = NULL,
+  umi1_idx = NULL, umi2_idx = NULL, use_seq = FALSE, only_seq = FALSE,
+  frag_intervs = NULL, maxdist = 0, rm_off_target = TRUE,
+  nbins = nrow(gintervals.all()), groot = GROOT, use_sge = FALSE,
+  max_jobs = 400, parallel = getOption("gpatterns.parallel"),
+  cmd_prefix = "", ...)
 }
 \arguments{
 \item{bams}{character vector with path of bam files}
@@ -18,6 +21,29 @@ gpatterns.import_from_bam(bams, workdir = NULL, track = NULL,
 'bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov'}
 
 \item{paired_end}{bam files are paired end, with R1 and R2 interleaved}
+
+\item{cgs_mask_file}{comma separated file with positions of cpgs to mask
+(e.g. MSP1 sticky ends). Needs to have chrom and start fields with the
+position of 'C' in the cpgs to mask}
+
+\item{trim}{trim cpgs that are --trim bp from the beginning/end of the read}
+
+\item{umi1_idx}{position of umi1 in index (0 based)}
+
+\item{umi2_idx}{position of umi2 in index (0 based)}
+
+\item{use_seq}{use UMI sequence (not only position) to filter duplicates}
+
+\item{only_seq}{use only UMI sequence (without positions) to filter duplicates}
+
+\item{frag_intervs}{intervals set of the fragments to change positions to.}
+
+\item{maxdist}{maximal distance from fragments}
+
+\item{rm_off_target}{if TRUE - remove reads with distance > maxdist from frag_intervs
+if FALSE - those reads would be left unchanged}
+
+\item{cmd_prefix}{prefix to run on 'system' commands (e.g. source ~/.bashrc)}
 
 \item{...}{gpatterns.import_from_tidy_cpgs parameters}
 }

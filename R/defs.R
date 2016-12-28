@@ -63,6 +63,9 @@
 .gpatterns.filter_dups_bin <- sprintf("%s/%s",
                                        system.file("import", package="gpatterns"),
                                        'filter_dups_cpgs.py')
+.gpatterns.adjust_read_bin <- sprintf("%s/%s",
+                                        system.file("bin", package="gpatterns"),
+                                        'adjust_read_pos.R')
 .gpatterns.bissli2_bin <-  sprintf("%s/%s",
                                        system.file("bissli2", package="gpatterns"),
                                        'bissli2-align.pl')
@@ -72,6 +75,9 @@
 .gpatterns.bipolar_model_bin <- sprintf("%s/%s",
                                         system.file("bin", package="gpatterns"),
                                         'mpms')
+.gpatterns.sg_script <- sprintf("%s/%s",
+                                        system.file("exec", package="gpatterns"),
+	                                'sgjob.sh')
 
 # Color palettes ------------------------------------------------
 .blue_red_pal <- colorRampPalette(c("#87FFFF", "black", "#FF413D"))(1000)
