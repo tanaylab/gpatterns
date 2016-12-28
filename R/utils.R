@@ -9,6 +9,8 @@ qqv <- function(text) {GetoptLong::qq(text, envir=parent.frame(), collapse=FALSE
 #' @export
 fread <- partial(data.table::fread, data.table=FALSE)
 
+#' @export
+fwrite <- data.table::fwrite
 
 #############################################################################
 .is_tidy_cpgs <- function(obj){
@@ -36,6 +38,11 @@ fread <- partial(data.table::fread, data.table=FALSE)
 comify <- scales::comma
 
 #############################################################################
+#' @inheritParams gpatterns::gcluster.run2
+#' @export
+gcluster.run3 <- partial(gcluster.run2, script = .gpatterns.sg_script)
+
+#############################################################################
 .gpatterns.base_dir <- function(track)
 {
     map(track, ~  c(gdir.cwd(), strsplit(.x, '.', fixed=TRUE)[[1]])) %>%
@@ -55,6 +62,16 @@ gpatterns.track_exists <- function(track){
         intervals %>% unite('coord', chrom:end, sep='_') %>%
             mutate(coord = paste0(dir, coord, '.tcpgs.gz')) %>%
             filter(coord %in% files) %>% .$coord
+}
+
+#############################################################################
+.gpatterns.force_chromosomes <- function(df){
+    f <- df$chrom %in%  as.character(gintervals.all()$chrom )
+    if (!all(f)){
+        chroms <- df$chrom[!f] %>% unique %>% paste(collapse=', ')
+        warning(qq("removed the following chromosomes that did not exist in genome db: @{chroms}"))
+    }
+    return(df %>% filter(f))
 }
 
 #############################################################################

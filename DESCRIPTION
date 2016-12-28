@@ -2,12 +2,13 @@ Package: gpatterns
 Title: Single molecule methylation patterns analysis suite
 Version: 0.0.0.9000
 Authors@R: c(person("Amos", "Tanay", role=c("aut")),
-    person("Aviezer", "Lifshitz", email = "aviezer.lifshitz@weizmann.ac.il", 
+    person("Aviezer", "Lifshitz", email = "aviezer.lifshitz@weizmann.ac.il",
     role = c("aut", "cre")),
     person("Elad", "Chomsky", role=c("aut")))
 Description: Methylation Analysis
 Depends:
-    R (>= 3.2.4)
+    R (>= 3.2.4),
+    misha
 Imports:
     plyr,
     reshape2,
