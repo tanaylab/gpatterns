@@ -196,7 +196,6 @@ gpatterns.import_from_bam <- function(bams,
         cgs_mask_file = cgs_mask_file,
         umi1_idx = umi1_idx,
         umi2_idx = umi2_idx,
-        only_seq = only_seq,
         trim = trim,
         frag_intervs = frag_intervs,
         maxdist = maxdist,
@@ -401,10 +400,11 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
                                      paired_end = TRUE,
                                      umi1_idx = NULL,
                                      umi2_idx = NULL,
-                                     only_seq = FALSE,
                                      frag_intervs = NULL,
                                      maxdist = 0,
                                      rm_off_target = TRUE,
+                                     sort_output = FALSE,
+                                     only_seq = FALSE,
                                      adjust_read_bin = .gpatterns.adjust_read_bin,
                                      bin = .gpatterns.bam2tidy_cpgs_bin,
                                      ...){
@@ -423,7 +423,10 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
     } else {
         post_process_str <- ''
     }
-    post_process_str <- qq('@{post_process_str} | awk \'NR==1; NR > 1 {print $0 | "sort --field-separator=, -k@{sort_fields} -k1 -k9"}\'')
+    if (sort_output){
+        post_process_str <- qq('@{post_process_str} | awk \'NR==1; NR > 1 {print $0 | "sort --field-separator=, -k@{sort_fields} -k1 -k9"}\'')
+    }
+
 
     commands <- genomic_bins %>% by_row( function(gbins){
         stats_fn <- qq('@{stats_dir}/@{gbins$chrom}_@{gbins$start}_@{gbins$end}.stats')
@@ -447,6 +450,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
                                    paired_end = TRUE,
                                    use_seq = FALSE,
                                    only_seq = FALSE,
+                                   sorted = FALSE,
                                    bin = .gpatterns.filter_dups_bin,
                                    ...) {
 
@@ -461,12 +465,13 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
     single_end <- if (!paired_end) '--only_R1' else ''
     use_seq <- if (use_seq) '--use-seq' else ''
     only_seq <- if (only_seq) '--only-seq' else ''
+    sorted_str <- if (sorted) '--sorted' else ''
 
     commands <- genomic_bins %>% by_row(function(gbins){
         stats_fn <- qq('@{stats_dir}/@{gbins$chrom}_@{gbins$start}_@{gbins$end}.stats')
         input_fn <- qq('@{tidy_cpgs_dir}/@{gbins$chrom}_@{gbins$start}_@{gbins$end}.tcpgs.gz')
         output_fn <- qq('@{uniq_tidy_cpgs_dir}/@{gbins$chrom}_@{gbins$start}_@{gbins$end}.tcpgs.gz')
-        qq('@{bin} -i @{input_fn} -o - -s @{stats_fn} @{single_end} @{use_seq} @{only_seq} | gzip -c > @{output_fn}')
+        qq('@{bin} -i @{input_fn} -o - -s @{stats_fn} @{single_end} @{use_seq} @{only_seq} @{sorted_str} | gzip -c > @{output_fn}')
         }, .collate =  'cols', .to = 'cmd')
     .gpatterns.run_commands(commands, jobs_title = 'filter_dups', ...)
 
