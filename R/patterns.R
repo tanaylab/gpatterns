@@ -146,8 +146,15 @@ gpatterns.apply_tidy_cpgs <- function(track,
 
 ########################################################################
 #' @export
-.gpatterns.get_tidy_cpgs_intervals <- function(track){
-    .gpatterns.tidy_cpgs_files(track) %>%
+.gpatterns.get_tidy_cpgs_intervals <- function(track=NULL, path=NULL){
+    stopifnot(!is.null(track) || !is.null(path))
+    if (!is.null(track)){
+        files <- .gpatterns.tidy_cpgs_files(track)
+    }
+    if (!is.null(path)){
+        files <- list.files(path, full.names=TRUE, pattern='tcpgs.gz')
+    }
+    files %>%
         basename %>%
         gsub('\\.tcpgs\\.gz$', '', .) %>%
         strsplit('_') %>%
@@ -235,6 +242,14 @@ gpatterns.tidy_cpgs_to_pats <- function(track,
         pats <- cpgs %>%
             inner_join(pat_space, by=c('chrom', 'cg_pos')) %>%
             reshape2::dcast(read_id + fid ~ pat_pos, value.var='meth', fill='*') %>%
+            tbl_df
+        for (i in paste(1:max_pat_len)){
+            if(!(i %in% colnames(pats))){
+                pats[[i]] <- '*'
+            }
+        }
+
+        pats <- pats %>%
             unite_('pat', paste(1:max_pat_len), sep='') %>%
             mutate(n_na = stringr::str_count(pat, '\\*')) %>%
             filter(n_na <= max_missing) %>%
@@ -325,16 +340,78 @@ gpatterns.tracks_to_pat_space <- function(tracks,
     return(space %>% ungroup %>% select(chrom, start, end, fid))
 }
 
+
+
+########################################################################
+.gpatterns.max_pat_cov_intervs <- function(expr, intervals, iterator=.gpatterns.genome_cpgs_intervals, pat_len=5, min_cov = 1, mode='pat_cov', contiguous = TRUE, nchunks= getOption('gpatterns.parallel.thread_num'), parallel=getOption('gpatterns.parallel'), verbose=FALSE){
+    old_opt <- options()
+    options(gmultitasking=FALSE)
+
+    get_max_cov <- function(covs){
+        covs <- covs %>%
+            group_by(chrom1, start1, end1) %>%
+            filter(n() >= pat_len)
+        if (contiguous){
+            if ('start.orig' %in% colnames(covs)){
+                # make sure that we are covering the original interval
+                covs <- covs %>%
+                    arrange(chrom1, start1, end1, chrom, start, end) %>%
+                    mutate(cg_num=1:n()) %>%
+                    filter(sum(chrom == chrom1 & start == start.orig & end == end.orig) > 0) %>%
+                    mutate(pos_cg_num=which(chrom == chrom1 & start == start.orig & end == end.orig)) %>%
+                    filter(abs(cg_num - pos_cg_num) < pat_len) %>%
+                    select(-cg_num, -pos_cg_num)
+            }
+            space <- covs %>%
+                group_by(chrom1, start1, end1) %>%
+                arrange(chrom1, start1, end1, chrom, start, end)
+            if (mode == 'cov'){
+                # calculate the total coverage of contiguous CpGs
+                space <- space %>%
+                    mutate(m = zoo::rollmean(cov, pat_len, align='left', fill=NA))
+            } else {
+                # coverage of contiguous CpGs was already calculated in 'pat_cov' tracks
+                space <- space %>%
+                    mutate(m = cov)
+            }
+
+            space <- space %>%
+                filter(max(m) < min_cov) %>%
+                mutate(cg_num=1:n(), chosen_start=which.max(m)) %>%
+                filter(cg_num %in% seq(chosen_start[1], chosen_start[1] + pat_len - 1)) %>%
+                select(chrom, start, end, chrom1, start1, end1)
+        } else {
+            space <- covs %>%
+            group_by(chrom1, start1, end1) %>%
+            filter(max(cov) < min_cov) %>%
+            top_n(pat_len, cov) %>%
+            ungroup
+        }
+
+        return(space)
+    }
+
+    res <- gdply(get_max_cov, expr, intervals = intervals, iterator = iterator, nchunks=nchunks, parallel=parallel, gfunc = gextract.left_join, colnames='cov', verbose=verbose)
+
+    options(old_opt)
+    return(res)
+}
+
 ########################################################################
 #' Generate pattern space for specific genomic loci
 #'
 #' @param tracks tracks
-#' @param intervals genomic loci to cover
+#' @param intervals genomic loci to cover (chrom,start,end), with an optional field
+#' 'fid'.
 #' @param pat_len pattern length
-#' @param max_span maximum span to look for CpGs
 #' @param contiguous generate patterns that do not skip a CpG
 #' @param add_rest add rest of the genome (using gpatterns.tracks_to_pat_space)
-#' @param min_cov minimal CpG coverage
+#' @param min_cov if contiguous: minimal pattern coverage for interval. else - minimal CpG coverage
+#' @param max_span maximum span to look for CpGs
+#' @param expand_intervals expand intervals by max_span when intervals are single CpG loci
+#' @param parallel override global gpatterns.parallel definition
+#' @param nchunks override global gpatterns.parallel.thread_num definition
+#' @param verbose print additional progress messages
 #'
 #' @return
 #' @export
@@ -343,55 +420,64 @@ gpatterns.tracks_to_pat_space <- function(tracks,
 gpatterns.intervs_to_pat_space <- function(tracks,
                                            intervals,
                                            pat_len,
-                                           max_span=500,
                                            contiguous=TRUE,
                                            add_rest=FALSE,
-                                           min_cov=1){
-    if (all(gtrack.exists(.gpatterns.pat_cov_track_name(tracks, pat_len)))){
-        cov_tracks <- .gpatterns.pat_cov_track_name(tracks, pat_len)
+                                           min_cov=1,
+                                           max_span=500,
+                                           expand_intervals = FALSE,
+                                           nchunks= getOption('gpatterns.parallel.thread_num'),
+                                           parallel=getOption('gpatterns.parallel'),
+                                           verbose = FALSE){
+    if (class(intervals) == 'character'){
+            intervals <- gintervals.load(intervals) %>% tbl_df
+    }
+    if (expand_intervals){
+        exp_intervs <- intervals %>%
+            mutate(start.orig=start, end.orig=end)
+        exp_intervs <- exp_intervs %>% gintervals.expand(max_span)
     } else {
+        exp_intervs <- intervals
+    }
+
+    if (contiguous){
+        cov_tracks <- .gpatterns.pat_cov_track_name(tracks, pat_len)
+        cov_tracks_exist <- gtrack.exists(cov_tracks)
+        if (any(!cov_tracks_exist)){
+            warning(sprintf('pat_cov track do not exist for %s.', cov_tracks[!cov_tracks_exist]))
+        }
+        if (all(cov_tracks_exist)){
+            mode <- 'pat_cov'
+        } else {
+            mode <- 'cov'
+        }
+    } else {
+        mode <- 'cov'
+    }
+
+    if (mode == 'cov'){
         cov_tracks <- .gpatterns.cov_track_name(tracks)
     }
-    expr <- sprintf('sum_ignore_na_all(%s)', paste(cov_tracks, collapse=','))
-    covs <- gextract.left_join(expr,
-                               intervals=intervals %>%
-                                   mutate(start.orig=start, end.orig=end) %>%
-                                   gintervals.expand(max_span),
-                               iterator=.gpatterns.genome_cpgs_intervals,
-                               colnames='cov')
 
-    # each cpg belongs to only one interval (if more than 1 choose the first)
-    covs <- covs %>% distinct(chrom, start, end, .keep_all=TRUE)
-    if (contiguous){
-        covs <- covs %>%
-            group_by(chrom1, start1, end1) %>%
-            filter(n() >= pat_len) %>%
-            arrange(chrom1, start1, end1, chrom, start, end) %>%
-            mutate(cg_num=1:n()) %>%
-            filter(sum(chrom == chrom1 & start == start.orig & end == end.orig) > 0) %>%
-            mutate(pos_cg_num=which(chrom == chrom1 & start == start.orig & end == end.orig)) %>%
-            filter(abs(cg_num - pos_cg_num) < pat_len) %>%
-            select(-cg_num, -pos_cg_num)
-        space <- covs %>%
-            group_by(chrom1, start1, end1) %>%
-            arrange(chrom1, start1, end1, chrom, start, end) %>%
-            mutate(m = rollmean(cov, pat_len, align='left', fill=NA)) %>%
-            mutate(cg_num=1:n(), chosen_start=which.max(m)) %>%
-            filter(cg_num %in% seq(chosen_start[1], chosen_start[1] + pat_len - 1)) %>%
-            select(chrom, start, end, chrom1, start1, end1, start.orig, end.orig)
+    expr <- sprintf('sum_ignore_na_all(%s)', paste(cov_tracks, collapse=','))
+    message('finding most covered contiguous CpGs...')
+    space <- .gpatterns.max_pat_cov_intervs(expr, exp_intervs, iterator=.gpatterns.genome_cpgs_intervals, pat_len=pat_len, min_cov = min_cov, verbose=verbose, mode = mode, contiguous=contiguous, parallel=parallel, nchunks=nchunks)
+
+    if ('fid' %in% colnames(exp_intervs) || 'FID' %in% colnames(exp_intervs)){
+        fid_col <- which(tolower(colnames(exp_intervs)) == 'fid')
+        colnames(exp_intervs)[fid_col] <- colnames(exp_intervs)[fid_col] %>% tolower()
+        space <- space %>%
+            select(chrom, start, end) %>%
+            gintervals.neighbors1(exp_intervs %>% select(chrom, start, end, fid)) %>%
+            filter(dist == 0) %>%
+            select(chrom, start, end, fid)
     } else {
-        space <- covs %>%
-            group_by(chrom1, start1, end1) %>%
-            top_n(pat_len, cov) %>%
-            ungroup
-    }
-    space <- space %>%
+        space <- space %>%
         ungroup %>%
         arrange(chrom, start, end) %>%
         mutate(fid = map(1:(nrow(space)/pat_len), ~ rep(., pat_len)) %>% combine) %>%
         ungroup %>%
         select(chrom, start, end, fid)
-
+    }
 
     if (add_rest){
         fid_intervs <- space %>%

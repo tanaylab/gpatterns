@@ -120,7 +120,7 @@ gpatterns.bissli2_build <- function(reference,
 ########################################################################
 #' Create a track from bam files.
 #'
-#' @description Creates a track from bam files for a specific sample.
+#' Creates a track from bam files for a specific sample.
 #' Use this methods only for small datasets. For large datasets please use
 #' the Snakemake pipeline.
 #'
@@ -247,7 +247,7 @@ gpatterns.import_from_bam <- function(bams,
 ########################################################################
 #' Create a track from tidy_cpgs files
 #'
-#' @description Creates a track from tidy_cpgs files for a specific sample.
+#' Creates a track from tidy_cpgs files for a specific sample.
 #' Use this methods only for small datasets. For large datasets please
 #' the Snakemake pipeline.
 #'
@@ -482,8 +482,10 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
                                         tmp_dir = NULL,
                                         ...){
     tmp_dir <- tmp_dir %||% tempdir()
+    genomic_bins <- .gpatterns.get_tidy_cpgs_intervals(path = tidy_cpgs_dirs[1])
+    #TODO: add test that genomic bins are the same
     .gpatterns.bind_tidy_cpgs(tidy_cpgs_dirs = tidy_cpgs_dirs, path=tmp_dir)
-    return(.gpatterns.filter_dups(tidy_cpgs_dir = file.path(tmp_dir, 'tidy_cpgs'), ...))
+    return(.gpatterns.filter_dups(tidy_cpgs_dir = file.path(tmp_dir, 'tidy_cpgs'), genomic_bins=genomic_bins, ...))
 }
 
 ########################################################################
@@ -840,7 +842,7 @@ gpatterns.create_downsampled_track <- function(track,
     }
 }
 
-# Patterns import utils ------------------------------------------------
+# Import utils ------------------------------------------------
 
 ########################################################################
 #' Change tidy_cpgs coordinates to fragments coordinates
@@ -856,10 +858,16 @@ gpatterns.create_downsampled_track <- function(track,
 #'
 #' @examples
 gpatterns.adjust_read_pos <- function(calls, frag_intervs, maxdist=0, rm_off_target=TRUE){
-    calls <- calls %>% .gpatterns.force_chromosomes()
-    capture.output(new_coords <- calls %>%
+    calls <- calls %>%
+        .gpatterns.force_chromosomes()
+    new_coords <- calls %>%
         select(chrom, start, end) %>%
         mutate(end = ifelse(end == '-', start + 1, as.numeric(end))) %>%
+        mutate(end1=end, start1=start, start=ifelse(end>start, start, end), end=ifelse(end>start, end, start)) %>%
+        select(-end1, -start1) %>%
+        mutate(end = ifelse(end == start, start+1, end))
+
+    capture.output(new_coords <-  new_coords %>%
         gintervals.neighbors1(frag_intervs))
     on_target_lines <- abs(new_coords$dist) <= maxdist
 

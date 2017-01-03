@@ -221,7 +221,7 @@ def parse_args(argv):
                         help="Name of output file. a value of '-' indicates that the output would be written to STDOUT")    
     parser.add_argument('-s', '--stats', type=str, default='stats', metavar='<stats>',
                         help="Name of stats file. a value of '-' indicates that the output would be written to STDERR")
-    parser.add_argument("--only_R1", help="use only read1",
+    parser.add_argument("--only_R1", help="use only read1 (ignore end,umi2 fields)",
                     action="store_true")
     parser.add_argument("--use-seq", help="use UMI sequence (not only position)",
                     action="store_true")
