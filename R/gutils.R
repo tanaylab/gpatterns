@@ -7,7 +7,6 @@
 #' Finds neighbors between two sets of intervals (and does not return conflicting column names)
 #'
 #' @inheritParams misha::gintervals.neighbours
-#' @param suffix suffix for conflicting colnames
 #'
 #' @return
 #' @export
@@ -15,7 +14,6 @@
 #' @examples
 gintervals.neighbors1 <- function(intervals1 = NULL,
                                   intervals2 = NULL,
-                                  suffix = '1',
                                   maxneighbors = 1,
                                   mindist = -1e+09,
                                   maxdist = 1e+09,
@@ -29,14 +27,9 @@ gintervals.neighbors1 <- function(intervals1 = NULL,
             mindist = mindist,
             maxdist = maxdist,
             na.if.notfound = na.if.notfound
-        )
+        ) %>%
+        tibble::repare_names()
 
-    intervs2_col_start <- which(colnames(res) == "chrom")[2]
-    intervals1.cols <- 1:(intervs2_col_start - 1)
-    intervals2.cols <- intervs2_col_start:ncol(res)
-    conflict.names <- which(colnames(res)[intervals2.cols] %in% colnames(res)[intervals1.cols])
-    colnames(res)[(intervs2_col_start - 1) + conflict.names] <- paste0(colnames(res)[(intervs2_col_start -
-        1) + conflict.names], suffix)
     return(res %>% tbl_df)
 }
 
@@ -180,12 +173,81 @@ gvextract <- function(tracks, intervals, colnames = NULL, iterator = NULL,
 #' @seealso \code{\link{misha::gextract}}
 #' @examples
 gextract.left_join <- function(expr, intervals = NULL, colnames = NULL, iterator = NULL, band = NULL, file = NULL, intervals.set.out = NULL, suffix='1'){
+    if (class(intervals) == 'character'){
+        intervals <- gintervals.load(intervals)
+    }
     d <- gextract(expr, intervals = intervals, colnames = colnames, iterator = iterator, band = band, file = file, intervals.set.out = intervals.set.out)
     conflict_names <- which(colnames(intervals) %in% colnames(d))
     colnames(intervals)[conflict_names] <- paste0(colnames(intervals)[conflict_names], suffix)
     intervals$intervalID <- 1:nrow(intervals)
     d <- d %>% arrange(intervalID) %>% left_join(intervals, by='intervalID') %>% select(-intervalID)
     return(d)
+}
+
+
+
+########################################################################
+#' Apply a function on track expression in intervals
+#'
+#' @param f function to apply. First argument would be the result of gfunc
+#' called with the track expression, intervals, iterator and column names, i.e.:
+#' we would run for each chunk f(gfunc(expr, intervals, iterator=iterator, colnames=colnames))
+#' For additional parameters use anonymous functions, e.g. function(x) f1(x, param1=1, param2=2)
+#' @param expr track expression for gfunc
+#' @param intervals intervals for which track expressions are calculated
+#' @param iterator track expression iterator. If 'NULL' iterator is determined
+#' implicitly based on track expressions
+#' @param colnames sets the columns names in the returned value. If 'NULL' names
+#' are set to track expression.
+#' @param nchunks number of chunks to divide the intervals to.
+#' @param parallel run each chunk in parallel
+#' @param verbose verbose
+#' @param gfunc function to apply on track expression.
+#' can be any function that gets track expression, intervals, iterator and colnames,
+#' e.g. gextract, gextract.left_join, gscreen etc.
+#'
+#' @return for llply - list with the returned values from the functions.
+#' for ldply - data.frame with the returned values from the functions rbinded.
+#'
+#' @export
+#'
+#' @examples
+glply <- function(f, expr, intervals = NULL, iterator = NULL, colnames = NULL, nchunks=1, parallel=FALSE, verbose=FALSE, gfunc = misha::gextract){
+    old_opt <- options()
+    options(gmultitasking=FALSE)
+
+    run_chunk <- function(intervs, chunk_num){
+        if (verbose){
+            message(qq('starting chunk @{chunk_num}'))
+        }
+        suppressMessages(capture.output(ext <- gfunc(expr, intervals=intervs, iterator=iterator, colnames=colnames)))
+        if (verbose){
+            message(qq('finished extracting chunk @{chunk_num}'))
+        }
+        r <- f(ext)
+        if (verbose){
+            message(qq('finished chunk @{chunk_num}'))
+        }
+        return(r)
+    }
+
+    res <- intervals %>%
+        mutate(chunk = ntile(chrom, nchunks)) %>%
+        plyr::dlply(.(chunk), function(y)
+            run_chunk(y %>% select(-chunk), y$chunk[1]),
+            .parallel = parallel,
+            .progress = 'text')
+
+    options(old_opt)
+    return(res)
+}
+
+########################################################################
+#' @rdname glply
+#' @export
+gdply <- function(...){
+    res <- glply(...) %>% map_df(~ .x) %>% tbl_df
+    return(res)
 }
 
 ########################################################################
@@ -197,7 +259,7 @@ gintervals.which=function(expr, intervals, iterator=expr, which.func=max) {
     result.intervals[GAPPLY.INTERVID, ] <<- GAPPLY.INTERVALS[idx, ]
     return(v)
   }
-  gintervals.apply("f(x1)", expr, intervals, enable.gapply.intervals=T, iterator=iterator)
+  gintervals.mapply(f, expr, intervals, enable.gapply.intervals=T, iterator=iterator)
   result.intervals
 }
 

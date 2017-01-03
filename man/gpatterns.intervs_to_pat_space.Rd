@@ -4,23 +4,35 @@
 \alias{gpatterns.intervs_to_pat_space}
 \title{Generate pattern space for specific genomic loci}
 \usage{
-gpatterns.intervs_to_pat_space(tracks, intervals, pat_len, max_span = 500,
-  contiguous = TRUE, add_rest = FALSE, min_cov = 1)
+gpatterns.intervs_to_pat_space(tracks, intervals, pat_len, contiguous = TRUE,
+  add_rest = FALSE, min_cov = 1, max_span = 500,
+  expand_intervals = FALSE,
+  nchunks = getOption("gpatterns.parallel.thread_num"),
+  parallel = getOption("gpatterns.parallel"), verbose = FALSE)
 }
 \arguments{
 \item{tracks}{tracks}
 
-\item{intervals}{genomic loci to cover}
+\item{intervals}{genomic loci to cover (chrom,start,end), with an optional field
+'fid'.}
 
 \item{pat_len}{pattern length}
-
-\item{max_span}{maximum span to look for CpGs}
 
 \item{contiguous}{generate patterns that do not skip a CpG}
 
 \item{add_rest}{add rest of the genome (using gpatterns.tracks_to_pat_space)}
 
-\item{min_cov}{minimal CpG coverage}
+\item{min_cov}{if contiguous: minimal pattern coverage for interval. else - minimal CpG coverage}
+
+\item{max_span}{maximum span to look for CpGs}
+
+\item{expand_intervals}{expand intervals by max_span when intervals are single CpG loci}
+
+\item{nchunks}{override global gpatterns.parallel.thread_num definition}
+
+\item{parallel}{override global gpatterns.parallel definition}
+
+\item{verbose}{print additional progress messages}
 }
 \description{
 Generate pattern space for specific genomic loci
