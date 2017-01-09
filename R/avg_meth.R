@@ -1,6 +1,6 @@
 # Extraction Functions ------------------------------------------------
 
-########################################################################
+
 #' Extract average methylation
 #'
 #' @param tracks methylation tracks
@@ -58,6 +58,11 @@ gpatterns.get_avg_meth <- function(
     intervals.set.out = NULL) {
 
     .check_tracks_exist(tracks, c('meth', 'unmeth'))
+    min_samples <- min_samples %||% 1
+
+    if (is.null(iterator) && length(tracks) == 1){
+        iterator <- .gpatterns.meth_track_name(tracks)
+    }
 
     if ((is.null(iterator) && length(tracks) > 1) || use_cpgs) {
         message("Using cpgs as iterator")
@@ -66,7 +71,7 @@ gpatterns.get_avg_meth <- function(
         message(qq('Taking only intervals with at least @{min_cpgs} CpGs'))
         intervals <- gpatterns.filter_cpgs(intervals, min_cpgs)
     }
-    
+
     names <- names %||% tracks
 
     if (pre_screen || (!tidy & (!is.null(min_samples) || !is.null(min_cov)))){
@@ -166,7 +171,7 @@ gpatterns.get_avg_meth <- function(
 
 }
 
-########################################################################
+
 .gpatterns.get_avg_meth_not_tidy <- function(tracks,
                                              intervals,
                                              iterator = NULL,
@@ -177,7 +182,7 @@ gpatterns.get_avg_meth <- function(
                                              intervals.set.out = NULL,
                                              rm_intervals = FALSE) {
 
-    names <- names %||% tracks    
+    names <- names %||% tracks
 
     vtracks_pref <- .random_track_name()
     vtracks_meth <- paste0(vtracks_pref, '_', 1:length(tracks), '_meth')
@@ -215,7 +220,6 @@ gpatterns.get_avg_meth <- function(
     return(avgs %>% tbl_df)
 }
 
-#############################################################################
 #' screen intervals by coverage in multiple tracks
 #'
 #' @param tracks methylation tracks
@@ -235,9 +239,10 @@ gpatterns.screen_by_coverage <- function(tracks,
                                          intervals,
                                          iterator,
                                          min_cov,
-                                         min_samples,
+                                         min_samples = NULL,
                                          intervals.set.out = NULL){
     cov_tracks <- .gpatterns.cov_track_name(tracks)
+    min_samples <- min_samples %||% 1
     expr <- paste(qqv('(@{cov_tracks} >= min_cov)'), collapse = ', ')
     expr <- qq('sum(@{expr}, na.rm=T) >= @{min_samples}')
     intervs <- gscreen(expr,
@@ -247,7 +252,6 @@ gpatterns.screen_by_coverage <- function(tracks,
     return(intervs)
 }
 
-#############################################################################
 #' Filter intervals by number of CpGs
 #'
 #' @param intervals intervals to filter
@@ -269,7 +273,7 @@ gpatterns.filter_cpgs <- function(intervals,
     return(intervals)
 }
 
-########################################################################
+
 #' Filter intervals set by distance from another intervals set
 #'
 #' @param intervals intervals to filter
@@ -333,11 +337,11 @@ gpatterns.filter_by_dist <- function(intervals,
     return(intervals)
 }
 
-#############################################################################
 .gpatterns.filter_coverage <- function(avgs,
                                        min_cov,
-                                       min_samples,
-                                       mask_cpgs=FALSE){
+                                       min_samples = NULL,
+                                       mask_cpgs = FALSE){
+    min_samples <- min_samples %||% 1
     avgs <- avgs %>%
         group_by(chrom, start, end) %>%
         mutate(n = sum(cov >= min_cov, na.rm=T)) %>%
@@ -352,7 +356,7 @@ gpatterns.filter_by_dist <- function(intervals,
 
 # Analysis Functions ------------------------------------------------
 
-########################################################################
+
 #' Cluster average methylation of multiple tracks
 #'
 #' @param avgs avgs pre-computed intervals set with average methylation, output of gpatterns.get_avg_meth
@@ -440,7 +444,6 @@ gpatterns.cluster_avg_meth <- function(
     return(avgs)
 }
 
-#############################################################################
 .gpatterns.cluster_columns <- function(avgs, column_k = NULL){
     avgs_mat <- avgs %>%
         select(chrom, start, end, clust, ord, samp, avg) %>%
@@ -482,7 +485,6 @@ gpatterns.cluster_avg_meth <- function(
 
 # Plotting Functions ------------------------------------------------
 
-#############################################################################
 #' Plots smoothScatter of average methylation of two tracks
 #'
 #' @param samples a vector of 2 sample names as present in 'samp' filed of avgs, or track names if
@@ -519,17 +521,17 @@ gpatterns.smoothScatter <- function(
     title_text = NULL,
     add_n = TRUE,
     ...) {
-    
+
     avgs <- avgs %||% .do.call_ellipsis(gpatterns.get_avg_meth, list(tracks=samples, tidy=TRUE), ...)
-    
+
 
     if (length(samples) != 2) {
         stop("Please provide 2 samples")
     }
     d <- avgs %>% filter(samp %in% samples) %>% select(chrom, start, end, samp, avg) %>% spread(samp, avg)
-    
+
     sample_names <- sample_names %||% samples
-    
+
     stopifnot(length(sample_names) == 2)
 
     if (!is.null(fig_ofn)) {
@@ -559,7 +561,6 @@ gpatterns.smoothScatter <- function(
 
 # Utility Functions ------------------------------------------------
 
-#############################################################################
 .check_tracks_exist <- function(tracks, suffixes = c("")) {
     for (suffix in suffixes) {
         trs <- paste0(tracks, ".", suffix)
@@ -571,7 +572,6 @@ gpatterns.smoothScatter <- function(
     }
 }
 
-#############################################################################
 .do.call_ellipsis <- function(f, additonal_params, ...){
     f_args <- names(as.list(args(f)))
     elipsis <- list(...)
@@ -579,7 +579,6 @@ gpatterns.smoothScatter <- function(
     do.call(f, c(additonal_params, elipsis))
 }
 
-#############################################################################
 .hclust_order <- function(d, keys, variable, value, ...){
     d_mat <- d %>%
         select(one_of(c(keys, variable, value))) %>%

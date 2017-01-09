@@ -11,7 +11,7 @@ gpatterns.import_from_tidy_cpgs(tidy_cpgs, track, description, steps = "all",
   parallel = getOption("gpatterns.parallel"))
 }
 \arguments{
-\item{tidy_cpgs}{tidy_cpgs object / vector with directories of tidy_cpgs}
+\item{tidy_cpgs}{tidy_cpgs object / vector with directories of tidy_cpgs (use full path)}
 
 \item{track}{name of the track to generate}
 
