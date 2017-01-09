@@ -4,8 +4,8 @@
 \alias{gpatterns.screen_by_coverage}
 \title{screen intervals by coverage in multiple tracks}
 \usage{
-gpatterns.screen_by_coverage(tracks, intervals, iterator, min_cov, min_samples,
-  intervals.set.out = NULL)
+gpatterns.screen_by_coverage(tracks, intervals, iterator, min_cov,
+  min_samples = NULL, intervals.set.out = NULL)
 }
 \arguments{
 \item{tracks}{methylation tracks}

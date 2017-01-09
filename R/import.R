@@ -105,7 +105,7 @@ gpatterns.bissli2_build <- function(reference,
 }
 
 # import Functions ------------------------------------------------
-########################################################################
+
 .step_invoke <- function(step, steps, f, ...){
     if (step %in% steps){
         message(qq('doing @{step}'))
@@ -117,7 +117,6 @@ gpatterns.bissli2_build <- function(reference,
 
 
 
-########################################################################
 #' Create a track from bam files.
 #'
 #' Creates a track from bam files for a specific sample.
@@ -244,14 +243,13 @@ gpatterns.import_from_bam <- function(bams,
         uniq_tidy_cpgs_stats_dir = qq('@{workdir}/tidy_cpgs_uniq/stats'))
 }
 
-########################################################################
 #' Create a track from tidy_cpgs files
 #'
 #' Creates a track from tidy_cpgs files for a specific sample.
 #' Use this methods only for small datasets. For large datasets please
 #' the Snakemake pipeline.
 #'
-#' @param tidy_cpgs tidy_cpgs object / vector with directories of tidy_cpgs
+#' @param tidy_cpgs tidy_cpgs object / vector with directories of tidy_cpgs (use full path)
 #' @param track name of the track to generate
 #' @param description description of the track to generate
 #' @param steps steps of the pipeline. Possible options are:
@@ -352,7 +350,7 @@ gpatterns.import_from_tidy_cpgs <- function(tidy_cpgs,
 
 }
 
-########################################################################
+
 #' Separate a track by strands (for QC purposes)
 #'
 #' @inheritParams gpatterns::gpatterns.import_from_tidy_cpgs
@@ -390,7 +388,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
 
 
 
-########################################################################
+
 .gpatterns.bam2tidy_cpgs <- function(bams,
                                      tidy_cpgs_dir,
                                      stats_dir,
@@ -442,7 +440,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
     .gpatterns.run_commands(commands, jobs_title = 'bam2tidy_cpgs', ...)
 }
 
-########################################################################
+
 .gpatterns.filter_dups <- function(tidy_cpgs_dir,
                                    stats_dir,
                                    uniq_tidy_cpgs_dir,
@@ -477,7 +475,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
 
 }
 
-########################################################################
+
 .gpatterns.join_filter_dups <- function(tidy_cpgs_dirs,
                                         tmp_dir = NULL,
                                         ...){
@@ -488,7 +486,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
     return(.gpatterns.filter_dups(tidy_cpgs_dir = file.path(tmp_dir, 'tidy_cpgs'), genomic_bins=genomic_bins, ...))
 }
 
-########################################################################
+
 .gpatterns.bind_tidy_cpgs <- function(tidy_cpgs_dirs, track=NULL, path=NULL){
     .collate_gzips <- function(files, outfile) {
         if (length (files) == 1){
@@ -522,7 +520,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
     }
 }
 
-########################################################################
+
 #' @export
 .gpatterns.tidy_cpgs_to_files <- function(tidy_cpgs, intervals, track=NULL, outdir=NULL){
     if (!is.null(track)){
@@ -545,7 +543,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
     } )
 }
 
-########################################################################
+
 #' @export
 .gpatterns.pileup <- function(track, description, dsn = NULL, columns = c('meth', 'unmeth', 'cov', 'avg'), ...){
     message('calculating pileup...')
@@ -554,7 +552,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
     .gpattern.import_intervs_table(track, description, pileup, columns=columns)
 }
 
-########################################################################
+#'@export
 .gpatterns.pat_freq <- function(track, description, pat_freq_len, nbins=NULL, split_by_bin = TRUE, ...){
     message(qq('calculating pattern frequency (pattern length: @{pat_freq_len})...'))
     if (!is.null(nbins)){
@@ -584,7 +582,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
     }
 }
 
-########################################################################
+
 .gpatterns.pat_cov <- function(track, description, pat_cov_lens, max_span = 500, ...){
     message('calculating pattern coverage...')
     pat_cov <- pat_cov_lens %>%
@@ -600,7 +598,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
     .gpattern.import_intervs_table(track, description, pat_cov, columns = paste0('pat_cov', pat_cov_lens))
 }
 
-########################################################################
+
 .gpattern.import_intervs_table <- function(track_pref, description, tab, columns = NULL){
     tab <- tbl_df(tab)
     columns <- columns %||% colnames(tab)[!(colnames(tab) %in% c('chrom', 'start', 'end'))]
@@ -618,7 +616,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
     })
 }
 
-########################################################################
+
 .gpatterns.run_commands <- function(commands, use_sge=FALSE, max_jobs=400, parallel = getOption('gpatterns.parallel'), jobs_title='', cmd_prefix = '', ...){
       if (use_sge){
         command_list <- 1:length(commands$cmd) %>% map(~ qq('@{cmd_prefix} system(commands$cmd[@{.x}])'))
@@ -641,7 +639,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
 
 # Patterns import Functions ------------------------------------------------
 
-########################################################################
+
 #' Creates patterns attributes of track
 #'
 #' @param track track name
@@ -711,7 +709,7 @@ gpatterns.create_patterns_track <- function(track,
         ...)
 }
 
-########################################################################
+
 gpatterns.create_downsampled_track <- function(track,
                                    dsn,
                                    description = NULL,
@@ -757,7 +755,7 @@ gpatterns.create_downsampled_track <- function(track,
 }
 
 
-########################################################################
+
 .gpatterns.create_tracks <- function(track,
                                      description,
                                      patterns_tab,
@@ -837,14 +835,15 @@ gpatterns.create_downsampled_track <- function(track,
     if (add_biploar_stats){
         message("getting bipolarity stats")
         gpatterns.calc_bipolarity(track,
-                                  overwrite=overwrite,
+                                  overwrite = overwrite,
+                                  save_tab = TRUE,
                                   ...)
     }
 }
 
 # Import utils ------------------------------------------------
 
-########################################################################
+
 #' Change tidy_cpgs coordinates to fragments coordinates
 #'
 #' @param calls tidy_cpgs data frame

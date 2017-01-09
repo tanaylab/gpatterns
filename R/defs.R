@@ -1,3 +1,7 @@
+#' @useDynLib gpatterns
+#' @importFrom Rcpp sourceCpp
+NULL
+
 # library imports ------------------------------------------------
 #' @import tidyr
 #' @import dplyr

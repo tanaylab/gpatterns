@@ -1,6 +1,6 @@
 # Epipolymorphism Functions ------------------------------------------------
 
-########################################################################
+
 #' Calculate epipolymorphism of samples
 #'
 #' @param patterns patterns
@@ -15,7 +15,7 @@ gpatterns.calc_epipoly <- function(patterns){
     return(epipoly)
 }
 
-########################################################################
+
 #' Returns TRUE if pattern is a 'border' pattern
 #'
 #' @param pattern pattern
@@ -28,7 +28,7 @@ gpatterns.border_pattern <- function(pattern){
     !stringr::str_detect(pattern, '01+0|10+1') & !gpatterns.clean_pattern(pattern)
 }
 
-########################################################################
+
 #' Returns TRUE if pattern is fully methylated / unmethylated and FALSE if not
 #'
 #' @param pattern pattern
@@ -41,7 +41,7 @@ gpatterns.clean_pattern <- function(pattern){
     stringr::str_count(pattern, '1') == 0 | stringr::str_count(pattern, '0') == 0
 }
 
-########################################################################
+
 #' Plots epipolymorphism
 #'
 #' @param tracks track names
@@ -176,6 +176,7 @@ gpatterns.epipoly_plot <- function(
 #' @param init_num        init_num
 #' @param min_pat_cov     min_pat_cov
 #' @param save_tab        save_tab
+#' @param overwrite       overwrite
 #' @param parallel        parallel
 #' @param thread_num      thread_num
 #' @param verbose         verbose
@@ -187,13 +188,14 @@ gpatterns.epipoly_plot <- function(
 #' @export
 #'
 #' @examples
-gpatterns.run_bipolar_model <- function(track,
+gpatterns.calc_bipolarity <- function(track,
                             uniform_mix = 0.05,
                             max_sampling_n = 1000,
                             min_sampling_n = 100,
                             init_num = 3,
                             min_pat_cov = 5,
                             save_tab = FALSE,
+                            overwrite = FALSE,
                             parallel = getOption('gpatterns.parallel'),
                             thread_num = getOption('gpatterns.parallel.thread_num'),
                             verbose = FALSE,
@@ -229,7 +231,7 @@ gpatterns.run_bipolar_model <- function(track,
         mutate(grp = ntile(fid, group_num)) %>%
         group_by(grp) %>%
         summarise(min_fid=min(fid), max_fid=max(fid))
-
+    
     if (use_sge){
         commands <- plyr::alply(fid_groups, 1, function(x)
             qq('.gpatterns.run_bipolar_model("@{fn}",
@@ -272,10 +274,14 @@ gpatterns.run_bipolar_model <- function(track,
     res <- res %>% mutate(qval = p.adjust(pval)) %>%
         tbl_df()
 
+    if (save_tab){
+        .gpatterns.save_bipolar_stats(track, res, overwrite = overwrite)
+    }
+
     return(res)
 }
 
-########################################################################
+
 .gpatterns.run_bipolar_model <- function(fn,
                                          min_frag_id,
                                          max_frag_id,
@@ -327,7 +333,8 @@ gpatterns.run_bipolar_model <- function(track,
                                   gain.uni = 'numeric',
                                   loss.uni = 'numeric',
                                   uni.mix2 = 'numeric')) %>%
-            rename(fid = frag_id) %>% tbl_df %>%
+            rename(fid = frag_id) %>%
+            tbl_df %>%
             .gpatterns.arrange_biploar_model_output()
 
 
@@ -335,7 +342,7 @@ gpatterns.run_bipolar_model <- function(track,
     }
 }
 
-########################################################################
+
 .gpatterns.arrange_biploar_model_output <- function(tab, calc_qval = TRUE){
     if (calc_qval){
         tab <- tab %>% mutate(qval = p.adjust(pval))
@@ -381,9 +388,76 @@ gpatterns.run_bipolar_model <- function(track,
 
 }
 
+
+.gpatterns.save_bipolar_stats <- function(track, bipolar_tab, overwrite = FALSE){
+    fids_tab <- .gpatterns.load_table(
+        saved_name=.gpatterns.fids_tab_name(track),
+        file=.gpatterns.fids_file_name(track)
+    ) %>%
+        tbl_df()
+
+    bipolar_tab <- fids_tab %>%
+        select(chrom, start, end, fid) %>%
+        left_join(bipolar_tab, by="fid")
+
+    message("saving result...")
+    .gpatterns.save_table(bipolar_tab,
+                          saved_name=.gpatterns.mixture_model_tab_name(track),
+                          file=.gpatterns.mixture_model_file_name(track))
+
+    if (overwrite){
+        tracks <- c(
+            .gpatterns.mix_qval_track_name(track),
+            .gpatterns.mix_meth_track_name(track),
+            .gpatterns.mix_unmeth_track_name(track),
+            .gpatterns.gain_meth_track_name(track),
+            .gpatterns.gain_unmeth_track_name(track),
+            .gpatterns.gain_uni_track_name(track),
+            .gpatterns.loss_meth_track_name(track),
+            .gpatterns.loss_unmeth_track_name(track),
+            .gpatterns.loss_uni_track_name(track),
+            .gpatterns.center_meth_track_name(track),
+            .gpatterns.center_unmeth_track_name(track),
+            .gpatterns.center_uni_track_name(track))
+        .gpatterns.remove.tracks(tracks)
+    }
+
+    description.suf = sprintf(
+        "from mixture model mixture scanner run on %s. params: uniform_mix=%s, max_sampling_n=%s, min_sampling_n=%s, init_num=%s",
+        track,
+        uniform_mix,
+        max_sampling_n,
+        min_sampling_n,
+        init_num)
+
+    gtrack.create_sparse(.gpatterns.mix_qval_track_name(track),  paste("qvalue (FDR)", description.suf), bipolar_tab, bipolar_tab$qval)
+    gtrack.create_sparse(.gpatterns.mix_meth_track_name(track),
+                         paste("estimated mixture coefficient of methylated component", description.suf), bipolar_tab, bipolar_tab$mix.meth)
+    gtrack.create_sparse(.gpatterns.mix_unmeth_track_name(track),
+                         paste("estimated mixture coefficient of unmethylated component", description.suf), bipolar_tab, bipolar_tab$mix.unmeth)
+    gtrack.create_sparse(.gpatterns.gain_meth_track_name(track),
+                         paste("estimated gain rate of methylated component", description.suf), bipolar_tab, bipolar_tab$gain.meth)
+    gtrack.create_sparse(.gpatterns.gain_unmeth_track_name(track),
+                         paste("estimated gain rate of unmethylated component", description.suf), bipolar_tab, bipolar_tab$gain.unmeth)
+    gtrack.create_sparse(.gpatterns.gain_uni_track_name(track),
+                         paste("estimated gain rate of unimodal component", description.suf), bipolar_tab, bipolar_tab$gain.uni)
+    gtrack.create_sparse(.gpatterns.loss_meth_track_name(track),
+                         paste("estimated loss rate of methylated component", description.suf), bipolar_tab, bipolar_tab$loss.meth)
+    gtrack.create_sparse(.gpatterns.loss_unmeth_track_name(track),
+                         paste("estimated loss rate of unmethylated component", description.suf), bipolar_tab, bipolar_tab$loss.unmeth)
+    gtrack.create_sparse(.gpatterns.loss_uni_track_name(track),
+                         paste("estimated loss rate of unimodal component", description.suf), bipolar_tab, bipolar_tab$loss.uni)
+    gtrack.create_sparse(.gpatterns.center_meth_track_name(track),
+                         paste("number of ones in methylated center", description.suf), bipolar_tab, bipolar_tab$center.meth.ones)
+    gtrack.create_sparse(.gpatterns.center_unmeth_track_name(track),
+                         paste("number of ones in unmethylated center", description.suf), bipolar_tab, bipolar_tab$center.unmeth.ones)
+    gtrack.create_sparse(.gpatterns.center_uni_track_name(track),
+                         paste("number of ones in unimodal center", description.suf), bipolar_tab, bipolar_tab$center.uni.ones)
+}
+
 # other Functions ------------------------------------------------
 
-########################################################################
+
 gpatterns.theta_distance <- function(track1, track2, meth_range=NULL, min_cov=NULL, similarity=FALSE){
 
     pats1 <- gpatterns.extract_patterns(track1, tabular=T) %>%
@@ -447,7 +521,7 @@ gpatterns.theta_distance <- function(track1, track2, meth_range=NULL, min_cov=NU
     return(res)
 }
 
-########################################################################
+
 gpatterns.theta_distance_sampling <- function(track1, track2, sampling_n, meth_range=NULL, rm_n0=FALSE, rm_n1=FALSE, rm_borders=FALSE, similarity=FALSE, replace=FALSE, min_cov=NULL, add_frag_stats=FALSE, add_intra=FALSE){
     if (!replace && is.null(min_cov)){
         min_cov <- sampling_n
@@ -499,7 +573,7 @@ gpatterns.theta_distance_sampling <- function(track1, track2, sampling_n, meth_r
 }
 
 
-########################################################################
+
 .gpatterns_filter_pats <- function(pats, min_cov=NULL, meth_range=NULL, rm_n0=FALSE, rm_n1=FALSE, rm_borders=FALSE, track=NULL){
     pats <- pats %>%
         mutate(
@@ -533,7 +607,7 @@ gpatterns.theta_distance_sampling <- function(track1, track2, sampling_n, meth_r
     return(pats)
 }
 
-########################################################################
+
 .calc_epipoly_sampling <- function(pats1, pats2, sampling_n, replace=FALSE, similarity=FALSE){
     pats1 <- pats1 %>%
         arrange(fid) %>%
@@ -557,7 +631,7 @@ gpatterns.theta_distance_sampling <- function(track1, track2, sampling_n, meth_r
     return(res)
 }
 
-########################################################################
+
 .calc_epipoly_sampling_intra <- function(pats, sampling_n, replace=FALSE, similarity=FALSE){
     pats_min2 <- pats %>% group_by(fid) %>% filter(n() >= 2) %>% ungroup
     res <- plyr::adply(1:sampling_n, 1, function(x)
@@ -580,7 +654,7 @@ gpatterns.theta_distance_sampling <- function(track1, track2, sampling_n, meth_r
     return(res)
 }
 
-########################################################################
+
 gpatterns.theta_matrix_sampling <- function(tracks, samples=NULL, parallel=FALSE, symetric=TRUE, ...){
     if (parallel){
         .progress='none'

@@ -1,4 +1,4 @@
-############################################################################################
+
 #' Effiecient implementation of kmeans++ algorithm
 #'
 #' @param tab table
@@ -55,7 +55,7 @@ TGL_kmeans <- function(tab,
 }
 
 
-############################################################################################
+
 #' Alternative interface for TGL_kmeans
 #' Returned value is more similar to native R kmeans
 #' Allows keeping the output of the kmeans exec within the R return value

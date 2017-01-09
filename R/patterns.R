@@ -1,6 +1,6 @@
 # Tidy CpGs Functions ------------------------------------------------
 
-########################################################################
+
 #' Get tidy cpgs from a track
 #'
 #' @param track name of track
@@ -71,7 +71,7 @@ gpatterns.get_tidy_cpgs <- function(track,
 }
 
 
-########################################################################
+
 #' Apply a function on tidy cpgs (internally separated by coordinates)
 #'
 #' @param track name of track
@@ -144,7 +144,7 @@ gpatterns.apply_tidy_cpgs <- function(track,
 }
 
 
-########################################################################
+
 #' @export
 .gpatterns.get_tidy_cpgs_intervals <- function(track=NULL, path=NULL){
     stopifnot(!is.null(track) || !is.null(path))
@@ -163,7 +163,7 @@ gpatterns.apply_tidy_cpgs <- function(track,
 
 # Pattern generation Functions ------------------------------------------------
 
-########################################################################
+
 #' Calculate pattern coverage for each CpG
 #'
 #' @param track name of track
@@ -197,7 +197,7 @@ gpatterns.get_pat_cov <- function(track,
 
 }
 
-########################################################################
+
 #' Extracts patterns given pattern space
 #'
 #' @param track name of track
@@ -275,7 +275,7 @@ gpatterns.tidy_cpgs_to_pats <- function(track,
     return(pats)
 }
 
-########################################################################
+
 #' Generate pattern space
 #'
 #' @param tracks tracks
@@ -342,7 +342,7 @@ gpatterns.tracks_to_pat_space <- function(tracks,
 
 
 
-########################################################################
+
 .gpatterns.max_pat_cov_intervs <- function(expr, intervals, iterator=.gpatterns.genome_cpgs_intervals, pat_len=5, min_cov = 1, mode='pat_cov', contiguous = TRUE, nchunks= getOption('gpatterns.parallel.thread_num'), parallel=getOption('gpatterns.parallel'), verbose=FALSE){
     old_opt <- options()
     options(gmultitasking=FALSE)
@@ -397,7 +397,7 @@ gpatterns.tracks_to_pat_space <- function(tracks,
     return(res)
 }
 
-########################################################################
+
 #' Generate pattern space for specific genomic loci
 #'
 #' @param tracks tracks
@@ -508,7 +508,7 @@ gpatterns.intervs_to_pat_space <- function(tracks,
 }
 
 
-########################################################################
+
 .gpatterns.tidy_cpgs_2_pat_cov  <- function(calls, pat_len, max_span){
     calls <- calls %>%
         mutate(start = cg_pos, end = start+1) %>%
@@ -542,7 +542,7 @@ gpatterns.intervs_to_pat_space <- function(tracks,
     return(res)
 }
 
-########################################################################
+
 #' Generate CpG pattern frequency from tidy_cpgs
 #'
 #' @param calls tidy_cpgs
@@ -557,26 +557,45 @@ gpatterns.intervs_to_pat_space <- function(tracks,
 #' @examples
 gpatterns.tidy_cpgs_2_pat_freq <- function(calls, pat_length = 2, min_cov = 1, tidy=TRUE){
 
-        #########################################################
         gen_pats <- function(calls, min_cov, pat_length=2){
-            message(qq('cpg num: 1'))
-            for (i in 1:(pat_length - 1)){
-                message(qq('cpg num: @{i+1}'))
-                calls <- calls %>%
-                    mutate(next_meth = lead(meth, i)) %>%
-                    group_by(read_id) %>%
-                    mutate(next_pos = lead(start, i)) %>%
-                    ungroup %>%
-                    filter(!is.na(next_pos)) %>%
-                    gintervals.neighbors1(.gpatterns.genome_next_cpg_intervals) %>%
-                    filter(dist == 0) %>%
-                    filter(next_pos == nextcg) %>%
-                    select(-(next_pos:dist)) %>%
-                    rename_(.dots = setNames('next_meth', paste0('next_', i, '_meth')))
+
+            add_pat <- function(calls, cls, l, min_cov=1){
+                #for each position the l'th position after it in the read
+                cls <- cls %>%
+                    left_join(calls %>%
+                                  mutate(next_pos = lead(start, l),
+                                         next_meth = lead(meth, l)) %>%
+                                  select(chrom, start, end, next_pos, next_meth),
+                              by=c('chrom', 'start', 'end') )
+
+                #get the genomic CG after the last position
+                cls <- cls %>%
+                    bind_cols(cls %>%
+                                  select(chrom, start=lastpos) %>%
+                                  mutate(end = start + 1) %>%
+                                  gintervals.neighbors1(.gpatterns.genome_next_cpg_intervals) %>%
+                                  select(dist, nextcg)) %>%
+                    filter(dist == 0)
+
+                #add another CG only if the next cg in the read is the next in the genome
+                cls <- cls %>%
+                    filter(nextcg == next_pos) %>%
+                    unite('meth', ends_with('meth'), sep='') %>%
+                    mutate(lastpos = nextcg) %>%
+                    select(chrom, start, end, read_id, meth, lastpos)
+
+                return(cls)
             }
 
-            pats_dist <- calls %>%
-                unite('pat', ends_with('meth'), sep='') %>%
+            message(qq('cpg num: 1'))
+            cls <-  calls %>% mutate(lastpos = start)
+            for (i in 1:(pat_length-1)){
+                message(qq('cpg num: @{i+1}'))
+                cls <-  add_pat(calls, cls, i, min_cov=min_cov)
+            }
+            cls <- cls %>% select(chrom, start, end, pat=meth)
+
+            pats_dist <- cls %>%
                 group_by(chrom, start, end, pat) %>%
                 summarise(n_pat = n()) %>%
                 group_by(chrom, start, end) %>%
@@ -588,7 +607,6 @@ gpatterns.tidy_cpgs_2_pat_freq <- function(calls, pat_length = 2, min_cov = 1, t
             return(pats_dist)
         }
 
-        #########################################################
         fill_columns <- function(pats_dist, pat_length){
             possible_pats <- apply(expand.grid(rep(list(0:1), pat_length)), 1,
                                    function(x) paste0(x, collapse='')) %>%
@@ -606,7 +624,6 @@ gpatterns.tidy_cpgs_2_pat_freq <- function(calls, pat_length = 2, min_cov = 1, t
             return(pats_dist[, c('chrom', 'start', 'end', possible_pats)])
         }
 
-        #########################################################
         calls <-  calls %>%
             mutate(start = cg_pos, end = start + 1) %>%
             select(chrom, start, end, read_id, meth)
@@ -618,7 +635,7 @@ gpatterns.tidy_cpgs_2_pat_freq <- function(calls, pat_length = 2, min_cov = 1, t
         }
 
         if (tidy){
-            pats_dist <- k %>%
+            pats_dist <- pats_dist %>%
                 tidyr::complete(nesting(chrom, start, end), pat, fill=list(p_pat=0, n_pat=0))
         } else {
             pats_dist <- pats_dist %>%
@@ -634,7 +651,7 @@ gpatterns.tidy_cpgs_2_pat_freq <- function(calls, pat_length = 2, min_cov = 1, t
 
 
 
-########################################################################
+
 #' Generate pileup form tidy_cpgs
 #'
 #' @param calls tidy_cpgs
@@ -679,7 +696,7 @@ gpatterns.tidy_cpgs_2_pileup <- function(calls, dsn = NULL){
 
 # Pattern utility Functions ------------------------------------------------
 
-########################################################################
+
 #' Downsample patterns table
 #'
 #' @param patterns patterns table
@@ -699,7 +716,7 @@ gpatterns.downsample_patterns <- function(patterns, dsn){
 
 
 
-########################################################################
+
 #' transforms patterns to summary statistics: n,n0,n1,nx,nc,meth and epipoly
 #'
 #' @param patterns_tab patterns table (needs to have 'fid' and 'pattern' fields)
@@ -724,7 +741,7 @@ gpatterns.frag_stats <- function(patterns_tab, noise_threshold=0.2){
         ungroup()
 }
 
-########################################################################
+
 #' Extract patterns of a track
 #'
 #' @param track name of track
@@ -769,7 +786,7 @@ gpatterns.extract_patterns <- function(track, fids = NULL, tidy = TRUE, dsn = NU
     return(patterns_list)
 }
 
-########################################################################
+
 #' Extract pattern data from tracks without specifying coordinates
 #'
 #' @param ... tracks (comma separated)
@@ -834,7 +851,7 @@ gpatterns.extract_all <- function(...,
     return(tab)
 }
 
-########################################################################
+
 #' Extract pattern data
 #'
 #' @param ... tracks to extract
@@ -960,7 +977,7 @@ gpatterns.extract <- function(...,
     return(untidy_tab)
 }
 
-########################################################################
+
 .gpatterns.save_table <- function(x, saved_name, file)
 {
     assign(saved_name, data.table::as.data.table(x))
@@ -968,37 +985,37 @@ gpatterns.extract <- function(...,
 }
 
 
-########################################################################
+
 .gpatterns.load_table <- function(saved_name, file)
 {
     load(file)
     return(get(saved_name) %>% tbl_df())
 }
 
-########################################################################
+
 .gpatterns.load_fids_tab <- function(track){
     .gpatterns.load_table(saved_name=.gpatterns.fids_tab_name(track),
                           file=.gpatterns.fids_file_name(track))
 }
 
-########################################################################
+
 .gpatterns.load_patterns_tab <- function(track){
     .gpatterns.load_table(saved_name=.gpatterns.patterns_tab_name(track),
                           file=.gpatterns.patterns_file_name(track))
 }
 
-########################################################################
+
 .gpatterns.load_bipolar_tab <- function(track){
     .gpatterns.load_table(saved_name=.gpatterns.bipolar_model_tab_name(track),
                           file=.gpatterns.bipolar_model_file_name(track))
 }
 
-########################################################################
+
 .gpatterns.patterns_exist <- function(tracks){
     map_lgl(tracks, function(track) file.exists(.gpatterns.patterns_file_name(track)))
 }
 
-########################################################################
+
 .gpatterns.count_noise <- function(patterns, cpgs, ones, noise_threshold)
 {
     noise_threshold <- noise_threshold * length(patterns)
@@ -1007,7 +1024,7 @@ gpatterns.extract <- function(...,
     return(sum(tab[tab < noise_threshold]))
 }
 
-########################################################################
+
 .gpatterns.remove.tracks <- function(tracks){
     for (tr in tracks){
         if(gtrack.exists(tr)){
@@ -1017,7 +1034,7 @@ gpatterns.extract <- function(...,
     }
 }
 
-########################################################################
+
 .gpatterns.centered_cpg_content <- function(intervals, cpg_nhood)
 {
     intervals <- intervals %>%

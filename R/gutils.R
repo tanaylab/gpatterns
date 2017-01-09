@@ -1,9 +1,9 @@
-########################################################################
+
 .random_track_name <- function(len=12){
     stringi::stri_rand_strings(1, len, "[a-z]")
 }
 
-########################################################################
+
 #' Finds neighbors between two sets of intervals (and does not return conflicting column names)
 #'
 #' @inheritParams misha::gintervals.neighbours
@@ -28,12 +28,12 @@ gintervals.neighbors1 <- function(intervals1 = NULL,
             maxdist = maxdist,
             na.if.notfound = na.if.notfound
         ) %>%
-        tibble::repare_names()
+        tibble::repair_names()
 
     return(res %>% tbl_df)
 }
 
-########################################################################
+
 #' Filter intervals set by distance to another.
 #' A wrapper around gintervals.neighbours and filter(dist <= max_distance)
 #'
@@ -57,7 +57,7 @@ gintervals.filter <- function(intervals1, intervals2, max_distance=0, abs_dist =
     return(res)
 }
 
-########################################################################
+
 gintervals.neighbors_y <- function(intervals1, intervals2, maxneighbors=1, mindist=-1e+09, maxdist=1e+09, na.if.notfound=FALSE)
 {
     cols1 <- colnames(intervals1)
@@ -79,7 +79,7 @@ gintervals.neighbors_y <- function(intervals1, intervals2, maxneighbors=1, mindi
     return(neighbors)
 }
 
-########################################################################
+
 gintervals.left_join <- function(intervals1, intervals2, maxneighbors=1, mindist=-1e+09, maxdist=1e+09)
 {
     joined <- gintervals.neighbors_y(intervals1, intervals2, maxneighbors=maxneighbors, mindist=mindist, maxdist=maxdist, na.if.notfound=TRUE)
@@ -91,14 +91,14 @@ gintervals.left_join <- function(intervals1, intervals2, maxneighbors=1, mindist
     return(joined)
 }
 
-########################################################################
+
 gintervals.centers <- function(inv) {
     inv %>%
         mutate(center = floor((start + end) / 2), start=center, end=center+1) %>%
         select(-center)
 }
 
-########################################################################
+
 gintervals.expand <- function(inv, expansion = 100) {
     inv %>%
         mutate(start = start - expansion, end = end + expansion) %>%
@@ -106,19 +106,19 @@ gintervals.expand <- function(inv, expansion = 100) {
         gintervals.force_range()
 }
 
-########################################################################
+
 gintervals.normalize <- function(inv, size) {
     centers <- gintervals.centers(inv) %>%
         mutate(end = end - 1)
     return(gintervals.expand(centers, floor(size/2)))
 }
 
-########################################################################
+
 gintervals.distance <- function(start1,end1,start2,end2) {
     pmax(pmax(start1, start2) - pmin(end1, end2), 0)
 }
 
-########################################################################
+
 #' Creates a virtual track and runs gextract
 #'
 #' @param tracks tracks
@@ -160,7 +160,7 @@ gvextract <- function(tracks, intervals, colnames = NULL, iterator = NULL,
 }
 
 
-########################################################################
+
 #' Returns the result of track expressions evaluation for each of the
 #' iterator intervals, and cbinds the intervals (instead of intervalID)
 #'
@@ -186,7 +186,7 @@ gextract.left_join <- function(expr, intervals = NULL, colnames = NULL, iterator
 
 
 
-########################################################################
+
 #' Apply a function on track expression in intervals
 #'
 #' @param f function to apply. First argument would be the result of gfunc
@@ -242,7 +242,7 @@ glply <- function(f, expr, intervals = NULL, iterator = NULL, colnames = NULL, n
     return(res)
 }
 
-########################################################################
+
 #' @rdname glply
 #' @export
 gdply <- function(...){
@@ -250,7 +250,7 @@ gdply <- function(...){
     return(res)
 }
 
-########################################################################
+
 gintervals.which=function(expr, intervals, iterator=expr, which.func=max) {
   result.intervals = intervals
   f = function(x) {
@@ -263,13 +263,13 @@ gintervals.which=function(expr, intervals, iterator=expr, which.func=max) {
   result.intervals
 }
 
-########################################################################
+
 gmax.coord=function(chr) {
   x = ALLGENOME[[1]]
   x[x$chrom == chr,"end"]
 }
 
-########################################################################
+
 gseq.extract_conv <- function(..., methylated=TRUE) {
     res <- toupper(gseq.extract(...))
     if (methylated) {
@@ -279,16 +279,16 @@ gseq.extract_conv <- function(..., methylated=TRUE) {
     }
 }
 
-########################################################################
+
 gseq.rev_comp <- function(s) {
     chartr('acgtACGT', 'tgcaTGCA', s) %>% stringi::stri_reverse()
 }
 
-########################################################################
+
 sum_ignore_na <- purrr::partial(sum, na.rm=T)
 sum_ignore_na_all <- sum_ignore_na
 
-########################################################################
+
 #' split genomic intervals to bins
 #'
 #' @param intervals intervals
@@ -327,7 +327,7 @@ gbin_intervals <- function(intervals, nbins){
 }
 
 
-########################################################################
+
 #' Return an alternate empirical cumulative distribution, counting only
 #' values with a lower rank.
 #'
@@ -336,7 +336,7 @@ gbin_intervals <- function(intervals, nbins){
 cume_dist_min <- function(x) {1 - cume_dist(-x)}
 
 
-########################################################################
+
 gintervals.mark_overlapping <- function(intervals, unify_touching_intervals=TRUE, var='overlap')
 {
     canonic <- intervals %>%
@@ -345,7 +345,7 @@ gintervals.mark_overlapping <- function(intervals, unify_touching_intervals=TRUE
     return(intervals %>% mutate(overlap=attr(canonic, 'mapping')))
 }
 
-########################################################################
+
 #' Runs R commands on a cluster that supports SGE
 #'
 #' @inheritParams misha::gcluster.run
@@ -576,7 +576,7 @@ gcluster.run2 <- function (...,
 
 
 
-########################################################################
+
 #' Wrapper around gtrack.import_mappedseq for (multiple) bam files
 #'
 #' @param bam_files vector of bam (or sam) files to import
