@@ -560,13 +560,13 @@ gpatterns.tidy_cpgs_2_pat_freq <- function(calls, pat_length = 2, min_cov = 1, t
         gen_pats <- function(calls, min_cov, pat_length=2){
 
             add_pat <- function(calls, cls, l, min_cov=1){
-                #for each position the l'th position after it in the read
+                #for each position get the l'th position after it in the read
                 cls <- cls %>%
                     left_join(calls %>%
                                   mutate(next_pos = lead(start, l),
                                          next_meth = lead(meth, l)) %>%
-                                  select(chrom, start, end, next_pos, next_meth),
-                              by=c('chrom', 'start', 'end') )
+                                  select(chrom, start, end, read_id, next_pos, next_meth),
+                              by=c('chrom', 'start', 'end', 'read_id') )
 
                 #get the genomic CG after the last position
                 cls <- cls %>%
@@ -586,11 +586,11 @@ gpatterns.tidy_cpgs_2_pat_freq <- function(calls, pat_length = 2, min_cov = 1, t
 
                 return(cls)
             }
-
+            
             message(qq('cpg num: 1'))
             cls <-  calls %>% mutate(lastpos = start)
             for (i in 1:(pat_length-1)){
-                message(qq('cpg num: @{i+1}'))
+                message(qq('cpg num: @{i+1}'))                
                 cls <-  add_pat(calls, cls, i, min_cov=min_cov)
             }
             cls <- cls %>% select(chrom, start, end, pat=meth)
