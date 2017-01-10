@@ -254,6 +254,7 @@ gpatterns.import_from_bam <- function(bams,
 #' @param description description of the track to generate
 #' @param steps steps of the pipeline. Possible options are:
 #' 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov'
+#' @param overwrite overwrite existing tracks
 #' @param dsn downsampling n. Leave NULL for no downsampling
 #' @param pat_cov_lens lengthes of patterns to calculate pattern coverage track for
 #' @param max_span maximal span to look for patterns (usually the maximal insert length)
@@ -272,6 +273,7 @@ gpatterns.import_from_tidy_cpgs <- function(tidy_cpgs,
                                             track,
                                             description,
                                             steps = 'all',
+                                            overwrite = TRUE,
                                             dsn = NULL,
                                             pat_cov_lens = c(3,5,7),
                                             max_span = 500,
@@ -284,7 +286,7 @@ gpatterns.import_from_tidy_cpgs <- function(tidy_cpgs,
     gsetroot(groot)
     all_steps <- c('bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov')
 
-    if (steps == 'all'){
+    if (length(steps) == 1 && steps[1] == 'all'){
         steps <- all_steps
     }
 
@@ -316,6 +318,7 @@ gpatterns.import_from_tidy_cpgs <- function(tidy_cpgs,
         .gpatterns.pileup,
         track = track,
         description = description,
+        overwrite = overwrite,
         genomic_bins = genomic_bins,
         dsn = dsn,
         use_sge = use_sge,
@@ -329,6 +332,7 @@ gpatterns.import_from_tidy_cpgs <- function(tidy_cpgs,
         .gpatterns.pat_freq,
         track = track,
         description = description,
+        overwrite = overwrite,
         pat_freq_len = pat_freq_len,
         nbins = 350,
         use_sge = use_sge,
@@ -342,6 +346,7 @@ gpatterns.import_from_tidy_cpgs <- function(tidy_cpgs,
         .gpatterns.pat_cov,
         track = track,
         description = description,
+        overwrite = overwrite,
         pat_cov_lens = pat_cov_lens,
         max_span = max_span,
         use_sge = use_sge,
@@ -526,18 +531,23 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
     if (!is.null(track)){
         outdir <- paste0(.gpatterns.base_dir(track), '/tidy_cpgs')
     }
+
     system(qq('mkdir -p @{outdir}'))
     tidy_cpgs <- tidy_cpgs %>%
         bind_cols(tidy_cpgs %>%
                       select(chrom, start=cg_pos) %>%
                       mutate(end = start + 1) %>%
-                      gintervals.filter(intervals) %>%
+                      gintervals.filter(intervals, bind_intervals2 = TRUE) %>%
                       select(chrom1, start1, end1)
                   )
     tidy_cpgs %>% unite('grp', chrom1, start1, end1, remove=F) %>% group_by(grp) %>% by_slice(
         function(x) {
         tmp <- tempfile()
-        fwrite(x %>% select(-chrom1, -start1, -end1), tmp, sep=',', row.names=F, col.names=T)
+        x %>%
+            select(-chrom1, -start1, -end1) %>%
+            mutate(meth = ifelse(meth == 1, 'Z', 'z')) %>%
+            fwrite(tmp, sep=',', row.names=F, col.names=T)
+
         system(qq('cat @{tmp} | gzip -c > @{outdir}/@{x$chrom1[1]}_@{x$start1[1]}_@{x$end1[1]}.tcpgs.gz'))
         system('rm -f @{tmp}')
     } )
@@ -545,15 +555,15 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
 
 
 #' @export
-.gpatterns.pileup <- function(track, description, dsn = NULL, columns = c('meth', 'unmeth', 'cov', 'avg'), ...){
+.gpatterns.pileup <- function(track, description, dsn = NULL, columns = c('meth', 'unmeth', 'cov', 'avg'), overwrite=TRUE, ...){
     message('calculating pileup...')
     pileup <- gpatterns.apply_tidy_cpgs(track, function(x) gpatterns.tidy_cpgs_2_pileup(x, dsn=dsn), ...)
     message('importing pileup to misha...')
-    .gpattern.import_intervs_table(track, description, pileup, columns=columns)
+    .gpattern.import_intervs_table(track, description, pileup, columns=columns, overwrite = overwrite)
 }
 
 #'@export
-.gpatterns.pat_freq <- function(track, description, pat_freq_len, nbins=NULL, split_by_bin = TRUE, ...){
+.gpatterns.pat_freq <- function(track, description, pat_freq_len, nbins=NULL, split_by_bin = TRUE, overwrite=TRUE, ...){
     message(qq('calculating pattern frequency (pattern length: @{pat_freq_len})...'))
     if (!is.null(nbins)){
         intervals <- gbin_intervals(intervals = gintervals.all(), nbins)
@@ -578,12 +588,12 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
         warning('no patterns were found. Skipping creation of pattern frequency tracks')
     } else {
         message('importing pat_freq to misha...')
-        .gpattern.import_intervs_table(track, description, pat_freq, columns = NULL)
+        .gpattern.import_intervs_table(track, description, pat_freq, columns = NULL, overwrite = overwrite)
     }
 }
 
 
-.gpatterns.pat_cov <- function(track, description, pat_cov_lens, max_span = 500, ...){
+.gpatterns.pat_cov <- function(track, description, pat_cov_lens, max_span = 500, overwrite=TRUE, ...){
     message('calculating pattern coverage...')
     pat_cov <- pat_cov_lens %>%
         map_df(~ gpatterns.apply_tidy_cpgs(track,
@@ -595,24 +605,30 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
     pat_cov <- pat_cov %>% spread(pat_len, pat_cov)
 
     message('importing pat_cov to misha...')
-    .gpattern.import_intervs_table(track, description, pat_cov, columns = paste0('pat_cov', pat_cov_lens))
+    .gpattern.import_intervs_table(track, description, pat_cov, columns = paste0('pat_cov', pat_cov_lens), overwrite = overwrite)
 }
 
-
-.gpattern.import_intervs_table <- function(track_pref, description, tab, columns = NULL){
+#' @export
+.gpattern.import_intervs_table <- function(track_pref, description, tab, columns = NULL, overwrite = FALSE, rescan = FALSE){
     tab <- tbl_df(tab)
     columns <- columns %||% colnames(tab)[!(colnames(tab) %in% c('chrom', 'start', 'end'))]
     walk(columns, function(col){
         track_name <- qq('@{track_pref}.@{col}')
         if (gtrack.exists(track_name)){
-            message(qq('removing @{track_name}'))
-            gtrack.rm(track_name, force=TRUE)
+            if (overwrite){
+                message(qq('removing @{track_name}'))
+                gtrack.rm(track_name, force=TRUE)
+            } else {
+                warning(qq("did not overwrite track @{track_name}. To do that please set overwrite to TRUE"))
+                return(NULL)
+            }
         }
         message(qq('creating @{track_name}'))
         gtrack.create_sparse(track = track_name,
                              description = qq('@{description}: @{col} track'),
                              intervals = tab %>% select(chrom, start, end),
-                             value = tab[[col]])
+                             value = tab[[col]],
+                             rescan = rescan)
     })
 }
 
