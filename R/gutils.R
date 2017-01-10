@@ -41,19 +41,23 @@ gintervals.neighbors1 <- function(intervals1 = NULL,
 #' @param intervals2 intervals set by which to filter intervals1
 #' @param max_distance maximal distance of every interval in intervals1 from intervals2 (defualt 0)
 #' @param abs_dist take the absolute distance
+#' @param bind_intervals2 cbind add intervals2 to result
 #' @param ... additional parameters to gintervals.neighbours1
 #'
 #' @return
 #' @export
 #'
 #' @examples
-gintervals.filter <- function(intervals1, intervals2, max_distance=0, abs_dist = TRUE, ...){
+gintervals.filter <- function(intervals1, intervals2, max_distance=0, abs_dist = TRUE, bind_intervals2 = FALSE, ...){
     intervals1_cols <- colnames(intervals1)
     res <- intervals1 %>% gintervals.neighbors1(intervals2, ...)
     if (abs_dist){
         res$dist <- abs(res$dist)
     }
-    res <- res %>% filter(dist <= max_distance) %>% select(one_of(intervals1_cols))
+    res <- res %>% filter(dist <= max_distance)
+    if (!bind_intervals2){
+        res <- res %>% select(one_of(intervals1_cols))
+    }
     return(res)
 }
 
