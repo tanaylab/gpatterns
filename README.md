@@ -6,7 +6,7 @@ This package provides a set of tools for the analysis of methylation patterns.
 #### Requirements 
 - _Perl_
 - R packages:
-    * remotes.
+    * devtools.
     * _misha_.
 
 
@@ -20,7 +20,7 @@ install.packages("http://www.wisdom.weizmann.ac.il/~aviezerl/gpattrerns/misha_3.
 Download and install *gpatterns*: 
 ```
 #!r
-remotes::install_bitbucket("tanaylab/gpatterns", ref='default', vignette = TRUE)
+devtools::install_bitbucket("tanaylab/gpatterns", ref='default', vignette = TRUE)
 library(gpatterns)
 ```
 
