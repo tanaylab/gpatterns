@@ -8,7 +8,7 @@ gpatterns.get_avg_meth(tracks, intervals, iterator = NULL, min_cov = NULL,
   mask_by_cov = FALSE, use_cpgs = FALSE, min_samples = NULL,
   min_cpgs = NULL, min_var = NULL, var_quantile = NULL, names = NULL,
   tidy = TRUE, pre_screen = FALSE, use_disk = FALSE, file = NULL,
-  intervals.set.out = NULL)
+  intervals.set.out = NULL, sum_tracks = FALSE)
 }
 \arguments{
 \item{tracks}{methylation tracks}
@@ -49,6 +49,8 @@ intervals tidy == FALSE may be the only memory feasable option.}
 
 \item{intervals.set.out}{save output big intervals set (only in tidy mode,
 would not filter by variance)}
+
+\item{sum_tracks}{get average methylation from all the tracks summed}
 
 \item{pre}{screen for min_samples and min_cov (for large number of
 tracks / large number of intervals). Note that the intervalID column may be incorrect

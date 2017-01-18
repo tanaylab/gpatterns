@@ -5,9 +5,9 @@
 \title{Create a track from tidy_cpgs files}
 \usage{
 gpatterns.import_from_tidy_cpgs(tidy_cpgs, track, description, steps = "all",
-  dsn = NULL, pat_cov_lens = c(3, 5, 7), max_span = 500,
-  pat_freq_len = 2, nbins = nrow(gintervals.all()), groot = GROOT,
-  use_sge = FALSE, max_jobs = 400,
+  overwrite = TRUE, dsn = NULL, pat_cov_lens = c(3, 5, 7),
+  max_span = 500, pat_freq_len = 2, nbins = nrow(gintervals.all()),
+  groot = GROOT, use_sge = FALSE, max_jobs = 400,
   parallel = getOption("gpatterns.parallel"))
 }
 \arguments{
@@ -19,6 +19,8 @@ gpatterns.import_from_tidy_cpgs(tidy_cpgs, track, description, steps = "all",
 
 \item{steps}{steps of the pipeline. Possible options are:
 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov'}
+
+\item{overwrite}{overwrite existing tracks}
 
 \item{dsn}{downsampling n. Leave NULL for no downsampling}
 

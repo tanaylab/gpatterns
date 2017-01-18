@@ -32,6 +32,7 @@
 #' @param file save output to file (only in non tidy mode, would not filer by variance)
 #' @param intervals.set.out save output big intervals set (only in tidy mode,
 #' would not filter by variance)
+#' @param sum_tracks get average methylation from all the tracks summed
 #'
 #'
 #'
@@ -55,7 +56,8 @@ gpatterns.get_avg_meth <- function(
     pre_screen = FALSE,
     use_disk = FALSE,
     file = NULL,
-    intervals.set.out = NULL) {
+    intervals.set.out = NULL,
+    sum_tracks = FALSE) {
 
     .check_tracks_exist(tracks, c('meth', 'unmeth'))
     min_samples <- min_samples %||% 1
@@ -74,26 +76,28 @@ gpatterns.get_avg_meth <- function(
 
     names <- names %||% tracks
 
-    if (pre_screen || (!tidy & (!is.null(min_samples) || !is.null(min_cov)))){
+    if ((pre_screen || !tidy || sum_tracks) & (!is.null(min_samples) || !is.null(min_cov))){
         message(qq("Taking only intervals with coverage >= @{min_cov} in at least @{min_samples} samples"))
         if (use_disk){
             f_intervs <- .random_track_name()
         } else {
             f_intervs <- NULL
         }
+
         intervals <- gpatterns.screen_by_coverage(tracks = tracks,
                                                   intervals = intervals,
                                                   iterator = iterator,
                                                   min_cov = min_cov,
                                                   min_samples = min_samples,
-                                                  intervals.set.out = f_intervs)
+                                                  intervals.set.out = f_intervs,
+                                                  sum_tracks = FALSE)
         if (use_disk){
             intervals <- f_intervs
         }
 
     }
 
-    if (!tidy){
+    if (!tidy || sum_tracks){
         return(
             .gpatterns.get_avg_meth_not_tidy(
                 tracks,
@@ -104,7 +108,8 @@ gpatterns.get_avg_meth <- function(
                 names = names,
                 file = file,
                 intervals.set.out = intervals.set.out,
-                rm_intervals = !is.null(f_intervs))
+                rm_intervals = !is.null(f_intervs),
+                sum_tracks = sum_tracks)
         )
     }
 
@@ -180,7 +185,8 @@ gpatterns.get_avg_meth <- function(
                                              names = NULL,
                                              file = NULL,
                                              intervals.set.out = NULL,
-                                             rm_intervals = FALSE) {
+                                             rm_intervals = FALSE,
+                                             sum_tracks = FALSE) {
 
     names <- names %||% tracks
 
@@ -191,11 +197,24 @@ gpatterns.get_avg_meth <- function(
     walk2(vtracks_meth, .gpatterns.meth_track_name(tracks), gvtrack.create, func='sum')
     walk2(vtracks_unmeth, .gpatterns.unmeth_track_name(tracks), gvtrack.create, func='sum')
 
-    expr <- qqv('@{vtracks_meth} / ( @{vtracks_meth} + @{vtracks_unmeth} )')
+    if (sum_tracks){
+        meth_expr <- sprintf('sum(%s, na.rm=T)', paste(vtracks_meth, collapse=', '))
+        unmeth_expr <- sprintf('sum(%s, na.rm=T)', paste(vtracks_unmeth, collapse=', '))
+        expr <- qq('@{meth_expr} / ( @{meth_expr} + @{unmeth_expr} )')
+    } else {
+        expr <- qqv('@{vtracks_meth} / ( @{vtracks_meth} + @{vtracks_unmeth} )')
+    }
+
     avgs <- gextract(expr, intervals=intervals, iterator=iterator, colnames=names, file=file, intervals.set.out = intervals.set.out)
+
+    walk(c(vtracks_meth, vtracks_unmeth), gvtrack.rm)
 
     if (!is.null(file) || !is.null(intervals.set.out)){
         return(NULL)
+    }
+
+    if (sum_tracks){
+        return(avgs %>% tbl_df)
     }
 
     if (!is.null(min_var) || !is.null(var_quantile)) {
@@ -210,8 +229,6 @@ gpatterns.get_avg_meth <- function(
 
     n_intervals <- nrow(avgs)
     message(qq('number of intervals: @{scales::comma(n_intervals)}'))
-
-    walk(c(vtracks_meth, vtracks_unmeth), gvtrack.rm)
 
     if (rm_intervals){
         gintervals.rm(intervals, force = TRUE)
@@ -230,6 +247,7 @@ gpatterns.get_avg_meth <- function(
 #' @param min_samples minimal number of samples with cov >= min_cov. if min_cov
 #' is NULL it would be set to 1.
 #' @param intervals.set.out intervals.set.out
+#' @param sum_tracks sum the coverage from all tracks (min_samples parameter is ignored)
 #'
 #' @return
 #' @export
@@ -240,11 +258,18 @@ gpatterns.screen_by_coverage <- function(tracks,
                                          iterator,
                                          min_cov,
                                          min_samples = NULL,
-                                         intervals.set.out = NULL){
+                                         intervals.set.out = NULL,
+                                         sum_tracks = FALSE){
     cov_tracks <- .gpatterns.cov_track_name(tracks)
-    min_samples <- min_samples %||% 1
-    expr <- paste(qqv('(@{cov_tracks} >= min_cov)'), collapse = ', ')
-    expr <- qq('sum(@{expr}, na.rm=T) >= @{min_samples}')
+    if (sum_tracks){
+        cov_expr <- sprintf('sum(%s, na.rm=T)', paste(qqv('@{tracks}.cov'), collapse=', '))
+        expr <- qq('@{cov_expr} >= @{min_cov}')
+    } else {
+        min_samples <- min_samples %||% 1
+        expr <- paste(qqv('(@{cov_tracks} >= min_cov)'), collapse = ', ')
+        expr <- qq('sum(@{expr}, na.rm=T) >= @{min_samples}')
+    }
+
     intervs <- gscreen(expr,
                        intervals = intervals,
                        iterator = iterator,
@@ -484,6 +509,83 @@ gpatterns.cluster_avg_meth <- function(
 
 
 # Plotting Functions ------------------------------------------------
+.gpatterns.get_global_meth_trend <- function(tracks,
+                                             strat_track,
+                                             strat_breaks,
+                                             intervals,
+                                             iterator,
+                                             min_cov = NULL,
+                                             meth_breaks = seq(0, 1, by = 0.05),
+                                             names = NULL){
+    names <- names %||% tracks
+    trend <- map2_df(tracks, names, function(track, name){
+        if (!is.null(min_cov)){
+            message(qq('Taking only intervals with coverage >= @{min_cov}'))
+            intervals <- gpatterns.screen_by_coverage(track, intervals, iterator, min_cov=min_cov)
+        }
+        g <- gdist(strat_track, strat_breaks, .gpatterns.avg_track_name(track), meth_breaks, iterator=iterator, intervals=intervals)
+        w <- zoo::rollmean(meth_breaks, k=2)
+        y <- apply(g, 1, function(x) sum(x*w)/sum(x))
+        tibble(sample=name, breaks=names(y), value=y, breaks_numeric=zoo::rollmean(strat_breaks, k=2))
+    })
+    return(trend)
+}
+
+#' Plot global methylation stratified on other tracks
+#'
+#' @param tracks tracks to plot
+#' @param strat_track track to stratify average methylation by
+#' @param strat_breaks breaks to determine the bins of strat_track
+#' @param intervals genomic scope for which the function is applied
+#' @param iterator track expression iterator (of both tracks and strat_track)
+#' @param min_cov minimal coverage of each track
+#' @param meth_breaks breaks to determine the bins of the methylation track
+#' @param names alternative names for the track
+#' @param width plot width (if fig_fn is not NULL)
+#' @param height plot height (if fig_fn is not NULL)
+#' @param fig_fn output filename for the figure (if NULL, figure would be returned)
+#' @param xlab label for the x axis
+#'
+#' @return list with trend data frame (under 'trend') and the plot (under 'p')
+#' @export
+#'
+#' @examples
+gpatterns.global_meth_trend <- function(tracks,
+                                        strat_track = .gpatterns.cg_cont_500_track,
+                                        strat_breaks = seq(0, 0.08, by=0.002),
+                                        intervals = .gpatterns.genome_cpgs_intervals,
+                                        iterator = .gpatterns.genome_cpgs_intervals,
+                                        min_cov = NULL,
+                                        meth_breaks = seq(0, 1, by = 0.05),
+                                        names=NULL,
+                                        width=500,
+                                        height=260,
+                                        fig_fn=NULL,
+                                        xlab=strat_track){
+    trend <- .gpatterns.get_global_meth_trend(tracks=tracks,
+                                              strat_track=strat_track,
+                                              strat_breaks=strat_breaks,
+                                              intervals=intervals,
+                                              iterator=iterator,
+                                              min_cov=min_cov,
+                                              meth_breaks=meth_breaks,
+                                              names=names)
+
+    if (length(track == 1)){
+        p <- trend %>% ggplot(aes(x=breaks_numeric, y=value, group=1)) + geom_line() + xlab(xlab) + ylab('Methylation')
+    } else {
+        p <- trend %>% ggplot(aes(x=breaks_numeric, y=value, color=sample, group=sample)) + geom_line() + xlab(xlab) + ylab('Methylation')
+    }
+
+    if (!is.null(fig_fn)){
+        png(fig_fn, width = width, height = height)
+        print(p)
+        dev.off()
+    }
+
+    return(list(trend=trend, p=p))
+}
+
 
 #' Plots smoothScatter of average methylation of two tracks
 #'
@@ -498,7 +600,7 @@ gpatterns.cluster_avg_meth <- function(
 #'  if NULL the sample names would be used.
 #' @param width plot width
 #' @param height plot height
-#' @param color.pal colo pallete
+#' @param color.pal color pallete
 #' @param device function to open a device if fig.ofn is not NULL. default: 'png'
 #' @param title_text title text
 #' @param add_n add 'n = number_of_observations' to the title

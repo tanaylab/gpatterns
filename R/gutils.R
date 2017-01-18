@@ -579,6 +579,26 @@ gcluster.run2 <- function (...,
 }
 
 
+#' Import array from data frame
+#'
+#' @param df data frame with intervals and values
+#' @inheritParams misha::gtrack.array.import
+#'
+#' @return
+#' @export
+#'
+#' @examples
+gtrack.array.import_from_df <- function(df, track, description) {
+    fn <- tempfile()
+    data.table::fwrite(format(df, scientific = FALSE), fn, na = "nan", row.names = FALSE,
+                       quote = FALSE, sep = "\t")
+    # write.table(format(df, scientific = FALSE), fn, na = "nan", row.names = FALSE,
+                # quote = FALSE, sep = "\t")
+    tryCatch(gtrack.array.import(track, description, fn),
+             finally=system(qq('rm -f @{fn}')))
+
+}
+
 
 
 #' Wrapper around gtrack.import_mappedseq for (multiple) bam files
@@ -599,6 +619,8 @@ gtrack.import_mappedseq_bam <- function(bam_files, ...){
     tmp_fifo <- tempfile()
     tryCatch({
         system(qq('mkfifo @{tmp_fifo}; @{cat_cmd} @{files} | samtools view -h > @{tmp_fifo}'), wait=FALSE)
-        gtrack.import_mappedseq(file=tmp_fifo, ...)
+        gtrack.import_mappedseq(file=tmp_fifo, cols.order=NULL, ...)
         }, finally=system(qq('rm -f @{tmp_fifo}')))
 }
+
+

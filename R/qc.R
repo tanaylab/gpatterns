@@ -58,6 +58,14 @@ gpatterns.get_pipeline_stats <- function(track,
 }
 
 
+#' reads per umi
+#'
+#' @param track
+#' @param dsn
+#'
+#' @return
+#'
+#' @examples
 .gpatterns.reads_per_umi <- function(track, dsn=NULL){
     tcpgs <- gpatterns.get_tidy_cpgs(track) %>% distinct(read_id, num)
     if (!is.null(dsn)){
@@ -68,6 +76,20 @@ gpatterns.get_pipeline_stats <- function(track,
 
 
 #dsns = c(2e5, 5e5, 7e5, 1e6, 1.5e6, 2e6, 3e6)
+
+#' ds stats
+#'
+#' @param track
+#' @param dsns
+#' @param bam
+#' @param fastq
+#' @param intervals
+#' @param sort_rand
+#'
+#' @export
+#' @return
+#'
+#' @examples
 .gpatterns.ds_stats <- function(track, dsns, bam = NULL, fastq = NULL, intervals=NULL, sort_rand=FALSE){
     stats <- list()
     stats[['cg_num']] <- tibble(dsn=numeric(), cg_num=numeric())
