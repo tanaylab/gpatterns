@@ -42,7 +42,9 @@ gpatterns.get_tidy_cpgs <- function(track,
         return(res)
     }
 
-    .intervals2files <- function(intervals, files) .gpatterns.intervals2files(intervals=intervals, files=files, dir = paste0(.gpatterns.base_dir(track), '/tidy_cpgs/'))
+    .intervals2files <- function(intervals, files) {
+        .gpatterns.intervals2files(intervals=intervals, files=files, dir = paste0(.gpatterns.base_dir(track), '/tidy_cpgs/'))
+    }
 
 
     if (!is.null(intervals)){
@@ -586,11 +588,11 @@ gpatterns.tidy_cpgs_2_pat_freq <- function(calls, pat_length = 2, min_cov = 1, t
 
                 return(cls)
             }
-            
+
             message(qq('cpg num: 1'))
             cls <-  calls %>% mutate(lastpos = start)
             for (i in 1:(pat_length-1)){
-                message(qq('cpg num: @{i+1}'))                
+                message(qq('cpg num: @{i+1}'))
                 cls <-  add_pat(calls, cls, i, min_cov=min_cov)
             }
             cls <- cls %>% select(chrom, start, end, pat=meth)

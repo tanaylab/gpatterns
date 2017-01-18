@@ -1,4 +1,4 @@
-# Utility functions
+# Utility functions ------------------------------------------------
 
 #' @export
 qq <- GetoptLong::qq
@@ -11,6 +11,46 @@ fread <- partial(data.table::fread, data.table=FALSE)
 
 #' @export
 fwrite <- data.table::fwrite
+
+#' @export
+comify <- scales::comma
+
+
+#' Smoothscatter that works with the pipe operator
+#' @export
+p_smoothScatter <- function(.data, .x, .y, xlab = NULL, ylab = NULL, ...){
+    x <- lazyeval::lazy_eval(lazyeval::lazy(.x), .data)
+    y <- lazyeval::lazy_eval(lazyeval::lazy(.y), .data)
+    xlab <- xlab %||% as.character(lazyeval::lazy(.x)$expr)
+    ylab <- ylab %||% as.character(lazyeval::lazy(.y)$expr)
+    smoothScatter(x, y, xlab=xlab, ylab=ylab, ...)
+}
+
+
+# Patterns utils -------------------------------------------
+
+
+
+#
+#' Set parallel threads
+#'
+#' @param thread_num number of threads. use '1' for non parallel behaviour
+#'
+#' @return None
+#'
+#' @examples
+#' gpatterns.set_parallel(8)
+#'
+#' @export
+gpatterns.set_parallel <- function(thread_num) {
+    if (1 == thread_num) {
+        options(gpatterns.parallel = FALSE)
+    } else {
+        doMC::registerDoMC(thread_num)
+        options(gpatterns.parallel = TRUE)
+        options(gpatterns.parallel.thread_num = thread_num)
+    }
+}
 
 .is_tidy_cpgs <- function(obj){
     return('data.frame' %in% class(obj) &&
@@ -32,9 +72,88 @@ fwrite <- data.table::fwrite
                ))
 }
 
+.gpatterns.tcpgs_colClasses <- function(uniq=TRUE){
+    if (uniq){
+        colClasses <- c(
+            read_id = 'character',
+            chrom = 'character',
+            start = 'numeric',
+            end = 'character',
+            strand = 'character',
+            umi1 = 'character',
+            umi2 = 'character',
+            insert_len = 'numeric',
+            num = 'numeric',
+            cg_pos = 'numeric',
+            meth = 'character',
+            qual = 'numeric')
+    } else {
+        colClasses <- c(
+            read_id = 'character',
+            chrom = 'character',
+            start = 'numeric',
+            end = 'character',
+            strand = 'character',
+            umi1 = 'character',
+            umi2 = 'character',
+            insert_len = 'numeric',
+            cg_pos = 'numeric',
+            meth = 'character',
+            qual = 'numeric')
+    }
+    return(colClasses)
+}
 
-#' @export
-comify <- scales::comma
+.gpatterns.get_tidy_cpgs_from_dir <- function(dir,
+                                              intervals = NULL,
+                                              uniq = TRUE){
+
+    files <- list.files(dir, full.names=TRUE, pattern='tcpgs.gz')
+
+
+    .get_tcpgs <- function(files){
+        res <- files %>%
+            map_df(function(f) fread(
+                qq('gzip -d -c @{f}'),
+                colClasses = .gpatterns.tcpgs_colClasses(uniq)) %>%
+                    tbl_df %>%
+                    mutate(cg_pos = cg_pos, meth = ifelse(meth == 'Z', 1, 0)))
+        if (0 == nrow(res)){
+            return(NULL)
+        }
+        return(res)
+    }
+
+    .intervals2files <- function(intervals, files) {
+        .gpatterns.intervals2files(intervals=intervals, files=files, dir = dir)
+    }
+
+
+    if (!is.null(intervals)){
+        tidy_intervals <- .gpatterns.get_tidy_cpgs_intervals(path=dir)
+        if (!is.character(intervals)){
+            if (all(
+                unite(intervals, 'coord', (chrom:end))$coord %in%
+                unite(tidy_intervals, 'coord', (chrom:end))$coord)
+            ){
+                return(.intervals2files(intervals, files) %>% .get_tcpgs)
+            }
+        }
+        tcpgs <- tidy_intervals %>%
+            gintervals.filter(intervals) %>%
+            .intervals2files(files) %>%
+            .get_tcpgs()
+        f <- tcpgs %>%
+            select(chrom, start=cg_pos) %>%
+            mutate(end = start+1) %>%
+            gintervals.neighbors1(intervals) %>%
+            mutate(f = dist == 0) %>% .$f
+        return(tcpgs %>% filter(f))
+    }
+
+    return(.get_tcpgs(files))
+}
+
 
 
 #' @inheritParams gpatterns::gcluster.run2
@@ -51,6 +170,7 @@ gcluster.run3 <- partial(gcluster.run2, script = .gpatterns.sg_script)
 }
 
 
+#' check if tidy_cpgs exist for track
 #' @export
 gpatterns.track_exists <- function(track){
     dir.exists(paste0(.gpatterns.base_dir(track), '/tidy_cpgs'))
@@ -74,35 +194,8 @@ gpatterns.track_exists <- function(track){
 }
 
 
-#' @export
-p_smoothScatter <- function(.data, .x, .y, xlab = NULL, ylab = NULL, ...){
-    x <- lazyeval::lazy_eval(lazyeval::lazy(.x), .data)
-    y <- lazyeval::lazy_eval(lazyeval::lazy(.y), .data)
-    xlab <- xlab %||% as.character(lazyeval::lazy(.x)$expr)
-    ylab <- ylab %||% as.character(lazyeval::lazy(.y)$expr)
-    smoothScatter(x, y, xlab=xlab, ylab=ylab, ...)
-}
 
-#
-#' Set parallel threads
-#'
-#' @param thread_num number of threads. use '1' for non parallel behaviour
-#'
-#' @return None
-#'
-#' @examples
-#' gpatterns.set_parallel(8)
-#'
-#' @export
-gpatterns.set_parallel <- function(thread_num) {
-    if (1 == thread_num) {
-        options(gpatterns.parallel = FALSE)
-    } else {
-        doMC::registerDoMC(thread_num)
-        options(gpatterns.parallel = TRUE)
-        options(gpatterns.parallel.thread_num = thread_num)
-    }
-}
+# Misha overrides ------------------------------------------------
 
 #' overrides gtrack.create_sparse without rescaning database
 #' @export
@@ -143,5 +236,95 @@ gtrack.create_sparse <- function (track = NULL, description = NULL, intervals = 
     })
     retv <- 0
 }
+
+#' @export
+gtrack.rm <- function (track = NULL, force = FALSE, rescan = TRUE)
+{
+    if (is.null(substitute(track)))
+        stop("Usage: gtrack.rm(track, force = FALSE)", call. = F)
+    .gcheckroot()
+    trackname <- do.call(.gexpr2str, list(substitute(track)),
+                         envir = parent.frame())
+    if (is.na(match(trackname, get("GTRACKS")))) {
+        if (force)
+            return(invisible())
+        stop(sprintf("Track %s does not exist", trackname), call. = F)
+    }
+    answer <- "N"
+    if (force)
+        answer <- "Y"
+    else {
+        str <- sprintf("Are you sure you want to delete track %s (Y/N)? ",
+                       trackname)
+        cat(str)
+        answer <- toupper(readLines(n = 1))
+    }
+    if (answer == "Y" || answer == "YES") {
+        dirname <- sprintf("%s.track", paste(get("GWD"), gsub("\\.",
+                                                              "/", trackname), sep = "/"))
+        unlink(dirname, recursive = TRUE)
+        if (file.exists(dirname))
+            cat(sprintf("Failed to delete track %s\n", trackname))
+        else gdb.reload(rescan = rescan)
+    }
+}
+
+gtrack.array.import <- function (track = NULL, description = NULL, ...)
+{
+    args <- as.list(substitute(list(...)))[-1L]
+    if (is.null(substitute(track)) || is.null(description) ||
+        !length(args))
+        stop("Usage: gtrack.array.import(track, description, [src]+)",
+             call. = F)
+    .gcheckroot()
+    trackstr <- do.call(.gexpr2str, list(substitute(track)),
+                        envir = parent.frame())
+    srcs <- c()
+    colnames <- list()
+    for (src in args) {
+        src <- do.call(.gexpr2str, list(src), envir = parent.frame())
+        srcs <- c(srcs, src)
+        if (is.na(match(src, get("GTRACKS"))))
+            colnames[[length(colnames) + 1]] <- as.character(NULL)
+        else {
+            if (.gcall_noninteractive(gtrack.info, src)$type !=
+                "array")
+                stop(sprintf("Track %s: only array tracks can be used as a source",
+                             src), call. = F)
+            colnames[[length(colnames) + 1]] <- names(.gtrack.array.get_colnames(src))
+        }
+    }
+    trackdir <- sprintf("%s.track", paste(get("GWD"), gsub("\\.",
+                                                           "/", trackstr), sep = "/"))
+    direxisted <- file.exists(trackdir)
+    if (!is.na(match(trackstr, get("GTRACKS"))))
+        stop(sprintf("Track %s already exists", trackstr), call. = F)
+    .gconfirmtrackcreate(trackstr)
+    success <- FALSE
+    tryCatch({
+        colnames <- .gcall("garrays_import", trackstr, srcs,
+                           colnames, new.env(parent = parent.frame()), silent = TRUE)
+        gdb.reload()
+        .gtrack.array.set_colnames(trackstr, colnames, FALSE)
+        created.by <- sprintf("gtrack.array.import(\"%s\", description, src = c(\"%s\"))",
+                              trackstr, paste(srcs, collapse = "\", \""))
+        .gtrack.attr.set(trackstr, "created.by", created.by,
+                         T)
+        .gtrack.attr.set(trackstr, "created.date", date(), T)
+        .gtrack.attr.set(trackstr, "description", description,
+                         T)
+        success <- TRUE
+    }, finally = {
+        if (!success && !direxisted) {
+            unlink(trackdir, recursive = TRUE)
+            gdb.reload(rescan=FALSE)
+            warning('Please run gdb.reload() once finished uploading array tracks')
+        }
+    })
+    retv <- 0
+}
+
+
+
 
 

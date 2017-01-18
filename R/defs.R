@@ -58,6 +58,7 @@ NULL
 .gpatterns.genome_cpgs_track <- 'seq.CG'
 .gpatterns.genome_cpgs_intervals <- 'intervs.global.seq_CG'
 .gpatterns.genome_next_cpg_intervals <- 'intervs.global.next_CG'
+.gpatterns.cg_cont_500_track <- 'seq.CG_500_mean'
 
 
 # Import defs ------------------------------------------------

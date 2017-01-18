@@ -5,7 +5,7 @@
 \title{screen intervals by coverage in multiple tracks}
 \usage{
 gpatterns.screen_by_coverage(tracks, intervals, iterator, min_cov,
-  min_samples = NULL, intervals.set.out = NULL)
+  min_samples = NULL, intervals.set.out = NULL, sum_tracks = FALSE)
 }
 \arguments{
 \item{tracks}{methylation tracks}
@@ -21,6 +21,8 @@ would be set to CpGs}
 is NULL it would be set to 1.}
 
 \item{intervals.set.out}{intervals.set.out}
+
+\item{sum_tracks}{sum the coverage from all tracks (min_samples parameter is ignored)}
 }
 \description{
 screen intervals by coverage in multiple tracks

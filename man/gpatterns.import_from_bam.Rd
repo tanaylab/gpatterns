@@ -8,9 +8,10 @@ gpatterns.import_from_bam(bams, workdir = NULL, track = NULL,
   steps = "all", paired_end = TRUE, cgs_mask_file = NULL, trim = NULL,
   umi1_idx = NULL, umi2_idx = NULL, use_seq = FALSE, only_seq = FALSE,
   frag_intervs = NULL, maxdist = 0, rm_off_target = TRUE,
-  nbins = nrow(gintervals.all()), groot = GROOT, use_sge = FALSE,
+  add_chr_prefix = FALSE, bismark = FALSE, nbins = nrow(gintervals.all()),
+  groot = GROOT, import_raw_tcpgs = FALSE, use_sge = FALSE,
   max_jobs = 400, parallel = getOption("gpatterns.parallel"),
-  cmd_prefix = "", ...)
+  cmd_prefix = "", run_per_interv = TRUE, ...)
 }
 \arguments{
 \item{bams}{character vector with path of bam files}
@@ -43,7 +44,15 @@ position of 'C' in the cpgs to mask}
 \item{rm_off_target}{if TRUE - remove reads with distance > maxdist from frag_intervs
 if FALSE - those reads would be left unchanged}
 
+\item{add_chr_prefix}{add "chr" prefix for chromosomes (in order to import to misha)}
+
+\item{bismark}{bam was aligned using bismark}
+
+\item{import_raw_tcpgs}{import raw tidy cpgs to misha (without filtering duplicates)}
+
 \item{cmd_prefix}{prefix to run on 'system' commands (e.g. source ~/.bashrc)}
+
+\item{run_per_interv}{split run of bam2tidy_cpgs scripts separatly for each interval.}
 
 \item{...}{gpatterns.import_from_tidy_cpgs parameters}
 }

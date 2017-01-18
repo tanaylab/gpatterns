@@ -140,7 +140,11 @@ gpatterns.bissli2_build <- function(reference,
 #' @param maxdist maximal distance from fragments
 #' @param rm_off_target if TRUE - remove reads with distance > maxdist from frag_intervs
 #' if FALSE - those reads would be left unchanged
+#' @param add_chr_prefix add "chr" prefix for chromosomes (in order to import to misha)
+#' @param bismark bam was aligned using bismark
+#' @param import_raw_tcpgs import raw tidy cpgs to misha (without filtering duplicates)
 #' @param cmd_prefix prefix to run on 'system' commands (e.g. source ~/.bashrc)
+#' @param run_per_interv split run of bam2tidy_cpgs scripts separatly for each interval.
 #' @param ... gpatterns.import_from_tidy_cpgs parameters
 #'
 #' @inheritParams gpatterns::gpatterns.import_from_tidy_cpgs
@@ -163,12 +167,16 @@ gpatterns.import_from_bam <- function(bams,
                                       frag_intervs = NULL,
                                       maxdist = 0,
                                       rm_off_target = TRUE,
+                                      add_chr_prefix = FALSE,
+                                      bismark = FALSE,
                                       nbins = nrow(gintervals.all()),
                                       groot = GROOT,
+                                      import_raw_tcpgs = FALSE,
                                       use_sge = FALSE,
                                       max_jobs = 400,
                                       parallel = getOption('gpatterns.parallel'),
                                       cmd_prefix = '',
+                                      run_per_interv = TRUE,
                                       ...){
     gsetroot(groot)
     all_steps <- c('bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov', 'stats')
@@ -199,10 +207,13 @@ gpatterns.import_from_bam <- function(bams,
         frag_intervs = frag_intervs,
         maxdist = maxdist,
         rm_off_target = rm_off_target,
+        add_chr_prefix = add_chr_prefix,
+        bismark = bismark,
         use_sge = use_sge,
         max_jobs = max_jobs,
         parallel = parallel,
-        cmd_prefix = cmd_prefix)
+        cmd_prefix = cmd_prefix,
+        run_per_interv = run_per_interv)
 
     # filter dups
     .step_invoke(
@@ -222,8 +233,11 @@ gpatterns.import_from_bam <- function(bams,
         cmd_prefix = cmd_prefix)
 
     tidy_cpgs_steps <- c('bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov')
+
+    tidy_cpgs_dirs <- if (import_raw_tcpgs) qq('@{workdir}/tidy_cpgs') else qq('@{workdir}/tidy_cpgs_uniq')
+
     if (any(steps %in% tidy_cpgs_steps)){
-        gpatterns.import_from_tidy_cpgs(tidy_cpgs_dirs = qq('@{workdir}/tidy_cpgs_uniq'),
+        gpatterns.import_from_tidy_cpgs(tidy_cpgs_dirs = tidy_cpgs_dirs,
                                         track = track,
                                         steps = steps[steps %in% tidy_cpgs_steps],
                                         nbins = nbins,
@@ -408,18 +422,23 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
                                      rm_off_target = TRUE,
                                      sort_output = FALSE,
                                      only_seq = FALSE,
+                                     bismark = FALSE,
                                      adjust_read_bin = .gpatterns.adjust_read_bin,
                                      bin = .gpatterns.bam2tidy_cpgs_bin,
+                                     run_per_interv = TRUE,
+                                     add_chr_prefix = FALSE,
                                      ...){
     walk(c(tidy_cpgs_dir, stats_dir), ~ system(qq('mkdir -p @{.x}')))
     bam_prefix <- if (1 == length(bams)) 'cat' else 'samtools cat'
-    single_end <- if (!paired_end) '--single_end' else ''
+    single_end <- if (!paired_end) '--single-end' else ''
     cgs_mask <- if (is.null(cgs_mask_file)) '' else qq('--cgs-mask @{cgs_mask_file}')
     trim_str <- if(is.null(trim)) '' else qq('--trim @{trim}')
     umi1_idx_str <- if (is.null(umi1_idx)) '' else qq('--umi1-idx @{umi1_idx}')
     umi2_idx_str <- if (is.null(umi2_idx)) '' else qq('--umi2-idx @{umi2_idx}')
     sort_fields <- if (only_seq) '6,7' else '2,7'
     rm_of_target_str <- if (rm_off_target) '--rm_off_target' else ''
+    chr_prefix_str <- if(add_chr_prefix) '--add-chr-prefix' else ''
+    bismark_str <- if(bismark) '--bismark' else ''
 
     if (!is.null(frag_intervs)){
         post_process_str <- qq(' | @{adjust_read_bin} @{rm_of_target_str} -f @{frag_intervs} --maxdist @{maxdist} --groot @{GROOT}')
@@ -430,19 +449,33 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
         post_process_str <- qq('@{post_process_str} | awk \'NR==1; NR > 1 {print $0 | "sort --field-separator=, -k@{sort_fields} -k1 -k9"}\'')
     }
 
-
-    commands <- genomic_bins %>% by_row( function(gbins){
-        stats_fn <- qq('@{stats_dir}/@{gbins$chrom}_@{gbins$start}_@{gbins$end}.stats')
-        output_fn <- qq('@{tidy_cpgs_dir}/@{gbins$chrom}_@{gbins$start}_@{gbins$end}.tcpgs.gz')
-        qq('@{bam_prefix} @{paste(bams, collapse=\' \')} |
-         @{bin} --no-progress -i - -o - -s @{stats_fn} @{umi1_idx_str} @{umi2_idx_str}
+    if (run_per_interv){
+        commands <- genomic_bins %>% by_row( function(gbins){
+            stats_fn <- qq('@{stats_dir}/@{gbins$chrom}_@{gbins$start}_@{gbins$end}.stats')
+            output_fn <- qq('@{tidy_cpgs_dir}/@{gbins$chrom}_@{gbins$start}_@{gbins$end}.tcpgs.gz')
+            qq('@{bam_prefix} @{paste(bams, collapse=\' \')} |
+         @{bin} --no-progress -i - -o - -s @{stats_fn} @{bismark_str} @{umi1_idx_str} @{umi2_idx_str}
          --chrom @{gbins$chrom} --genomic-range @{gbins$start} @{gbins$end}
-         @{trim_str} @{single_end} @{cgs_mask} @{post_process_str} |
+         @{chr_prefix_str} @{trim_str} @{single_end} @{cgs_mask} @{post_process_str} |
            gzip -c > @{output_fn}') %>%
-            gsub('\n', '', .) %>% gsub('  ', ' ', .)
+                gsub('\n', '', .) %>% gsub('  ', ' ', .)
         }, .collate =  'cols', .to = 'cmd')
 
-    .gpatterns.run_commands(commands, jobs_title = 'bam2tidy_cpgs', ...)
+        .gpatterns.run_commands(commands, jobs_title = 'bam2tidy_cpgs', ...)
+    } else {
+        stats_fn <- qq('@{stats_dir}/all.stats')
+        output_fn <- sprintf("%s.gz", tempfile())
+        cmd <- qq('@{bam_prefix} @{paste(bams, collapse=\' \')} |
+         @{bin} --no-progress -i - -o - -s @{stats_fn} @{bismark_str} @{umi1_idx_str} @{umi2_idx_str}
+         @{chr_prefix_str} @{trim_str} @{single_end} @{cgs_mask} @{post_process_str} |
+           gzip -c > @{output_fn}') %>%
+            gsub('\n', '', .) %>% gsub('  ', ' ', .)
+
+        system(cmd)
+        tcpgs <- fread(qq('gzip -d -c @{output_fn}'), colClasses=.gpatterns.tcpgs_colClasses(uniq=FALSE)) %>% tbl_df
+        .gpatterns.tidy_cpgs_to_files(tcpgs, genomic_bins, outdir=tidy_cpgs_dir)
+    }
+
 }
 
 
@@ -588,7 +621,16 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
         warning('no patterns were found. Skipping creation of pattern frequency tracks')
     } else {
         message('importing pat_freq to misha...')
-        .gpattern.import_intervs_table(track, description, pat_freq, columns = NULL, overwrite = overwrite)
+        new_track <- qq('@{track}.pat@{pat_freq_len}')
+        if (gtrack.exists(new_track)){
+            if (overwrite){
+                gtrack.rm(new_track, force=TRUE)
+            } else {
+                return(NULL)
+            }
+        }
+        message(qq('creating @{new_track}'))
+        gtrack.array.import_from_df(df = pat_freq, track=new_track, description=description)
     }
 }
 
@@ -643,9 +685,8 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
                              collapse_results = FALSE, ....)
         codes <-  res %>% map_int(~ .x$retv)
     } else {
-        ulimit <- getOption('gpatterns.ulimit')
         res <- commands %>% plyr::alply(1, function(x)
-            system(paste(qq('@{cmd_prefix} ulimit -u @{ulimit};'), x$cmd)), .parallel=parallel)
+            system(paste(qq('@{cmd_prefix} '), x$cmd)), .parallel=parallel)
         codes <- res
     }
     walk2(codes, commands$cmd, function(code, cmd) if (code != 0) stop(qq('command "@{cmd}" failed')))
