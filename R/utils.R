@@ -324,6 +324,50 @@ gtrack.array.import <- function (track = NULL, description = NULL, ...)
     retv <- 0
 }
 
+gtrack.create <- function (track = NULL, description = NULL, expr = NULL, iterator = NULL,
+          band = NULL, rescan=FALSE){
+    if (is.null(substitute(track)) || is.null(description) ||
+        is.null(substitute(expr)))
+        stop("Usage: gtrack.create(track, description, expr, iterator = NULL, band = NULL)",
+             call. = F)
+    .gcheckroot()
+    trackstr <- do.call(.gexpr2str, list(substitute(track)),
+                        envir = parent.frame())
+    exprstr <- do.call(.gexpr2str, list(substitute(expr)), envir = parent.frame())
+    .iterator <- do.call(.giterator, list(substitute(iterator)),
+                         envir = parent.frame())
+    trackdir <- sprintf("%s.track", paste(get("GWD"), gsub("\\.",
+                                                           "/", trackstr), sep = "/"))
+    direxisted <- file.exists(trackdir)
+    if (!is.na(match(trackstr, get("GTRACKS"))))
+        stop(sprintf("Track %s already exists", trackstr), call. = F)
+    .gconfirmtrackcreate(trackstr)
+    success <- FALSE
+    tryCatch({
+        if (.ggetOption("gmultitasking"))
+            .gcall("gtrackcreate_multitask", trackstr, exprstr,
+                   .iterator, band, new.env(parent = parent.frame()),
+                   silent = TRUE)
+        else .gcall("gtrackcreate", trackstr, exprstr, .iterator,
+                    band, new.env(parent = parent.frame()), silent = TRUE)
+        gdb.reload(rescan = rescan)
+        .gtrack.attr.set(trackstr, "created.by", sprintf("gtrack.create(%s, description, %s, iterator=%s)",
+                                                         trackstr, exprstr, deparse(substitute(iterator),
+                                                                                    width.cutoff = 500)[1]), T)
+        .gtrack.attr.set(trackstr, "created.date", date(), T)
+        .gtrack.attr.set(trackstr, "description", description,
+                         T)
+        success <- TRUE
+    }, finally = {
+        if (!success && !direxisted) {
+            unlink(trackdir, recursive = TRUE)
+            gdb.reload()
+        }
+    })
+    retv <- 0
+}
+
+
 
 
 
