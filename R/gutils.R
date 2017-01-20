@@ -104,6 +104,9 @@ gintervals.centers <- function(inv) {
 
 
 gintervals.expand <- function(inv, expansion = 100) {
+    if (is.character(inv)){
+        inv <- gintervals.load(inv)
+    }
     inv %>%
         mutate(start = start - expansion, end = end + expansion) %>%
         as.data.frame %>%
@@ -597,6 +600,60 @@ gtrack.array.import_from_df <- function(df, track, description) {
     tryCatch(gtrack.array.import(track, description, fn),
              finally=system(qq('rm -f @{fn}')))
 
+}
+
+gtrack.array.import <- function (track = NULL, description = NULL, ...)
+{
+    args <- as.list(substitute(list(...)))[-1L]
+    if (is.null(substitute(track)) || is.null(description) ||
+        !length(args))
+        stop("Usage: gtrack.array.import(track, description, [src]+)",
+             call. = F)
+    .gcheckroot()
+    trackstr <- do.call(.gexpr2str, list(substitute(track)),
+                        envir = parent.frame())
+    srcs <- c()
+    colnames <- list()
+    for (src in args) {
+        src <- do.call(.gexpr2str, list(src), envir = parent.frame())
+        srcs <- c(srcs, src)
+        if (is.na(match(src, get("GTRACKS"))))
+            colnames[[length(colnames) + 1]] <- as.character(NULL)
+        else {
+            if (.gcall_noninteractive(gtrack.info, src)$type !=
+                "array")
+                stop(sprintf("Track %s: only array tracks can be used as a source",
+                             src), call. = F)
+            colnames[[length(colnames) + 1]] <- names(.gtrack.array.get_colnames(src))
+        }
+    }
+    trackdir <- sprintf("%s.track", paste(get("GWD"), gsub("\\.",
+                                                           "/", trackstr), sep = "/"))
+    direxisted <- file.exists(trackdir)
+    if (!is.na(match(trackstr, get("GTRACKS"))))
+        stop(sprintf("Track %s already exists", trackstr), call. = F)
+    .gconfirmtrackcreate(trackstr)
+    success <- FALSE
+    tryCatch({
+        colnames <- .gcall("garrays_import", trackstr, srcs,
+                           colnames, new.env(parent = parent.frame()), silent = TRUE)
+        gdb.reload()
+        .gtrack.array.set_colnames(trackstr, colnames, FALSE)
+        created.by <- sprintf("gtrack.array.import(\"%s\", description, src = c(\"%s\"))",
+                              trackstr, paste(srcs, collapse = "\", \""))
+        .gtrack.attr.set(trackstr, "created.by", created.by,
+                         T)
+        .gtrack.attr.set(trackstr, "created.date", date(), T)
+        .gtrack.attr.set(trackstr, "description", description,
+                         T)
+        success <- TRUE
+    }, finally = {
+        if (!success && !direxisted) {
+            unlink(trackdir, recursive = TRUE)
+            gdb.reload(rescan = FALSE)
+        }
+    })
+    retv <- 0
 }
 
 

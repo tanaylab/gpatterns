@@ -509,72 +509,164 @@ gpatterns.cluster_avg_meth <- function(
 
 
 # Plotting Functions ------------------------------------------------
-.gpatterns.get_global_meth_trend <- function(tracks,
-                                             strat_track,
-                                             strat_breaks,
-                                             intervals,
-                                             iterator,
-                                             min_cov = NULL,
-                                             meth_breaks = seq(0, 1, by = 0.05),
-                                             names = NULL){
-    names <- names %||% tracks
-    trend <- map2_df(tracks, names, function(track, name){
-        if (!is.null(min_cov)){
-            message(qq('Taking only intervals with coverage >= @{min_cov}'))
-            intervals <- gpatterns.screen_by_coverage(track, intervals, iterator, min_cov=min_cov)
+
+
+# .gpatterns.get_spatial_meth <- function(tracks,
+#                                         intervals,
+#                                         min_cov = NULL,
+#                                         min_samples = NULL,
+#                                         iterator=NULL,
+#                                         dist_breaks = seq(-1000, 1000, 200),
+#                                         names=NULL,
+#                                         min_cgs = NULL,
+#                                         add_cg_num = FALSE){
+#     trend <- gpatterns.get_avg_meth(tracks, intervals = intervals %>% gintervals.expand(max(dist_breaks)), iterator=iterator, min_cov=min_cov, min_samples=min_samples, names=names)
+#     trend <- trend %>% filter(cov >= min_cov)
+#     trend <- trend %>% gintervals.neighbors1(intervals) %>% select(chrom, start, end, samp, meth, unmeth, avg, cov, dist)
+#     trend <- trend %>% mutate(breaks = cut(dist, dist_breaks), breaks_numeric=as.numeric(as.character(cut(dist, dist_breaks, labels=zoo::rollmean(dist_breaks, k=2)))))
+#
+#     if (!is.null(min_cgs) || add_cg_num){
+#         trend <- trend %>% group_by(samp, breaks, breaks_numeric) %>% summarise(meth = sum(meth, na.rm=T) ,unmeth = sum(unmeth, na.rm=T), avg=meth / (meth + unmeth), cg_num=n()) %>% select(-meth, -unmeth) %>% rename(meth=avg)
+#         if (!is.null(min_cgs)){
+#             trend <- trend %>% filter(cg_num >= min_cgs)
+#         }
+#     } else {
+#         trend <- trend %>% group_by(samp, breaks, breaks_numeric) %>% summarise(meth = sum(meth, na.rm=T) ,unmeth = sum(unmeth, na.rm=T), avg=meth / (meth + unmeth)) %>% select(-meth, -unmeth) %>% rename(meth=avg)
+#     }
+#
+#     return(trend)
+#
+#
+# }
+
+
+#' Plot spatial trend of methylation around intervals
+#'
+#' @param tracks tracks to plot
+#' @param intervals intervals to plot spatial methylation around.
+#' Can be any intervals set, or one of the following 'special' intervals:
+#' 'tss', 'exon', 'utr3', 'intron', 'cgi'
+#' @param dist_breaks breaks to determine the distances from intervals
+#' @param iterator track expression iterator (of both tracks and strat_track)
+#' @param min_cov minimal coverage of each track
+#' @param min_cgs minimal number of CpGs per bin.
+#' @param names alternative names for the track
+#' @param width plot width (if fig_fn is not NULL)
+#' @param height plot height (if fig_fn is not NULL)
+#' @param fig_fn output filename for the figure (if NULL, figure would be returned)
+#' @param xlab label for the x axis'
+#' @param colors custom colors
+#' @param parallel get trends parallely
+#'
+#' @return
+#' @export
+#'
+#' @examples
+gpatterns.spatial_meth_trend <- function(tracks,
+                                         intervals,
+                                         method = 'extract',
+                                         dist_breaks = seq(-1000, 1000, 200),
+                                         iterator = .gpatterns.genome_cpgs_intervals,
+                                         min_cov = NULL,
+                                         min_cgs = NULL,
+                                         names = NULL,
+                                         width = 500,
+                                         height = 260,
+                                         fig_fn = NULL,
+                                         xlab = 'Distance (bp)',
+                                         colors = NULL,
+                                         parallel = getOption('gpatterns.parallel')){
+    if (is.character(intervals)){
+        if (!gintervals.exists(intervals)){
+            intervals <- .gpatterns.special_intervals(intervals)
         }
-        g <- gdist(strat_track, strat_breaks, .gpatterns.avg_track_name(track), meth_breaks, iterator=iterator, intervals=intervals)
-        w <- zoo::rollmean(meth_breaks, k=2)
-        y <- apply(g, 1, function(x) sum(x*w)/sum(x))
-        tibble(sample=name, breaks=names(y), value=y, breaks_numeric=zoo::rollmean(strat_breaks, k=2))
-    })
-    return(trend)
+    }
+    tryCatch({
+            gvtrack.create('dist', intervals, 'distance')
+            trend <- .gpatterns.get_global_meth_trend(tracks = tracks,
+                                                      strat_track = 'dist',
+                                                      strat_breaks = dist_breaks,
+                                                      intervals = iterator,
+                                                      iterator = iterator,
+                                                      min_cov = min_cov,
+                                                      min_cgs=min_cgs,
+                                                      names = names,
+                                                      parallel = parallel)
+        }, finally=gvtrack.rm('dist'))
+
+
+    if (length(tracks) == 1){
+        p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, group=1)) + geom_line() + xlab(xlab) + ylab('Methylation') + geom_vline(xintercept=0, linetype='dashed', color='red')
+    } else {
+        p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, color=samp, group=samp)) + geom_line() + xlab(xlab) + ylab('Methylation') + scale_color_discrete(name='') + geom_vline(xintercept=0, linetype='dashed', color='red')
+    }
+
+    if (!is.null(colors)){
+        p <- p + scale_color_manual(values=colors)
+    }
+
+    if (!is.null(fig_fn)){
+        png(fig_fn, width = width, height = height)
+        print(p)
+        dev.off()
+    }
+
+    return(list(trend=trend, p=p))
 }
 
 #' Plot global methylation stratified on other tracks
 #'
 #' @param tracks tracks to plot
-#' @param strat_track track to stratify average methylation by
+#' @param strat_track track to stratify average methylation by. default is CG content
 #' @param strat_breaks breaks to determine the bins of strat_track
 #' @param intervals genomic scope for which the function is applied
 #' @param iterator track expression iterator (of both tracks and strat_track)
 #' @param min_cov minimal coverage of each track
-#' @param meth_breaks breaks to determine the bins of the methylation track
+#' @param min_cgs minimal number of CpGs per bin
 #' @param names alternative names for the track
 #' @param width plot width (if fig_fn is not NULL)
 #' @param height plot height (if fig_fn is not NULL)
 #' @param fig_fn output filename for the figure (if NULL, figure would be returned)
 #' @param xlab label for the x axis
+#' @param colors custom colors
+#' @param parallel get trends parallely
 #'
 #' @return list with trend data frame (under 'trend') and the plot (under 'p')
 #' @export
 #'
 #' @examples
+#'
 gpatterns.global_meth_trend <- function(tracks,
                                         strat_track = .gpatterns.cg_cont_500_track,
                                         strat_breaks = seq(0, 0.08, by=0.002),
                                         intervals = .gpatterns.genome_cpgs_intervals,
                                         iterator = .gpatterns.genome_cpgs_intervals,
                                         min_cov = NULL,
-                                        meth_breaks = seq(0, 1, by = 0.05),
+                                        min_cgs = NULL,
                                         names=NULL,
                                         width=500,
                                         height=260,
                                         fig_fn=NULL,
-                                        xlab=strat_track){
-    trend <- .gpatterns.get_global_meth_trend(tracks=tracks,
-                                              strat_track=strat_track,
-                                              strat_breaks=strat_breaks,
-                                              intervals=intervals,
-                                              iterator=iterator,
-                                              min_cov=min_cov,
-                                              meth_breaks=meth_breaks,
-                                              names=names)
-
-    if (length(track == 1)){
-        p <- trend %>% ggplot(aes(x=breaks_numeric, y=value, group=1)) + geom_line() + xlab(xlab) + ylab('Methylation')
+                                        xlab=strat_track,
+                                        colors = NULL,
+                                        parallel = getOption('gpatterns.parallel')){
+    trend <- .gpatterns.get_global_meth_trend(tracks = tracks,
+                                              strat_track = strat_track,
+                                              strat_breaks = strat_breaks,
+                                              intervals = intervals,
+                                              iterator = iterator,
+                                              min_cov = min_cov,
+                                              min_cgs = min_cgs,
+                                              names = names,
+                                              parallel = parallel)
+    if (length(tracks) == 1){
+        p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, group=1)) + geom_line() + xlab(xlab) + ylab('Methylation')
     } else {
-        p <- trend %>% ggplot(aes(x=breaks_numeric, y=value, color=sample, group=sample)) + geom_line() + xlab(xlab) + ylab('Methylation')
+        p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, color=samp, group=samp)) + geom_line() + xlab(xlab) + ylab('Methylation') + scale_color_discrete(name='')
+    }
+
+    if (!is.null(colors)){
+        p <- p + scale_color_manual(values=colors)
     }
 
     if (!is.null(fig_fn)){
@@ -697,3 +789,8 @@ gpatterns.smoothScatter <- function(
         arrange(ord)
     return(d)
 }
+
+
+
+
+

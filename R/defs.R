@@ -49,6 +49,10 @@ NULL
     list.files(paste0(.gpatterns.base_dir(track), '/tidy_cpgs'), full.names=TRUE, pattern='tcpgs.gz')
 }
 
+.gpatterns.tidy_cpgs_dir <- function(track){
+    paste0(.gpatterns.base_dir(track), '/tidy_cpgs')
+}
+
 .gpatterns.bipolar_model_tab_name     <- function(track) { 'mix' }
 .gpatterns.bipolar_model_file_name     <- function(track) {
     file.path(.gpatterns.base_dir(track), 'bipolar.RData')
@@ -60,6 +64,20 @@ NULL
 .gpatterns.genome_next_cpg_intervals <- 'intervs.global.next_CG'
 .gpatterns.cg_cont_500_track <- 'seq.CG_500_mean'
 
+
+
+.gpatterns.special_intervals <- function(name){
+    intervs_map <- list(tss = 'intervs.global.tss',
+                        exon = 'intervs.global.exon',
+                        utr3 = 'intervs.global.utr3',
+                        intron = 'intervs.global.introns',
+                        cgi = 'intervs.global.cgi_ucsc')
+    if (name %in% names(intervs_map)){
+        return(intervs_map[[name]])
+    } else {
+        stop(qq('interval @{name} does not exist'))
+    }
+}
 
 # Import defs ------------------------------------------------
 .gpatterns.bam2tidy_cpgs_bin <- sprintf("%s/%s",

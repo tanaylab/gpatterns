@@ -27,7 +27,7 @@ if NULL the sample names would be used.}
 
 \item{height}{plot height}
 
-\item{color.pal}{colo pallete}
+\item{color.pal}{color pallete}
 
 \item{device}{function to open a device if fig.ofn is not NULL. default: 'png'}
 

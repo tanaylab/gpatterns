@@ -237,7 +237,7 @@ gpatterns.import_from_bam <- function(bams,
     tidy_cpgs_dirs <- if (import_raw_tcpgs) qq('@{workdir}/tidy_cpgs') else qq('@{workdir}/tidy_cpgs_uniq')
 
     if (any(steps %in% tidy_cpgs_steps)){
-        gpatterns.import_from_tidy_cpgs(tidy_cpgs_dirs = tidy_cpgs_dirs,
+        gpatterns.import_from_tidy_cpgs(tidy_cpgs_dirs,
                                         track = track,
                                         steps = steps[steps %in% tidy_cpgs_steps],
                                         nbins = nbins,
@@ -248,13 +248,13 @@ gpatterns.import_from_bam <- function(bams,
                                         ...)
     }
 
-    .step_invoke(
-        'stats',
-        steps,
-        gpattens.get_pipeline_stats,
-        track = track,
-        tidy_cpgs_stats_dir = qq('@{workdir}/tidy_cpgs/stats'),
-        uniq_tidy_cpgs_stats_dir = qq('@{workdir}/tidy_cpgs_uniq/stats'))
+    # .step_invoke(
+    #     'stats',
+    #     steps,
+    #     gpatterns.get_pipeline_stats,
+    #     track = track,
+    #     tidy_cpgs_stats_dir = qq('@{workdir}/tidy_cpgs/stats'),
+    #     uniq_tidy_cpgs_stats_dir = qq('@{workdir}/tidy_cpgs_uniq/stats'))
 }
 
 #' Create a track from tidy_cpgs files
@@ -935,4 +935,43 @@ gpatterns.adjust_read_pos <- function(calls, frag_intervs, maxdist=0, rm_off_tar
     }
 
     return(calls)
+}
+
+#' Merge tracks
+#'
+#' @param tracks tracks to merge
+#' @param new_track new track name
+#' @param description new track description
+#' @param iterator new track iterator
+#' @param intervals intervals scope
+#'
+#' @return
+#' @export
+#'
+#' @examples
+gpatterns.merge_tracks <- function(tracks, new_track, description, iterator=NULL, intervals=gintervals.all()){
+    if (is.null(iterator)){
+        if (!all(gtrack.exists(qqv('@{tracks}.cov')))){
+            stop('not all tracks exist')
+        }
+        expr <- paste(qqv('!is.na(@{tracks}.cov)'), collapse=' | ')
+        iterator <- gscreen(expr, intervals=intervals, iterator=.gpatterns.genome_cpgs_intervals)
+    }
+
+    gdir.create(gsub('\\.', '/', new_track))
+
+    for (suffix in c('cov', 'meth', 'unmeth')){
+        message(qq('doing @{suffix}'))
+        if (!all(gtrack.exists(qqv('@{tracks}.@{suffix}')))){
+            stop('not all tracks exist')
+        }
+        expr <- sprintf("sum(%s, na.rm=T)", paste(qqv('@{tracks}.@{suffix}'), collapse=', '))
+        if (!gtrack.exists(qq('@{new_track}.@{suffix}'))){
+            gtrack.create(qq('@{new_track}.@{suffix}'), description, expr, iterator=iterator, rescan=FALSE)
+        }
+    }
+
+    tidy_dirs <- .gpatterns.tidy_cpgs_dir(tracks)
+    .gpatterns.bind_tidy_cpgs(tidy_cpgs_dirs = tidy_dirs, track=new_track)
+
 }
