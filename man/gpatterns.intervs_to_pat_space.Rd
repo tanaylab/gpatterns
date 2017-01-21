@@ -4,7 +4,7 @@
 \alias{gpatterns.intervs_to_pat_space}
 \title{Generate pattern space for specific genomic loci}
 \usage{
-gpatterns.intervs_to_pat_space(tracks, intervals, pat_len, contiguous = TRUE,
+gpatterns.intervs_to_pat_space(tracks, intervals, pat_len, adjacent = TRUE,
   add_rest = FALSE, min_cov = 1, max_span = 500,
   expand_intervals = FALSE,
   nchunks = getOption("gpatterns.parallel.thread_num"),
@@ -18,11 +18,11 @@ gpatterns.intervs_to_pat_space(tracks, intervals, pat_len, contiguous = TRUE,
 
 \item{pat_len}{pattern length}
 
-\item{contiguous}{generate patterns that do not skip a CpG}
+\item{adjacent}{generate patterns that do not skip a CpG}
 
 \item{add_rest}{add rest of the genome (using gpatterns.tracks_to_pat_space)}
 
-\item{min_cov}{if contiguous: minimal pattern coverage for interval. else - minimal CpG coverage}
+\item{min_cov}{if adjacent: minimal pattern coverage for interval. else - minimal CpG coverage}
 
 \item{max_span}{maximum span to look for CpGs}
 
