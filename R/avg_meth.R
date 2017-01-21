@@ -510,6 +510,57 @@ gpatterns.cluster_avg_meth <- function(
 
 # Plotting Functions ------------------------------------------------
 
+.gpatterns.get_global_meth_trend <- function(tracks,
+                                             strat_track,
+                                             strat_breaks,
+                                             intervals,
+                                             iterator,
+                                             min_cov = NULL,
+                                             min_cgs = NULL,
+                                             meth_breaks = seq(0, 1, by = 0.05),
+                                             names = NULL,
+                                             cg_breaks = seq(0, 200, 1),
+                                             max_cgs = 1000,
+                                             parallel = getOption('gpatterns.parallel')){
+    names <- names %||% tracks
+
+    if (length(names) != length(tracks)){
+        stop('tracks and names are not the same length!')
+    }
+
+    trend <- plyr::adply(tibble(track=tracks, name=names), 1, function(x){
+        track <- x$track
+        name <- x$name
+        if (!is.null(min_cov)){
+            message(qq('Taking only intervals with coverage >= @{min_cov}'))
+            intervs <- gpatterns.screen_by_coverage(track, intervals, iterator, min_cov=min_cov)
+        } else {
+            intervs <- intervals
+        }
+        gm <- gbins.summary(strat_track, strat_breaks, .gpatterns.meth_track_name(track), iterator=iterator, intervals=intervs)
+        brks <- rownames(gm)
+        gm <- gm %>% tbl_df
+        gum <- gbins.summary(strat_track, strat_breaks, .gpatterns.unmeth_track_name(track), iterator=iterator, intervals=intervs) %>% tbl_df
+
+        res <- tibble(samp = name,
+                      breaks=brks,
+                      meth=gm[['Sum']],
+                      unmeth=gum[['Sum']],
+                      breaks_numeric=zoo::rollmean(strat_breaks, k=2),
+                      cg_num=gm[['Total intervals']]) %>%
+            mutate(avg = meth / (meth + unmeth)) %>%
+            select(samp, breaks, meth=avg, breaks_numeric, cg_num)
+
+        return(res)
+    }, .parallel=parallel)
+
+    if (!is.null(min_cgs)){
+        trend <- trend %>% filter(cg_num >= min_cgs)
+    }
+
+    return(trend %>% tbl_df())
+}
+
 
 # .gpatterns.get_spatial_meth <- function(tracks,
 #                                         intervals,
@@ -558,7 +609,7 @@ gpatterns.cluster_avg_meth <- function(
 #' @param colors custom colors
 #' @param parallel get trends parallely
 #'
-#' @return
+#' @return list with trend data frame (under 'trend') and the plot (under 'p')
 #' @export
 #'
 #' @examples

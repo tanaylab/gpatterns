@@ -345,7 +345,7 @@ gpatterns.tracks_to_pat_space <- function(tracks,
 
 
 
-.gpatterns.max_pat_cov_intervs <- function(expr, intervals, iterator=.gpatterns.genome_cpgs_intervals, pat_len=5, min_cov = 1, mode='pat_cov', contiguous = TRUE, nchunks= getOption('gpatterns.parallel.thread_num'), parallel=getOption('gpatterns.parallel'), verbose=FALSE){
+.gpatterns.max_pat_cov_intervs <- function(expr, intervals, iterator=.gpatterns.genome_cpgs_intervals, pat_len=5, min_cov = 1, mode='pat_cov', adjacent = TRUE, nchunks= getOption('gpatterns.parallel.thread_num'), parallel=getOption('gpatterns.parallel'), verbose=FALSE){
     old_opt <- options()
     options(gmultitasking=FALSE)
 
@@ -353,7 +353,7 @@ gpatterns.tracks_to_pat_space <- function(tracks,
         covs <- covs %>%
             group_by(chrom1, start1, end1) %>%
             filter(n() >= pat_len)
-        if (contiguous){
+        if (adjacent){
             if ('start.orig' %in% colnames(covs)){
                 # make sure that we are covering the original interval
                 covs <- covs %>%
@@ -368,11 +368,11 @@ gpatterns.tracks_to_pat_space <- function(tracks,
                 group_by(chrom1, start1, end1) %>%
                 arrange(chrom1, start1, end1, chrom, start, end)
             if (mode == 'cov'){
-                # calculate the total coverage of contiguous CpGs
+                # calculate the total coverage of adjacent CpGs
                 space <- space %>%
                     mutate(m = zoo::rollmean(cov, pat_len, align='left', fill=NA))
             } else {
-                # coverage of contiguous CpGs was already calculated in 'pat_cov' tracks
+                # coverage of adjacent CpGs was already calculated in 'pat_cov' tracks
                 space <- space %>%
                     mutate(m = cov)
             }
@@ -406,9 +406,9 @@ gpatterns.tracks_to_pat_space <- function(tracks,
 #' @param intervals genomic loci to cover (chrom,start,end), with an optional field
 #' 'fid'.
 #' @param pat_len pattern length
-#' @param contiguous generate patterns that do not skip a CpG
+#' @param adjacent generate patterns that do not skip a CpG
 #' @param add_rest add rest of the genome (using gpatterns.tracks_to_pat_space)
-#' @param min_cov if contiguous: minimal pattern coverage for interval. else - minimal CpG coverage
+#' @param min_cov if adjacent: minimal pattern coverage for interval. else - minimal CpG coverage
 #' @param max_span maximum span to look for CpGs
 #' @param expand_intervals expand intervals by max_span when intervals are single CpG loci
 #' @param parallel override global gpatterns.parallel definition
@@ -422,7 +422,7 @@ gpatterns.tracks_to_pat_space <- function(tracks,
 gpatterns.intervs_to_pat_space <- function(tracks,
                                            intervals,
                                            pat_len,
-                                           contiguous=TRUE,
+                                           adjacent=TRUE,
                                            add_rest=FALSE,
                                            min_cov=1,
                                            max_span=500,
@@ -441,7 +441,7 @@ gpatterns.intervs_to_pat_space <- function(tracks,
         exp_intervs <- intervals
     }
 
-    if (contiguous){
+    if (adjacent){
         cov_tracks <- .gpatterns.pat_cov_track_name(tracks, pat_len)
         cov_tracks_exist <- gtrack.exists(cov_tracks)
         if (any(!cov_tracks_exist)){
@@ -461,8 +461,8 @@ gpatterns.intervs_to_pat_space <- function(tracks,
     }
 
     expr <- sprintf('sum_ignore_na_all(%s)', paste(cov_tracks, collapse=','))
-    message('finding most covered contiguous CpGs...')
-    space <- .gpatterns.max_pat_cov_intervs(expr, exp_intervs, iterator=.gpatterns.genome_cpgs_intervals, pat_len=pat_len, min_cov = min_cov, verbose=verbose, mode = mode, contiguous=contiguous, parallel=parallel, nchunks=nchunks)
+    message('finding most covered adjacent CpGs...')
+    space <- .gpatterns.max_pat_cov_intervs(expr, exp_intervs, iterator=.gpatterns.genome_cpgs_intervals, pat_len=pat_len, min_cov = min_cov, verbose=verbose, mode = mode, adjacent=adjacent, parallel=parallel, nchunks=nchunks)
 
     if ('fid' %in% colnames(exp_intervs) || 'FID' %in% colnames(exp_intervs)){
         fid_col <- which(tolower(colnames(exp_intervs)) == 'fid')
@@ -694,6 +694,142 @@ gpatterns.tidy_cpgs_2_pileup <- function(calls, dsn = NULL){
         select(chrom, start, end, meth, unmeth, cov, avg)
 
     return(pileup)
+}
+
+.gpatterns.get_cg_cor_adjacent <- function(track, dist_breaks, intervals=gintervals.all()){
+    a <- gtrack.array.extract(paste0(track, '.pat2'),
+                              slice = NULL,
+                              intervals = intervals) %>%
+        select(-intervalID) %>%
+        tbl_df %>%
+        gintervals.neighbors1(.gpatterns.genome_next_cpg_intervals) %>%
+        select(-(chrom1:end1), dist) %>%
+        mutate(dist  = abs(nextcg - start))
+    a <- a %>%
+        mutate(dist = cut(dist, breaks=dist_breaks, include.lowest=T)) %>%
+        group_by(dist) %>%
+        summarise_at(vars(starts_with('pat_')), sum) %>%
+        mutate(N = pat_00 + pat_10 + pat_01 + pat_11,
+               Ex = (pat_10 + pat_11) / N,
+               Ey = (pat_01 + pat_11) / N,
+               Exy = pat_11 / N,
+               sdx = (Ex - Ex^2)^0.5,
+               sdy = (Ey - Ey^2)^0.5,
+               cr = (Exy - Ex *Ey) / (sdx * sdy))
+
+    return(a %>% mutate(track=track) %>% select(track, dist, cr))
+}
+
+.gpatterns.get_cg_cor <- function(track, dist_breaks, intervals, parallel = getOption('gpatterns.parallel'), ...){
+    get_cor <- function(tcpgs){
+        tcpgs <- tcpgs %>%  group_by(read_id) %>% mutate(n = n())
+        max_cgs <- max(tcpgs$n)
+        crs <- 1:(max_cgs-1) %>% map_df(function(i) {
+            tcpgs %>%
+                select(read_id, n, cg_pos, meth) %>%
+                filter(n > i) %>%
+                mutate(meth2 = lead(meth, i),
+                       pos2 = lead(cg_pos, i),
+                       dist = abs(pos2 - cg_pos)) %>%
+                filter(!is.na(dist)) %>%
+                mutate(dist = cut(dist, breaks=dist_breaks, include.lowest=T)) %>%
+                group_by(dist, meth1=meth, meth2) %>%
+                summarise(n = n())
+        })
+        crs <- crs %>% group_by(dist, meth1, meth2) %>% summarise(n = sum(n)) %>% ungroup
+        return(crs)
+    }
+    cors <- gpatterns.apply_tidy_cpgs(track, function(x) get_cor(x), intervals=intervals, parallel=parallel, ...)
+    cors <- cors %>%
+        group_by(dist, meth1, meth2) %>%
+        summarise(n = sum(n)) %>%
+        ungroup %>%
+        mutate(pat = paste0('pat_', meth1, meth2)) %>%
+        select(dist, pat, n) %>%
+        group_by(dist) %>%
+        spread(pat, n) %>%
+        mutate(N = pat_00 + pat_10 + pat_01 + pat_11,
+               Ex = (pat_10 + pat_11) / N,
+               Ey = (pat_01 + pat_11) / N,
+               Exy = pat_11 / N,
+               sdx = (Ex - Ex^2)^0.5,
+               sdy = (Ey - Ey^2)^0.5,
+               cr = (Exy - Ex *Ey) / (sdx * sdy))
+    return(cors %>% mutate(track = track) %>% select(track, dist, cr))
+}
+
+# Plotting Functions ------------------------------------------------
+
+#' Plot CpG correlation (pearson) as a function of distance between CpGs
+#'
+#' @param tracks tracks to plot
+#' @param dist_breaks distance breaks
+#' @param intervals genomic scope for which the function is applied
+#' @param adjacent plot correlation only between adjacent CpGs (faster)
+#' @param names alternative names for the track
+#' @param width plot width (if fig_fn is not NULL)
+#' @param height plot height (if fig_fn is not NULL)
+#' @param fig_fn output filename for the figure (if NULL, figure would be returned)
+#' @param xlab label for the x axis
+#' @param ylab label for the y axis
+#' @param colors custom colors
+#' @param parallel parallel
+#' @param ...
+#'
+#' @return list with trend data frame (under 'trend') and the plot (under 'p')
+#' @export
+#'
+#' @examples
+gpatterns.plot_cg_cor <- function(tracks,
+                                  dist_breaks,
+                                  intervals = gintervals.all(),
+                                  adjacent = FALSE,
+                                  names = NULL,
+                                  width = 500,
+                                  height = 260,
+                                  fig_fn = NULL,
+                                  xlab = 'Distance between CpGs',
+                                  ylab = 'CpG correlation',
+                                  colors = NULL,
+                                  parallel = getOption('gpatterns.parallel'),
+                                  ...){
+    names <- names %||% tracks
+    if (adjacent){
+        cors <- tracks %>% plyr::adply(1, function(track)
+            .gpatterns.get_cg_cor_adjacent(track, dist_breaks, intervals),
+                                       .parallel=parallel)
+    } else {
+        cors <- tracks %>% map_df(function(track) {
+            message(qq('calculating for @{track}'))
+            .gpatterns.get_cg_cor(track, dist_breaks=dist_breaks, intervals=intervals, parallel=parallel, ...)
+            })
+    }
+    cors <- cors %>% mutate(dist_numeric = dist)
+    breaks_numeric <- zoo::rollmean(dist_breaks, k=2)
+    levels(cors$dist_numeric) <- breaks_numeric
+    cors <-  cors %>%
+        mutate(dist_numeric = as.numeric(as.character(dist_numeric))) %>%
+        left_join(tibble(track=tracks, samp=names), by='track') %>%
+        select(samp, dist, dist_numeric, cr) %>%
+        tbl_df
+
+    if (length(tracks) == 1){
+        p <- cors %>% ggplot(aes(x=dist_numeric, y=cr, group=1)) + geom_line() + xlab(xlab) + ylab(ylab)
+    } else {
+        p <- cors %>% ggplot(aes(x=dist_numeric, y=cr, color=samp, group=samp)) + geom_line() + xlab(xlab) + ylab(ylab) + scale_color_discrete(name='')
+    }
+
+    if (!is.null(colors)){
+        p <- p + scale_color_manual(values=colors)
+    }
+
+    if (!is.null(fig_fn)){
+        png(fig_fn, width = width, height = height)
+        print(p)
+        dev.off()
+    }
+
+    return(list(cors=cors, p=p))
 }
 
 # Pattern utility Functions ------------------------------------------------

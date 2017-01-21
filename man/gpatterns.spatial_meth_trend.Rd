@@ -40,6 +40,9 @@ Can be any intervals set, or one of the following 'special' intervals:
 
 \item{parallel}{get trends parallely}
 }
+\value{
+list with trend data frame (under 'trend') and the plot (under 'p')
+}
 \description{
 Plot spatial trend of methylation around intervals
 }
