@@ -709,7 +709,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
 #' @param add_read_id save the read_id together with the patterns
 #' @param noise_threshold threshold to consider pattern as 'noise'
 #' @param overwrite overwrite existing tracks
-#' @param canonize convert to canonic form (see: \code{\link[gintervals.canonic]{misha}}).
+#' @param canonize convert to canonic form (see: \code{\link[misha]{gintervals.canonic}}).
 #' warning: may lose data
 #' @param add_biploar_stats run mixture model and add bipolaritly stats.
 #' (warning: heavy computation)
@@ -944,16 +944,18 @@ gpatterns.adjust_read_pos <- function(calls, frag_intervs, maxdist=0, rm_off_tar
 #' @param description new track description
 #' @param iterator new track iterator
 #' @param intervals intervals scope
+#' @param add_var calculate variance (of tracks '.avg'). Will be created in new_track.var
 #'
-#' @return
+#' @return name of the new_track
 #' @export
 #'
 #' @examples
-gpatterns.merge_tracks <- function(tracks, new_track, description, iterator=NULL, intervals=gintervals.all()){
+gpatterns.merge_tracks <- function(tracks, new_track, description, iterator=NULL, intervals=gintervals.all(), add_var=FALSE){
     if (is.null(iterator)){
         if (!all(gtrack.exists(qqv('@{tracks}.cov')))){
             stop('not all tracks exist')
         }
+        message('calculating covered CpGs')
         expr <- paste(qqv('!is.na(@{tracks}.cov)'), collapse=' | ')
         iterator <- gscreen(expr, intervals=intervals, iterator=.gpatterns.genome_cpgs_intervals)
     }
@@ -971,7 +973,16 @@ gpatterns.merge_tracks <- function(tracks, new_track, description, iterator=NULL
         }
     }
 
+    if (add_var){
+        expr <-  sprintf("var(%s, na.rm=T)", paste(qqv('@{tracks}.avg'), collapse=', '))
+        if (!gtrack.exists(qq('@{new_track}.var'))){
+            gtrack.create(qq('@{new_track}.var'), description, expr, iterator=iterator, rescan=FALSE)
+        }
+    }
+
     tidy_dirs <- .gpatterns.tidy_cpgs_dir(tracks)
     .gpatterns.bind_tidy_cpgs(tidy_cpgs_dirs = tidy_dirs, track=new_track)
+
+    return(new_track)
 
 }

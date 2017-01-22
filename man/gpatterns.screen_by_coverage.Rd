@@ -12,7 +12,7 @@ gpatterns.screen_by_coverage(tracks, intervals, iterator, min_cov,
 
 \item{intervals}{genomic scope for which the function is applied}
 
-\item{iterator}{see iterator in \code{\link[gextract]{misha}}. if NULL iterator
+\item{iterator}{see iterator in \link[misha]{gextract}. if NULL iterator
 would be set to CpGs}
 
 \item{min_cov}{minimal coverage for iterator interval}

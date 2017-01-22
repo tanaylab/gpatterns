@@ -5,7 +5,7 @@
 \title{Merge tracks}
 \usage{
 gpatterns.merge_tracks(tracks, new_track, description, iterator = NULL,
-  intervals = gintervals.all())
+  intervals = gintervals.all(), add_var = FALSE)
 }
 \arguments{
 \item{tracks}{tracks to merge}
@@ -17,6 +17,11 @@ gpatterns.merge_tracks(tracks, new_track, description, iterator = NULL,
 \item{iterator}{new track iterator}
 
 \item{intervals}{intervals scope}
+
+\item{add_var}{calculate variance (of tracks '.avg'). Will be created in new_track.var}
+}
+\value{
+name of the new_track
 }
 \description{
 Merge tracks

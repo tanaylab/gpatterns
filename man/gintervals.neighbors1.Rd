@@ -11,4 +11,7 @@ gintervals.neighbors1(intervals1 = NULL, intervals2 = NULL,
 \description{
 Finds neighbors between two sets of intervals (and does not return conflicting column names)
 }
+\seealso{
+\link[misha]{gintrevals.neighbours}
+}
 
