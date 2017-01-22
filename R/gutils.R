@@ -10,6 +10,7 @@
 #'
 #' @return
 #' @export
+#' @seealso \link[misha]{gintrevals.neighbours}
 #'
 #' @examples
 gintervals.neighbors1 <- function(intervals1 = NULL,
@@ -177,7 +178,7 @@ gvextract <- function(tracks, intervals, colnames = NULL, iterator = NULL,
 #' @return
 #' @export
 #'
-#' @seealso \code{\link{misha::gextract}}
+#' @seealso \link[misha]{gextract}
 #' @examples
 gextract.left_join <- function(expr, intervals = NULL, colnames = NULL, iterator = NULL, band = NULL, file = NULL, intervals.set.out = NULL, suffix='1'){
     if (class(intervals) == 'character'){
@@ -375,7 +376,7 @@ gintervals.mark_overlapping <- function(intervals, unify_touching_intervals=TRUE
 #' if collapse_results is FALSE returns the same as: \link[misha]{gcluster.run}
 #'
 #' @export
-#' @seealso \code{\link{misha::gcluster.run}}
+#' @seealso \link[misha]{gcluster.run}
 #' @examples
 #'
 gcluster.run2 <- function (...,
@@ -665,7 +666,7 @@ gtrack.array.import <- function (track = NULL, description = NULL, ...)
 #'
 #' @return
 #' @export
-#' @seealso \code{\link{misha::gtrack.import_mappedseq}}
+#' @seealso \link[misha]{gtrack.import_mappedseq}
 #' @examples
 gtrack.import_mappedseq_bam <- function(bam_files, ...){
     cat_cmd <- 'cat'

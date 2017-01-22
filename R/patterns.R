@@ -30,7 +30,7 @@ gpatterns.get_tidy_cpgs <- function(track,
                     umi1 = 'character',
                     umi2 = 'character',
                     insert_len = 'numeric',
-                    num = 'numeric',
+                    # num = 'numeric',
                     cg_pos = 'numeric',
                     meth = 'character',
                     qual = 'numeric')) %>%
@@ -696,6 +696,9 @@ gpatterns.tidy_cpgs_2_pileup <- function(calls, dsn = NULL){
     return(pileup)
 }
 
+
+# Plotting Functions ------------------------------------------------
+
 .gpatterns.get_cg_cor_adjacent <- function(track, dist_breaks, intervals=gintervals.all()){
     a <- gtrack.array.extract(paste0(track, '.pat2'),
                               slice = NULL,
@@ -758,7 +761,6 @@ gpatterns.tidy_cpgs_2_pileup <- function(calls, dsn = NULL){
     return(cors %>% mutate(track = track) %>% select(track, dist, cr))
 }
 
-# Plotting Functions ------------------------------------------------
 
 #' Plot CpG correlation (pearson) as a function of distance between CpGs
 #'

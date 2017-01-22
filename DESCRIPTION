@@ -1,11 +1,14 @@
 Package: gpatterns
-Title: Single molecule methylation patterns analysis suite
-Version: 0.0.0.9000
-Authors@R: c(person("Amos", "Tanay", role=c("aut")),
-    person("Aviezer", "Lifshitz", email = "aviezer.lifshitz@weizmann.ac.il",
+Title: Single Molecule Methylation Patterns Analysis Suite
+Version: 0.1
+Authors@R: c(person("Aviezer", "Lifshitz", email = "aviezer.lifshitz@weizmann.ac.il",
     role = c("aut", "cre")),
-    person("Elad", "Chomsky", role=c("aut")))
-Description: Methylation Analysis
+    person("Elad", "Chomsky", role=c("aut")),
+    person("Amos", "Tanay", role=c("aut")))
+Description: Package for import and analysis of DNA methylation (5mC) data. 
+    includes basic pipeline to import data from raw fastq, and functions to analyse
+    both average methylation and epipolymorphism of multiple samples.
+URL: https://bitbucket.org/tanaylab/gpatterns
 Depends:
     R (>= 3.2.4),
     misha

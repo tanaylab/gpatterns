@@ -5,7 +5,7 @@
 #'
 #' @param tracks methylation tracks
 #' @param intervals genomic scope for which the function is applied
-#' @param iterator see iterator in \code{\link[gextract]{misha}}. if NULL iterator
+#' @param iterator see iterator in \link[misha]{gextract}. if NULL iterator
 #' would be set to CpGs
 #' @param min_cov minimal coverage for iterator interval
 #' @param mask_by_cov change loci with coverage < min_cov to NA. Not relevant in
@@ -18,12 +18,12 @@
 #' @param min_var minimal variance (across samples) per iterator interval
 #' @param var_quantile minimal quantile of variance per iterator interval
 #' @param names alternative names to tracks. similar to colnames in
-#' \code{\link[gextract]{misha}} if tidy == FALSE. Note that names should be
+#' \link[misha]{gextract} if tidy == FALSE. Note that names should be
 #' shorter than the maximal length of R data frame column name
 #' @param tidy if TRUE returns a tidy data frame with the following fields:
 #' chrom, start, end, intervalID, samp, meth, unmeth, avg, cov.
 #' if FALSE returns a data frame with average methylation,
-#' similar to \code{\link[gextract]{misha}}'. Note that for a large number of
+#' similar to \link[misha]{gextract}'. Note that for a large number of
 #' intervals tidy == FALSE may be the only memory feasable option.
 #' @param pre screen for min_samples and min_cov (for large number of
 #' tracks / large number of intervals). Note that the intervalID column may be incorrect
@@ -241,7 +241,7 @@ gpatterns.get_avg_meth <- function(
 #'
 #' @param tracks methylation tracks
 #' @param intervals genomic scope for which the function is applied
-#' @param iterator see iterator in \code{\link[gextract]{misha}}. if NULL iterator
+#' @param iterator see iterator in \link[misha]{gextract}. if NULL iterator
 #' would be set to CpGs
 #' @param min_cov minimal coverage for iterator interval
 #' @param min_samples minimal number of samples with cov >= min_cov. if min_cov
@@ -531,6 +531,7 @@ gpatterns.cluster_avg_meth <- function(
     trend <- plyr::adply(tibble(track=tracks, name=names), 1, function(x){
         track <- x$track
         name <- x$name
+        message(qq('calculating for @{track}'))
         if (!is.null(min_cov)){
             message(qq('Taking only intervals with coverage >= @{min_cov}'))
             intervs <- gpatterns.screen_by_coverage(track, intervals, iterator, min_cov=min_cov)
@@ -547,7 +548,7 @@ gpatterns.cluster_avg_meth <- function(
                       meth=gm[['Sum']],
                       unmeth=gum[['Sum']],
                       breaks_numeric=zoo::rollmean(strat_breaks, k=2),
-                      cg_num=gm[['Total intervals']]) %>%
+                      cg_num=gm[['Total intervals']] - gm[['NaN intervals']]) %>%
             mutate(avg = meth / (meth + unmeth)) %>%
             select(samp, breaks, meth=avg, breaks_numeric, cg_num)
 

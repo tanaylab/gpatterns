@@ -26,7 +26,7 @@ needs to have the following fields: fid,pattern}
 
 \item{overwrite}{overwrite existing tracks}
 
-\item{canonize}{convert to canonic form (see: \code{\link[gintervals.canonic]{misha}}).
+\item{canonize}{convert to canonic form (see: \code{\link[misha]{gintervals.canonic}}).
 warning: may lose data}
 
 \item{add_biploar_stats}{run mixture model and add bipolaritly stats.

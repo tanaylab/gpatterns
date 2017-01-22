@@ -15,7 +15,7 @@ gpatterns.get_avg_meth(tracks, intervals, iterator = NULL, min_cov = NULL,
 
 \item{intervals}{genomic scope for which the function is applied}
 
-\item{iterator}{see iterator in \code{\link[gextract]{misha}}. if NULL iterator
+\item{iterator}{see iterator in \link[misha]{gextract}. if NULL iterator
 would be set to CpGs}
 
 \item{min_cov}{minimal coverage for iterator interval}
@@ -36,13 +36,13 @@ intervalID column may be incorrect.}
 \item{var_quantile}{minimal quantile of variance per iterator interval}
 
 \item{names}{alternative names to tracks. similar to colnames in
-\code{\link[gextract]{misha}} if tidy == FALSE. Note that names should be
+\link[misha]{gextract} if tidy == FALSE. Note that names should be
 shorter than the maximal length of R data frame column name}
 
 \item{tidy}{if TRUE returns a tidy data frame with the following fields:
 chrom, start, end, intervalID, samp, meth, unmeth, avg, cov.
 if FALSE returns a data frame with average methylation,
-similar to \code{\link[gextract]{misha}}'. Note that for a large number of
+similar to \link[misha]{gextract}'. Note that for a large number of
 intervals tidy == FALSE may be the only memory feasable option.}
 
 \item{file}{save output to file (only in non tidy mode, would not filer by variance)}
