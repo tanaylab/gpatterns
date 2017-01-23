@@ -26,6 +26,39 @@ p_smoothScatter <- function(.data, .x, .y, xlab = NULL, ylab = NULL, ...){
     smoothScatter(x, y, xlab=xlab, ylab=ylab, ...)
 }
 
+#' Returns a list of track names
+#'
+#' @description Returns a list of gpatterns tracks in the genomic database
+#'
+#' @param regex regular expression of track names
+#' @param ignore.case see 'grep'
+#' @param perl see 'grep'
+#' @param fixed see 'grep'
+#' @param useBytes see 'grep'
+#'
+#' @return An array that contains the names of tracks that match the supplied patterns
+#' @export
+#'
+#' @examples
+gpatterns.ls <- function(regex, ignore.case = FALSE, perl=FALSE, fixed=FALSE, useBytes=FALSE){
+    cov_tracks <- gtrack.ls(paste0(regex, '\\.cov$'),
+                            ignore.case = ignore.case,
+                            perl = perl,
+                            fixed = fixed,
+                            useBytes = useBytes) %>% gsub('\\.cov', '', .)
+    meth_tracks <- gtrack.ls(paste0(regex, '\\.meth$'),
+                            ignore.case = ignore.case,
+                            perl = perl,
+                            fixed = fixed,
+                            useBytes = useBytes) %>% gsub('\\.meth', '', .)
+    unmeth_tracks <- gtrack.ls(paste0(regex, '\\.unmeth$'),
+                             ignore.case = ignore.case,
+                             perl = perl,
+                             fixed = fixed,
+                             useBytes = useBytes) %>% gsub('\\.unmeth', '', .)
+    tracks <- tibble(track = cov_tracks) %>% inner_join(tibble(track = meth_tracks), by='track') %>% inner_join(tibble(track = unmeth_tracks), by='track') %>% .$track
+    return(tracks)
+}
 
 # Patterns utils -------------------------------------------
 

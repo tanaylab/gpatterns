@@ -702,6 +702,11 @@ gpatterns.global_meth_trend <- function(tracks,
                                         xlab=strat_track,
                                         colors = NULL,
                                         parallel = getOption('gpatterns.parallel')){
+    if (is.character(intervals)){
+        if (!gintervals.exists(intervals)){
+            intervals <- .gpatterns.special_intervals(intervals)
+        }
+    }
     trend <- .gpatterns.get_global_meth_trend(tracks = tracks,
                                               strat_track = strat_track,
                                               strat_breaks = strat_breaks,

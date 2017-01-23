@@ -242,7 +242,12 @@ gpatterns.tidy_cpgs_to_pats <- function(track,
     .cpgs_to_pats <- function(cpgs){
         cpgs <- cpgs %>% select(read_id, chrom, meth, cg_pos)
         pats <- cpgs %>%
-            inner_join(pat_space, by=c('chrom', 'cg_pos')) %>%
+            inner_join(pat_space, by=c('chrom', 'cg_pos'))
+        if (nrow(pats) == 0){
+            return(tibble(read_id=character(), fid=character(), pat=character()))
+        }
+        
+        pats <- pats %>%
             reshape2::dcast(read_id + fid ~ pat_pos, value.var='meth', fill='*') %>%
             tbl_df
         for (i in paste(1:max_pat_len)){
@@ -355,7 +360,7 @@ gpatterns.tracks_to_pat_space <- function(tracks,
             filter(n() >= pat_len)
         if (adjacent){
             if ('start.orig' %in% colnames(covs)){
-                # make sure that we are covering the original interval
+                #ad make sure that we are covering the original interval
                 covs <- covs %>%
                     arrange(chrom1, start1, end1, chrom, start, end) %>%
                     mutate(cg_num=1:n()) %>%
@@ -376,23 +381,24 @@ gpatterns.tracks_to_pat_space <- function(tracks,
                 space <- space %>%
                     mutate(m = cov)
             }
-
+            
             space <- space %>%
-                filter(max(m) < min_cov) %>%
+                filter(max(m) >= min_cov) %>%
                 mutate(cg_num=1:n(), chosen_start=which.max(m)) %>%
                 filter(cg_num %in% seq(chosen_start[1], chosen_start[1] + pat_len - 1)) %>%
                 select(chrom, start, end, chrom1, start1, end1)
         } else {
             space <- covs %>%
             group_by(chrom1, start1, end1) %>%
-            filter(max(cov) < min_cov) %>%
+            filter(max(cov) >= min_cov) %>%
             top_n(pat_len, cov) %>%
+            slice(1:pat_len) %>% #remove extra rows if there are ties
             ungroup
         }
 
         return(space)
     }
-
+    
     res <- gdply(get_max_cov, expr, intervals = intervals, iterator = iterator, nchunks=nchunks, parallel=parallel, gfunc = gextract.left_join, colnames='cov', verbose=verbose)
 
     options(old_opt)

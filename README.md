@@ -1,18 +1,19 @@
-# The gpatterns package - Analysis of Methylation Patterns#
+# The gpatterns Package - Analysis of Methylation Patterns 
 
 This package provides a set of tools for the analysis of methylation patterns.
 it includes basic pipeline to import data from raw fastq, as well as functions 
 to analyse average methylation and epipolymorphism of multiple samples. 
 
 ### Code
-source code can be found at: https://bitbucket.org/tanaylab/gpatterns
+Source code can be found at: https://bitbucket.org/tanaylab/gpatterns
+
 
 ### Installation 
 #### Requirements 
 - _Perl_
 - _Python_ (>=2.7)
 - R packages:
-    * devtools.
+    * _devtools_.
     * _misha_(>=3.5.4).
 
 
@@ -31,7 +32,7 @@ library(gpatterns)
 ```
 
 #### Using the package
-Please refer to the package vignette for usage and workflow.
+Please refer to the package vignette for usage and workflow. 
 ```
 #!r
 browseVignettes('gpatterns') 
