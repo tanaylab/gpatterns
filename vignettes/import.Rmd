@@ -15,6 +15,8 @@ Data can be imported to gpatterns from raw reads (.fastq files), mapped reads (.
 To explore gpatterns' import functions, we'll start with a dataset of UMI-RRBS of breast and lung tumors. 
 The dataset contains 16 breast tumors samples from 4 patients, with multiple sections from each sample. 
 
+* _table_
+
 ## Importing from raw reads (.fastq)
 ### bissli2
 `bissli2` is a wrapper around bowtie2 that maps bisulfite converted reads and extracts methylation calls.
@@ -41,12 +43,11 @@ In order to generate methylation patterns we first need to define the CpG scope,
 * `gpatterns.intervs_to_pat_space`: genereates pattern space for specific intervals (e.g. MSP1 fragments, capture regions, enhancers, CpG islands etc.) by taking the most covered streches of `pat_l` CpGs than cover each interval, and only then calls `gpatterms.tracks_to_pat_space` to calculate for the rest of the genome. The function can be limited to only adjacent CpGs (`adjacent=TRUE`) or take the most covered CpGs even if there are other CpGs in the middle.
 
 Since our example is from RRBS data we would use `gpatterns.intervs_to_pat_space` with the msp1 fragments:
-```{r}
+```{r, eval = FALSE}
 pat_space <- gpatterns.intervs_to_pat_space(tracks, intervals='intervs.msp1.fid', adjacent=TRUE, pat_len=5, parallel=TRUE)
-pat_space
 ```
 
 And now we can create the patterns attributes for each of our tracks: 
-```{r}
-purrr::map(tracks, ~ gpatterns.create_patterns_track(track = .x, description = paste0('patterns of ', .x), pat_space=pat_space, max_missing=0)
+```{r, eval = FALSE}
+purrr::map(tracks, ~ gpatterns.create_patterns_track(track = .x, description = paste0('patterns of ', .x), pat_space=pat_space, max_missing=0))
 ```
