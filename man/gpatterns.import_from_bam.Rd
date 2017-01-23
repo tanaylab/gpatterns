@@ -18,6 +18,8 @@ gpatterns.import_from_bam(bams, workdir = NULL, track = NULL,
 
 \item{workdir}{directory in which the files would be saved}
 
+\item{track}{name of the track to generate}
+
 \item{steps}{steps of the pipeline to do. Possible options are:
 'bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov'}
 
@@ -48,7 +50,17 @@ if FALSE - those reads would be left unchanged}
 
 \item{bismark}{bam was aligned using bismark}
 
+\item{nbins}{number of genomic bins to separate the analysis.}
+
+\item{groot}{root of misha genomic database to save the tracks}
+
 \item{import_raw_tcpgs}{import raw tidy cpgs to misha (without filtering duplicates)}
+
+\item{use_sge}{use sun grid engine for parallelization}
+
+\item{max_jobs}{maximal number of jobs for sge parallelization}
+
+\item{parallel}{parallelize using threads (number of threads is determined by gpatterns.set_parallel)}
 
 \item{cmd_prefix}{prefix to run on 'system' commands (e.g. source ~/.bashrc)}
 

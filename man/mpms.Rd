@@ -2,7 +2,7 @@
 % Please edit documentation in R/RcppExports.R
 \name{mpms}
 \alias{mpms}
-\title{Run Methyl Pattern Mixture Scanner (MPMS)}
+\title{Run mpms}
 \usage{
 mpms(df)
 }
@@ -10,6 +10,6 @@ mpms(df)
 \item{df}{data frame}
 }
 \description{
-Run Methyl Pattern Mixture Scanner (MPMS)
+Run mpms
 }
 

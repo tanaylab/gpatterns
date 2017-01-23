@@ -117,145 +117,6 @@ gpatterns.bissli2_build <- function(reference,
 
 
 
-#' Create a track from bam files.
-#'
-#' Creates a track from bam files for a specific sample.
-#' Use this methods only for small datasets. For large datasets please use
-#' the Snakemake pipeline.
-#'
-#' @param bams character vector with path of bam files
-#' @param workdir directory in which the files would be saved
-#' @param steps steps of the pipeline to do. Possible options are:
-#' 'bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov'
-#' @param paired_end bam files are paired end, with R1 and R2 interleaved
-#' @param cgs_mask_file comma separated file with positions of cpgs to mask
-#' (e.g. MSP1 sticky ends). Needs to have chrom and start fields with the
-#' position of 'C' in the cpgs to mask
-#' @param trim trim cpgs that are --trim bp from the beginning/end of the read
-#' @param umi1_idx position of umi1 in index (0 based)
-#' @param umi2_idx position of umi2 in index (0 based)
-#' @param use_seq use UMI sequence (not only position) to filter duplicates
-#' @param only_seq use only UMI sequence (without positions) to filter duplicates
-#' @param frag_intervs intervals set of the fragments to change positions to.
-#' @param maxdist maximal distance from fragments
-#' @param rm_off_target if TRUE - remove reads with distance > maxdist from frag_intervs
-#' if FALSE - those reads would be left unchanged
-#' @param add_chr_prefix add "chr" prefix for chromosomes (in order to import to misha)
-#' @param bismark bam was aligned using bismark
-#' @param import_raw_tcpgs import raw tidy cpgs to misha (without filtering duplicates)
-#' @param cmd_prefix prefix to run on 'system' commands (e.g. source ~/.bashrc)
-#' @param run_per_interv split run of bam2tidy_cpgs scripts separatly for each interval.
-#' @param ... gpatterns.import_from_tidy_cpgs parameters
-#'
-#' @inheritParams gpatterns::gpatterns.import_from_tidy_cpgs
-#'
-#' @return if 'stats' is one of the steps - data frame with statistics. Otherwise none.
-#' @export
-#'
-#' @examples
-gpatterns.import_from_bam <- function(bams,
-                                      workdir = NULL,
-                                      track = NULL,
-                                      steps = 'all',
-                                      paired_end = TRUE,
-                                      cgs_mask_file = NULL,
-                                      trim = NULL,
-                                      umi1_idx = NULL,
-                                      umi2_idx = NULL,
-                                      use_seq = FALSE,
-                                      only_seq = FALSE,
-                                      frag_intervs = NULL,
-                                      maxdist = 0,
-                                      rm_off_target = TRUE,
-                                      add_chr_prefix = FALSE,
-                                      bismark = FALSE,
-                                      nbins = nrow(gintervals.all()),
-                                      groot = GROOT,
-                                      import_raw_tcpgs = FALSE,
-                                      use_sge = FALSE,
-                                      max_jobs = 400,
-                                      parallel = getOption('gpatterns.parallel'),
-                                      cmd_prefix = '',
-                                      run_per_interv = TRUE,
-                                      ...){
-    gsetroot(groot)
-    all_steps <- c('bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov', 'stats')
-
-    if (length(steps) == 1 && steps == 'all'){
-        steps <- all_steps
-    }
-
-    stopifnot(all(steps %in% c(all_steps)))
-
-    # get genomic bins
-    genomic_bins <- gbin_intervals(intervals = gintervals.all(), nbins)
-
-    # bam to tidy cpgs
-    .step_invoke(
-        'bam2tidy_cpgs',
-        steps,
-        .gpatterns.bam2tidy_cpgs,
-        bams,
-        tidy_cpgs_dir = qq('@{workdir}/tidy_cpgs'),
-        stats_dir = qq('@{workdir}/tidy_cpgs/stats'),
-        genomic_bins = genomic_bins,
-        paired_end = paired_end,
-        cgs_mask_file = cgs_mask_file,
-        umi1_idx = umi1_idx,
-        umi2_idx = umi2_idx,
-        trim = trim,
-        frag_intervs = frag_intervs,
-        maxdist = maxdist,
-        rm_off_target = rm_off_target,
-        add_chr_prefix = add_chr_prefix,
-        bismark = bismark,
-        use_sge = use_sge,
-        max_jobs = max_jobs,
-        parallel = parallel,
-        cmd_prefix = cmd_prefix,
-        run_per_interv = run_per_interv)
-
-    # filter dups
-    .step_invoke(
-        'filter_dups',
-        steps,
-        .gpatterns.filter_dups,
-        tidy_cpgs_dir = qq('@{workdir}/tidy_cpgs'),
-        stats_dir = qq('@{workdir}/tidy_cpgs_uniq/stats'),
-        uniq_tidy_cpgs_dir = qq('@{workdir}/tidy_cpgs_uniq'),
-        genomic_bins = genomic_bins,
-        paired_end = paired_end,
-        use_seq = use_seq,
-        only_seq = only_seq,
-        use_sge = use_sge,
-        max_jobs = max_jobs,
-        parallel = parallel,
-        cmd_prefix = cmd_prefix)
-
-    tidy_cpgs_steps <- c('bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov')
-
-    tidy_cpgs_dirs <- if (import_raw_tcpgs) qq('@{workdir}/tidy_cpgs') else qq('@{workdir}/tidy_cpgs_uniq')
-
-    if (any(steps %in% tidy_cpgs_steps)){
-        gpatterns.import_from_tidy_cpgs(tidy_cpgs_dirs,
-                                        track = track,
-                                        steps = steps[steps %in% tidy_cpgs_steps],
-                                        nbins = nbins,
-                                        groot = groot,
-                                        use_sge = use_sge,
-                                        parallel = parallel,
-                                        max_jobs = max_jobs,
-                                        ...)
-    }
-
-    # .step_invoke(
-    #     'stats',
-    #     steps,
-    #     gpatterns.get_pipeline_stats,
-    #     track = track,
-    #     tidy_cpgs_stats_dir = qq('@{workdir}/tidy_cpgs/stats'),
-    #     uniq_tidy_cpgs_stats_dir = qq('@{workdir}/tidy_cpgs_uniq/stats'))
-}
 
 #' Create a track from tidy_cpgs files
 #'
@@ -369,6 +230,145 @@ gpatterns.import_from_tidy_cpgs <- function(tidy_cpgs,
 
 }
 
+#' Create a track from bam files.
+#'
+#' Creates a track from bam files for a specific sample.
+#' Use this methods only for small datasets. For large datasets please use
+#' the Snakemake pipeline.
+#'
+#' @param bams character vector with path of bam files
+#' @param workdir directory in which the files would be saved
+#' @param steps steps of the pipeline to do. Possible options are:
+#' 'bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov'
+#' @param paired_end bam files are paired end, with R1 and R2 interleaved
+#' @param cgs_mask_file comma separated file with positions of cpgs to mask
+#' (e.g. MSP1 sticky ends). Needs to have chrom and start fields with the
+#' position of 'C' in the cpgs to mask
+#' @param trim trim cpgs that are --trim bp from the beginning/end of the read
+#' @param umi1_idx position of umi1 in index (0 based)
+#' @param umi2_idx position of umi2 in index (0 based)
+#' @param use_seq use UMI sequence (not only position) to filter duplicates
+#' @param only_seq use only UMI sequence (without positions) to filter duplicates
+#' @param frag_intervs intervals set of the fragments to change positions to.
+#' @param maxdist maximal distance from fragments
+#' @param rm_off_target if TRUE - remove reads with distance > maxdist from frag_intervs
+#' if FALSE - those reads would be left unchanged
+#' @param add_chr_prefix add "chr" prefix for chromosomes (in order to import to misha)
+#' @param bismark bam was aligned using bismark
+#' @param import_raw_tcpgs import raw tidy cpgs to misha (without filtering duplicates)
+#' @param cmd_prefix prefix to run on 'system' commands (e.g. source ~/.bashrc)
+#' @param run_per_interv split run of bam2tidy_cpgs scripts separatly for each interval.
+#' @param ... gpatterns.import_from_tidy_cpgs parameters
+#'
+#' @inheritParams gpatterns.import_from_tidy_cpgs
+#'
+#' @return if 'stats' is one of the steps - data frame with statistics. Otherwise none.
+#' @export
+#'
+#' @examples
+gpatterns.import_from_bam <- function(bams,
+                                      workdir = NULL,
+                                      track = NULL,
+                                      steps = 'all',
+                                      paired_end = TRUE,
+                                      cgs_mask_file = NULL,
+                                      trim = NULL,
+                                      umi1_idx = NULL,
+                                      umi2_idx = NULL,
+                                      use_seq = FALSE,
+                                      only_seq = FALSE,
+                                      frag_intervs = NULL,
+                                      maxdist = 0,
+                                      rm_off_target = TRUE,
+                                      add_chr_prefix = FALSE,
+                                      bismark = FALSE,
+                                      nbins = nrow(gintervals.all()),
+                                      groot = GROOT,
+                                      import_raw_tcpgs = FALSE,
+                                      use_sge = FALSE,
+                                      max_jobs = 400,
+                                      parallel = getOption('gpatterns.parallel'),
+                                      cmd_prefix = '',
+                                      run_per_interv = TRUE,
+                                      ...){
+    gsetroot(groot)
+    all_steps <- c('bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov', 'stats')
+
+    if (length(steps) == 1 && steps == 'all'){
+        steps <- all_steps
+    }
+
+    stopifnot(all(steps %in% c(all_steps)))
+
+    # get genomic bins
+    genomic_bins <- gbin_intervals(intervals = gintervals.all(), nbins)
+
+    # bam to tidy cpgs
+    .step_invoke(
+        'bam2tidy_cpgs',
+        steps,
+        .gpatterns.bam2tidy_cpgs,
+        bams,
+        tidy_cpgs_dir = qq('@{workdir}/tidy_cpgs'),
+        stats_dir = qq('@{workdir}/tidy_cpgs/stats'),
+        genomic_bins = genomic_bins,
+        paired_end = paired_end,
+        cgs_mask_file = cgs_mask_file,
+        umi1_idx = umi1_idx,
+        umi2_idx = umi2_idx,
+        trim = trim,
+        frag_intervs = frag_intervs,
+        maxdist = maxdist,
+        rm_off_target = rm_off_target,
+        add_chr_prefix = add_chr_prefix,
+        bismark = bismark,
+        use_sge = use_sge,
+        max_jobs = max_jobs,
+        parallel = parallel,
+        cmd_prefix = cmd_prefix,
+        run_per_interv = run_per_interv)
+
+    # filter dups
+    .step_invoke(
+        'filter_dups',
+        steps,
+        .gpatterns.filter_dups,
+        tidy_cpgs_dir = qq('@{workdir}/tidy_cpgs'),
+        stats_dir = qq('@{workdir}/tidy_cpgs_uniq/stats'),
+        uniq_tidy_cpgs_dir = qq('@{workdir}/tidy_cpgs_uniq'),
+        genomic_bins = genomic_bins,
+        paired_end = paired_end,
+        use_seq = use_seq,
+        only_seq = only_seq,
+        use_sge = use_sge,
+        max_jobs = max_jobs,
+        parallel = parallel,
+        cmd_prefix = cmd_prefix)
+
+    tidy_cpgs_steps <- c('bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov')
+
+    tidy_cpgs_dirs <- if (import_raw_tcpgs) qq('@{workdir}/tidy_cpgs') else qq('@{workdir}/tidy_cpgs_uniq')
+
+    if (any(steps %in% tidy_cpgs_steps)){
+        gpatterns.import_from_tidy_cpgs(tidy_cpgs_dirs,
+                                        track = track,
+                                        steps = steps[steps %in% tidy_cpgs_steps],
+                                        nbins = nbins,
+                                        groot = groot,
+                                        use_sge = use_sge,
+                                        parallel = parallel,
+                                        max_jobs = max_jobs,
+                                        ...)
+    }
+
+    # .step_invoke(
+    #     'stats',
+    #     steps,
+    #     gpatterns.get_pipeline_stats,
+    #     track = track,
+    #     tidy_cpgs_stats_dir = qq('@{workdir}/tidy_cpgs/stats'),
+    #     uniq_tidy_cpgs_stats_dir = qq('@{workdir}/tidy_cpgs_uniq/stats'))
+}
 
 #' Separate a track by strands (for QC purposes)
 #'
@@ -705,7 +705,8 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
 #' (output of gpatterns.tracks_to_pat_space or gpatterns.intervs_to_pat_space)
 #' needs to have the following fields: chrom,start,end,fid
 #' @param patterns_tab table with patterns (output of gpatterns.tidy_cpgs_to_pats)
-#' needs to have the following fields: fid,pattern
+#' needs to have the following fields: fid,pattern. If NULL it would be generated
+#' automatically.
 #' @param add_read_id save the read_id together with the patterns
 #' @param noise_threshold threshold to consider pattern as 'noise'
 #' @param overwrite overwrite existing tracks
