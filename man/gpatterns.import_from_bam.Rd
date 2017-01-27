@@ -72,8 +72,6 @@ if FALSE - those reads would be left unchanged}
 if 'stats' is one of the steps - data frame with statistics. Otherwise none.
 }
 \description{
-Creates a track from bam files for a specific sample.
-Use this methods only for small datasets. For large datasets please use
-the Snakemake pipeline.
+Creates a track from bam files.
 }
 

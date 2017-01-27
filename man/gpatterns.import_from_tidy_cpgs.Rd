@@ -11,7 +11,7 @@ gpatterns.import_from_tidy_cpgs(tidy_cpgs, track, description, steps = "all",
   parallel = getOption("gpatterns.parallel"))
 }
 \arguments{
-\item{tidy_cpgs}{tidy_cpgs object / vector with directories of tidy_cpgs (use full path)}
+\item{tidy_cpgs}{tidy_cpgs data frame or a vector with directories of tidy_cpgs (use full path)}
 
 \item{track}{name of the track to generate}
 
@@ -41,8 +41,6 @@ gpatterns.import_from_tidy_cpgs(tidy_cpgs, track, description, steps = "all",
 \item{parallel}{parallelize using threads (number of threads is determined by gpatterns.set_parallel)}
 }
 \description{
-Creates a track from tidy_cpgs files for a specific sample.
-Use this methods only for small datasets. For large datasets please
-the Snakemake pipeline.
+Create a track from tidy_cpgs files
 }
 

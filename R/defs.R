@@ -25,7 +25,10 @@ NULL
 .gpatterns.nx_track_name      <- function(track) { qqv('@{track}.nx')}
 .gpatterns.nc_track_name      <- function(track) { qqv('@{track}.nc')}
 .gpatterns.pat_meth_track_name    <- function(track) { qqv('@{track}.pat_meth')}
+.gpatterns.pat_space_intervs_name    <- function(track) { qqv('@{track}.pat_space')}
 .gpatterns.epipolymorphism_track_name <- function(track) { qqv('@{track}.epipoly')}
+
+.gpatterns.patterns_track_names <- function(track) {paste0(track, '.', c('n', 'n0', 'n1', 'nx', 'nc', 'pat_meth', 'epipoly', 'fid'))}
 
 .gpatterns.mix_qval_track_name <- function(track) { qqv('@{track}.mix_qval')}
 .gpatterns.mix_meth_track_name <- function(track) { qqv('@{track}.mix_meth')}
@@ -78,6 +81,16 @@ NULL
         stop(qq('interval @{name} does not exist'))
     }
 }
+
+.gpatterns.get_intervals <- function(intervals){
+    if (is.character(intervals)){
+        if (!gintervals.exists(intervals)){
+            intervals <- .gpatterns.special_intervals(intervals)
+        }
+    }
+    return(intervals)
+}
+
 
 # Import defs ------------------------------------------------
 .gpatterns.bam2tidy_cpgs_bin <- sprintf("%s/%s",

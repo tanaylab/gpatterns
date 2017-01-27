@@ -3,6 +3,36 @@
 
 #' Extract average methylation
 #'
+#' Extracts average methylation data from tracks.
+#'
+#' Performance:\cr
+#' There are two main modes:
+#' \itemize{
+#'  \item{not tidy: }{returns a data frame with intervals (chrom,start,end) and a column with average methylation for each sample.}
+#'  \item{tidy: }{returns a tidy data frame with 'meth','unmeth','avg','cov' for each iterator interval for each sample. }
+#' }
+#' the 'tidy' option is very conveniet in terms of further analysis, but note that for large amount of data it may be too slow. The 'not tidy' version, on the other hand, returns only average methylation and not the raw 'meth' and 'unmeth' calls. In general, choose the mode according to the following guidelines:
+#' \itemize{
+#' \item{For extremly large datasets use the 'not tidy' version with \code{use_disk == TURE}. Note that in general working with huge number of genomic regions is not useful, both in terms of performance (memory consumption, slow algorithms) and analysis (more 'noise'). A good practice is to select the genomic regions carefully, for example by requering minimal coverage (\code{min_cov}) in minimal number of samples \code{min_samples}, minimal number of CpGs \code{min_cpgs}, taking only the most variable regions (\code{min_var}, \code{var_quantile}) or by taking sets of annotated regioins (e.g. promoters, enhancers).}
+#' \item{For large datasets use the 'not tidy' version.}
+#' \item{For intermediate size datasets use the 'tidy' version with \code{pre_screen = TRUE}. This would first filter the CpGs and only then exracts the methylation to memory. }
+#' \item{For small datasets use the 'vanilla' 'tidy' version.}
+#' }
+#' Iterators:\cr
+#' see \link[misha]{gextract}, and the \code{misha} package in general.\cr
+#' The function works in the following way: for every interval in \code{intervals}
+#' the function extracts the methylation calls in each \code{iterator} interval
+#' and calculates the average. \cr
+#' Beware the difference between intervals and
+#' iterator: intervals parameter sets the global genomic scope of the function
+#' (what part of the genome to look at to begin with).
+#' \code{iterator} parameter sets the iterator intervals, which are the chunks of the genome form which we will extract the methylation calls. \cr
+#' For example setting the iterator to gintervals.all() would calculate the average methylation of every chromosome, whereas setting the intervals to
+#' gintervals.all() would just mean that the calculations of the iterator
+#' intervals would not be limited to a specific part of the genome, and, for
+#' example, if iterator=NULL, methylation would be extracted from all the
+#' genomic CpGs.
+#'
 #' @param tracks methylation tracks
 #' @param intervals genomic scope for which the function is applied
 #' @param iterator see iterator in \link[misha]{gextract}. if NULL iterator
@@ -77,7 +107,13 @@ gpatterns.get_avg_meth <- function(
     names <- names %||% tracks
 
     if ((pre_screen || !tidy || sum_tracks) & (!is.null(min_samples) || !is.null(min_cov))){
-        message(qq("Taking only intervals with coverage >= @{min_cov} in at least @{min_samples} samples"))
+        min_cov <- min_cov %||% 1
+        if (length(tracks) == 1){
+            message(qq("Taking only intervals with coverage >= @{min_cov}"))
+        } else {
+            message(qq("Taking only intervals with coverage >= @{min_cov} in at least @{min_samples} samples"))
+        }
+
         if (use_disk){
             f_intervs <- .random_track_name()
         } else {
@@ -261,12 +297,16 @@ gpatterns.screen_by_coverage <- function(tracks,
                                          intervals.set.out = NULL,
                                          sum_tracks = FALSE){
     cov_tracks <- .gpatterns.cov_track_name(tracks)
+    vtracks_pref <- .random_track_name()
+    vtracks <- paste0(vtracks_pref, '_', 1:length(tracks), '_cov')
+
+    walk2(vtracks, cov_tracks, gvtrack.create, func='sum')
     if (sum_tracks){
-        cov_expr <- sprintf('sum(%s, na.rm=T)', paste(qqv('@{tracks}.cov'), collapse=', '))
+        cov_expr <- sprintf('sum(%s, na.rm=T)', paste(qqv('@{vtracks}.cov'), collapse=', '))
         expr <- qq('@{cov_expr} >= @{min_cov}')
     } else {
         min_samples <- min_samples %||% 1
-        expr <- paste(qqv('(@{cov_tracks} >= min_cov)'), collapse = ', ')
+        expr <- paste(qqv('(@{vtracks} >= min_cov)'), collapse = ', ')
         expr <- qq('sum(@{expr}, na.rm=T) >= @{min_samples}')
     }
 
@@ -274,6 +314,7 @@ gpatterns.screen_by_coverage <- function(tracks,
                        intervals = intervals,
                        iterator = iterator,
                        intervals.set.out = intervals.set.out)
+    walk(vtracks, gvtrack.rm)
     return(intervs)
 }
 
@@ -594,6 +635,10 @@ gpatterns.cluster_avg_meth <- function(
 
 #' Plot spatial trend of methylation around intervals
 #'
+#' @description calculates the distance of \code{tracks} values from \code{intervals}
+#' bins the distances based on \code{dist_breaks}, and then calculates the average
+#' methylation \code{m / (m + um)} in each bin and plots the results.
+#'
 #' @param tracks tracks to plot
 #' @param intervals intervals to plot spatial methylation around.
 #' Can be any intervals set, or one of the following 'special' intervals:
@@ -607,6 +652,8 @@ gpatterns.cluster_avg_meth <- function(
 #' @param height plot height (if fig_fn is not NULL)
 #' @param fig_fn output filename for the figure (if NULL, figure would be returned)
 #' @param xlab label for the x axis'
+#' @param title title for the plot
+#' @param legend add legend
 #' @param colors custom colors
 #' @param parallel get trends parallely
 #'
@@ -626,13 +673,11 @@ gpatterns.spatial_meth_trend <- function(tracks,
                                          height = 260,
                                          fig_fn = NULL,
                                          xlab = 'Distance (bp)',
+                                         title = '',
+                                         legend = TRUE,
                                          colors = NULL,
                                          parallel = getOption('gpatterns.parallel')){
-    if (is.character(intervals)){
-        if (!gintervals.exists(intervals)){
-            intervals <- .gpatterns.special_intervals(intervals)
-        }
-    }
+    intervals <- .gpatterns.get_intervals(intervals)
     tryCatch({
             gvtrack.create('dist', intervals, 'distance')
             trend <- .gpatterns.get_global_meth_trend(tracks = tracks,
@@ -648,13 +693,13 @@ gpatterns.spatial_meth_trend <- function(tracks,
 
 
     if (length(tracks) == 1){
-        p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, group=1)) + geom_line() + xlab(xlab) + ylab('Methylation') + geom_vline(xintercept=0, linetype='dashed', color='red')
+        p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, group=1)) + geom_line() + xlab(xlab) + ylab('Methylation') + geom_vline(xintercept=0, linetype='dashed', color='red') + ggtitle(title)
     } else {
-        p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, color=samp, group=samp)) + geom_line() + xlab(xlab) + ylab('Methylation') + scale_color_discrete(name='') + geom_vline(xintercept=0, linetype='dashed', color='red')
+        p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, color=samp, group=samp)) + geom_line() + xlab(xlab) + ylab('Methylation') + scale_color_discrete(name='', guide=legend) + geom_vline(xintercept=0, linetype='dashed', color='red') + ggtitle(title)
     }
 
     if (!is.null(colors)){
-        p <- p + scale_color_manual(values=colors)
+        p <- p + scale_color_manual(values=colors, guide=legend)
     }
 
     if (!is.null(fig_fn)){
@@ -668,6 +713,13 @@ gpatterns.spatial_meth_trend <- function(tracks,
 
 #' Plot global methylation stratified on other tracks
 #'
+#' @description calculates the average methylation \code{(m / m + um)} in each
+#' bin of \code{strat_track} and plots it. By default, plots the average methylation
+#' in different bins of CpG content. This can be used as a sanity check for methylation
+#' data - in general, methylation is high for regions with low CpG density,
+#' and low for CpG dense regions (e.g. CpG islands).
+#'
+#'
 #' @param tracks tracks to plot
 #' @param strat_track track to stratify average methylation by. default is CG content
 #' @param strat_breaks breaks to determine the bins of strat_track
@@ -680,6 +732,8 @@ gpatterns.spatial_meth_trend <- function(tracks,
 #' @param height plot height (if fig_fn is not NULL)
 #' @param fig_fn output filename for the figure (if NULL, figure would be returned)
 #' @param xlab label for the x axis
+#' @param title title for the plot
+#' @param legend add legend
 #' @param colors custom colors
 #' @param parallel get trends parallely
 #'
@@ -700,13 +754,11 @@ gpatterns.global_meth_trend <- function(tracks,
                                         height=260,
                                         fig_fn=NULL,
                                         xlab=strat_track,
+                                        title = '',
+                                        legend = TRUE,
                                         colors = NULL,
                                         parallel = getOption('gpatterns.parallel')){
-    if (is.character(intervals)){
-        if (!gintervals.exists(intervals)){
-            intervals <- .gpatterns.special_intervals(intervals)
-        }
-    }
+    intervals <- .gpatterns.get_intervals(intervals)
     trend <- .gpatterns.get_global_meth_trend(tracks = tracks,
                                               strat_track = strat_track,
                                               strat_breaks = strat_breaks,
@@ -717,13 +769,13 @@ gpatterns.global_meth_trend <- function(tracks,
                                               names = names,
                                               parallel = parallel)
     if (length(tracks) == 1){
-        p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, group=1)) + geom_line() + xlab(xlab) + ylab('Methylation')
+        p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, group=1)) + geom_line() + xlab(xlab) + ylab('Methylation') + ggtitle(title)
     } else {
-        p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, color=samp, group=samp)) + geom_line() + xlab(xlab) + ylab('Methylation') + scale_color_discrete(name='')
+        p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, color=samp, group=samp)) + geom_line() + xlab(xlab) + ylab('Methylation') + scale_color_discrete(name='', guide=legend) + ggtitle(title)
     }
 
     if (!is.null(colors)){
-        p <- p + scale_color_manual(values=colors)
+        p <- p + scale_color_manual(values=colors, guide=legend)
     }
 
     if (!is.null(fig_fn)){
@@ -826,8 +878,12 @@ gpatterns.smoothScatter <- function(
 .do.call_ellipsis <- function(f, additonal_params, ...){
     f_args <- names(as.list(args(f)))
     elipsis <- list(...)
-    elipsis <- map(names(elipsis), function(x) if (x %in% f_args) { return(elipsis[[x]]) } )
-    do.call(f, c(additonal_params, elipsis))
+    if (!is.null(names(elipsis))){
+        elipsis <- map(names(elipsis), function(x) if (x %in% f_args) { return(elipsis[[x]]) } )
+        do.call(f, c(additonal_params, elipsis))
+    } else {
+        do.call(f, additonal_params)
+    }
 }
 
 .hclust_order <- function(d, keys, variable, value, ...){

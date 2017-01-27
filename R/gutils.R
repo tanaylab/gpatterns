@@ -239,6 +239,10 @@ glply <- function(f, expr, intervals = NULL, iterator = NULL, colnames = NULL, n
         return(r)
     }
 
+    if (is.character(intervals)){
+        intervals <- gintervals.load(intervals)
+    }
+
     res <- intervals %>%
         mutate(chunk = ntile(chrom, nchunks)) %>%
         plyr::dlply(.(chunk), function(y)
@@ -601,6 +605,44 @@ gtrack.array.import_from_df <- function(df, track, description) {
     tryCatch(gtrack.array.import(track, description, fn),
              finally=system(qq('rm -f @{fn}')))
 
+}
+
+.gtrack.union_intervals <- function(tracks, intervals=ALLGENOME, iterator=NULL, parallel=TRUE, nchunks=5){
+    if (parallel){
+        map_reduce_union <- function(x)  alply(x, 1, giterator.intervals, .parallel=TRUE) %>% reduce(gintervals.union)
+        iter <- tibble(track=tracks, chunk=ntile(tracks, nchunks)) %>%
+            group_by(chunk) %>%
+            by_slice(~map_reduce_union(.x$track), .to='intervs') %>%
+            .$intervs %>%
+            reduce(gintervals.union)
+
+    } else {
+        iter <- giterator.intervals(tracks[1])
+        if (length(tracks) > 1){
+            iter <- giterator.intervals(tracks[1], intervals=intervals, iterator=iterator)
+            for (track in tracks[-2]) {
+                iter <- iter %>% gintervals.union(giterator.intervals(track, intervals=intervals, iterator=iterator))
+            }
+        }
+    }
+
+    return(iter)
+}
+
+gtrack.array.import_from_tracks <- function(tracks, intervals, track, description, iterator=NULL, colnames=NULL){
+    if (is.null(iterator)){
+        message('taking union of covered intervals as iterator')
+        iterator <- .gtrack.union_intervals(tracks, intervals=intervals)
+    }
+
+    message('extracting...')
+    fn <- tempfile()
+    print(fn)
+    df <- gextract(tracks, intervals=intervals, iterator=iterator, colnames=colnames, file = fn)
+
+    message('importing...')
+    tryCatch(gtrack.array.import(track, description, fn),
+             finally=system(qq('rm -f @{fn}')))
 }
 
 gtrack.array.import <- function (track = NULL, description = NULL, ...)

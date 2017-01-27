@@ -400,6 +400,121 @@ gtrack.create <- function (track = NULL, description = NULL, expr = NULL, iterat
     retv <- 0
 }
 
+.gintervals.apply <- function (chroms, intervals, intervals.set.out, FUN, ...)
+{
+    if (!is.null(intervals.set.out))
+        fullpath <- .gintervals.check_new_set(intervals.set.out)
+    if (is.data.frame(intervals))
+        intervals <- list(intervals)
+    chroms$size <- NULL
+    if ("chrom" %in% colnames(chroms))
+        chroms <- data.frame(chrom = chroms[with(chroms, order(chrom)),
+                                            ])
+    else chroms <- chroms[with(chroms, order(chrom1, chrom2)),
+                          ]
+    if (any(unlist(lapply(intervals, function(intervals) {
+        .gintervals.is_bigset(intervals) || .gintervals.needs_bigset(intervals)
+    })))) {
+        stats <- NULL
+        zeroline <- NULL
+        success <- FALSE
+        t <- Sys.time()
+        progress.percentage <- -1
+        tryCatch({
+            if (!is.null(intervals.set.out))
+                dir.create(fullpath, recursive = T, mode = "0777")
+            if (.gintervals.is1d(intervals[[1]])) {
+                mapply(function(chrom) {
+                    loaded_intervals <- lapply(intervals, function(intervals) {
+                        .gintervals.load_ext(intervals, chrom = chrom)
+                    })
+                    res <- do.call(FUN, list(loaded_intervals,
+                                             ...))
+                    if (!is.null(intervals.set.out) && !is.null(res) &&
+                        nrow(res) > 0) {
+                        zeroline <<- res[0, ]
+                        .gintervals.big.save(fullpath, res, chrom = chrom)
+                        stat <- .gcall("gintervals_stats", res, new.env(parent = parent.frame()))
+                        stats <<- rbind(stats, data.frame(chrom = chrom,
+                                                          stat))
+                    }
+                    if (as.integer(difftime(Sys.time(), t, units = "secs")) >
+                        3) {
+                        t <<- Sys.time()
+                        percentage <- as.integer(100 * match(chrom,
+                                                             chroms$chrom)/nrow(chroms))
+                        if (percentage < 100 && progress.percentage !=
+                            percentage) {
+                            cat(sprintf("%d%%...", percentage))
+                            progress.percentage <<- percentage
+                        }
+                    }
+                }, chroms$chrom)
+            }
+            else {
+                mapply(function(chrom1, chrom2) {
+                    loaded_intervals <- lapply(intervals, function(intervals) {
+                        .gintervals.load_ext(intervals, chrom1 = chrom1,
+                                             chrom2 = chrom2)
+                    })
+                    res <- do.call(FUN, list(loaded_intervals,
+                                             ...))
+                    if (!is.null(intervals.set.out) && !is.null(res) &&
+                        nrow(res) > 0) {
+                        zeroline <<- res[0, ]
+                        .gintervals.big.save(fullpath, res, chrom1 = chrom1,
+                                             chrom2 = chrom2)
+                        stat <- .gcall("gintervals_stats", res, new.env(parent = parent.frame()))
+                        stats <<- rbind(stats, data.frame(chrom1 = chrom1,
+                                                          chrom2 = chrom2, stat))
+                    }
+                    if (as.integer(difftime(Sys.time(), t, units = "secs")) >
+                        3) {
+                        t <<- Sys.time()
+                        percentage <- as.integer(100 * which(chroms$chrom1 ==
+                                                                 chrom1 & chroms$chrom2 == chrom2)/nrow(chroms))
+                        if (percentage < 100 && progress.percentage !=
+                            percentage) {
+                            cat(sprintf("%d%%...", percentage))
+                            progress.percentage <<- percentage
+                        }
+                    }
+                }, chroms$chrom1, chroms$chrom2)
+            }
+            if (!is.null(intervals.set.out)) {
+                if (is.null(stats))
+                    return(retv <- NULL)
+                .gintervals.big.save_meta(fullpath, stats, zeroline)
+            }
+            if (progress.percentage >= 0)
+                cat("100%\n")
+            success <- TRUE
+            if (!is.null(intervals.set.out) && !.gintervals.needs_bigset(intervals.set.out))
+                .gintervals.big2small(intervals.set.out)
+        }, finally = {
+            if (!success && !is.null(intervals.set.out))
+                unlink(fullpath, recursive = TRUE)
+        })
+    }
+    else {
+        loaded_intervals <- lapply(intervals, .gintervals.load_ext)
+        res <- do.call(FUN, list(loaded_intervals, ...))
+        if (!is.null(intervals.set.out) && !is.null(res) && nrow(res) >
+            0) {
+            if (.gintervals.is1d(res))
+                res <- res[order(res$chrom), ]
+            else res <- res[order(res$chrom1, res$chrom2), ]
+            if (.gintervals.needs_bigset(res))
+                .gintervals.small2big(intervals.set.out, res)
+            else .gintervals.save_file(fullpath, res)
+        }
+        else return(NULL)
+    }
+    if (!is.null(intervals.set.out))
+        gdb.reload(rescan = FALSE)
+}
+
+
 
 
 

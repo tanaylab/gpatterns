@@ -18,7 +18,8 @@ gpatterns.create_patterns_track(track, description, pat_space,
 needs to have the following fields: chrom,start,end,fid}
 
 \item{patterns_tab}{table with patterns (output of gpatterns.tidy_cpgs_to_pats)
-needs to have the following fields: fid,pattern}
+needs to have the following fields: fid,pattern. If NULL it would be generated
+automatically.}
 
 \item{add_read_id}{save the read_id together with the patterns}
 

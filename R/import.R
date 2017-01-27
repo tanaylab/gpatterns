@@ -120,11 +120,8 @@ gpatterns.bissli2_build <- function(reference,
 
 #' Create a track from tidy_cpgs files
 #'
-#' Creates a track from tidy_cpgs files for a specific sample.
-#' Use this methods only for small datasets. For large datasets please
-#' the Snakemake pipeline.
 #'
-#' @param tidy_cpgs tidy_cpgs object / vector with directories of tidy_cpgs (use full path)
+#' @param tidy_cpgs tidy_cpgs data frame or a vector with directories of tidy_cpgs (use full path)
 #' @param track name of the track to generate
 #' @param description description of the track to generate
 #' @param steps steps of the pipeline. Possible options are:
@@ -232,9 +229,7 @@ gpatterns.import_from_tidy_cpgs <- function(tidy_cpgs,
 
 #' Create a track from bam files.
 #'
-#' Creates a track from bam files for a specific sample.
-#' Use this methods only for small datasets. For large datasets please use
-#' the Snakemake pipeline.
+#' Creates a track from bam files.
 #'
 #' @param bams character vector with path of bam files
 #' @param workdir directory in which the files would be saved
@@ -592,12 +587,13 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
     message('calculating pileup...')
     pileup <- gpatterns.apply_tidy_cpgs(track, function(x) gpatterns.tidy_cpgs_2_pileup(x, dsn=dsn), ...)
     message('importing pileup to misha...')
-    .gpattern.import_intervs_table(track, description, pileup, columns=columns, overwrite = overwrite)
+    .gpatterns.import_intervs_table(track, description, pileup, columns=columns, overwrite = overwrite)
 }
 
 #'@export
 .gpatterns.pat_freq <- function(track, description, pat_freq_len, nbins=NULL, split_by_bin = TRUE, overwrite=TRUE, ...){
     message(qq('calculating pattern frequency (pattern length: @{pat_freq_len})...'))
+
     if (!is.null(nbins)){
         intervals <- gbin_intervals(intervals = gintervals.all(), nbins)
     } else {
@@ -647,12 +643,13 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
     pat_cov <- pat_cov %>% spread(pat_len, pat_cov)
 
     message('importing pat_cov to misha...')
-    .gpattern.import_intervs_table(track, description, pat_cov, columns = paste0('pat_cov', pat_cov_lens), overwrite = overwrite)
+    .gpatterns.import_intervs_table(track, description, pat_cov, columns = paste0('pat_cov', pat_cov_lens), overwrite = overwrite)
 }
 
 #' @export
-.gpattern.import_intervs_table <- function(track_pref, description, tab, columns = NULL, overwrite = FALSE, rescan = FALSE){
+.gpatterns.import_intervs_table <- function(track_pref, description, tab, columns = NULL, overwrite = FALSE, rescan = FALSE){
     tab <- tbl_df(tab)
+    gdir.create(gsub('\\.', '/', track_pref))
     columns <- columns %||% colnames(tab)[!(colnames(tab) %in% c('chrom', 'start', 'end'))]
     walk(columns, function(col){
         track_name <- qq('@{track_pref}.@{col}')
@@ -745,8 +742,19 @@ gpatterns.create_patterns_track <- function(track,
     # Create base dir for tracks
     dir.create(.gpatterns.base_dir(track), showWarnings=FALSE, recursive=TRUE)
 
-    message("creating tables...")
+    # save pattern_space
+    if (gintervals.exists(.gpatterns.pat_space_intervs_name(track))){
+        if (overwrite){
+            gintervals.rm(.gpatterns.pat_space_intervs_name(track), force=TRUE)
+        } else {
+            stop('pattern space intervals exist. Please run with overwrite=TRUE')
+        }
+    }
 
+    message('saving pattern space...')
+    gintervals.save(intervals=as.data.frame(pat_space), intervals.set.out=.gpatterns.pat_space_intervs_name(track))
+
+    message("creating tables...")
     # Create a table mapping pattern positions to the fid
     loci_tab <- pat_space %>%
         group_by(fid, chrom) %>%
@@ -904,13 +912,17 @@ gpatterns.create_downsampled_track <- function(track,
 
 #' Change tidy_cpgs coordinates to fragments coordinates
 #'
+#' @description changes the coordinates of tidy_cpgs to the fragment coordinates.
+#' This is necessary to avoid over-counting of reads with coordinates that are
+#' shifted by several bps from the restriction site.
+#'
 #' @param calls tidy_cpgs data frame
 #' @param frag_intervs intervals set of the fragment
 #' @param maxdist maximal distance from fragments
 #' @param rm_off_target if TRUE - remove reads with distance > maxdist from frag_intervs
 #' if FALSE - those reads would be left unchanged
 #'
-#' @return
+#' @return tidy_cpgs data frame with chrom,start,end coordinates adjusted to fragment intervals
 #' @export
 #'
 #' @examples
@@ -940,18 +952,26 @@ gpatterns.adjust_read_pos <- function(calls, frag_intervs, maxdist=0, rm_off_tar
 
 #' Merge tracks
 #'
+#' @description Creates a track called \code{new_track} that is the sum of the methylation calls in \code{tracks}.
+#' In addition, if \code{merge_tidy_cpgs} is TRUE, creates a union of tidy_cpgs of \code{tracks} and generates
+#' pattern frequency and pattern coverage for the combined tidy_cpgs.
+#' If patterns attributes are present, they will be combined and calculated for the new track.
+#'
 #' @param tracks tracks to merge
 #' @param new_track new track name
 #' @param description new track description
-#' @param iterator new track iterator
-#' @param intervals intervals scope
+#' @param intervals intervals scope. default is all the genome (gintrevals.all())
+#' @param iterator new track iterator. if left NULL, the iterator would be the union of all the covered CpGs of \code{tracks}
 #' @param add_var calculate variance (of tracks '.avg'). Will be created in new_track.var
+#' @param merge_tidy_cpgs merge also tidy cpgs and create pattern frequency and pattern coverage track.
+#' Does not work for tracks without the single molecule data (e.g. arrays, processed data)
+#' @param ... additional parameters for \code{\link[gpatterns]{gpatterns.import_from_tidy_cpgs}}
 #'
 #' @return name of the new_track
 #' @export
 #'
 #' @examples
-gpatterns.merge_tracks <- function(tracks, new_track, description, iterator=NULL, intervals=gintervals.all(), add_var=FALSE){
+gpatterns.merge_tracks <- function(tracks, new_track, description, intervals=gintervals.all(), iterator=NULL, add_var=FALSE, merge_tidy_cpgs = TRUE, ...){
     if (is.null(iterator)){
         if (!all(gtrack.exists(qqv('@{tracks}.cov')))){
             stop('not all tracks exist')
@@ -980,10 +1000,55 @@ gpatterns.merge_tracks <- function(tracks, new_track, description, iterator=NULL
             gtrack.create(qq('@{new_track}.var'), description, expr, iterator=iterator, rescan=FALSE)
         }
     }
+    gdb.reload()
+    message(qq('doing avg'))
+    gtrack.create(qq('@{new_track}.avg'), description, qq('@{new_track}.meth / @{new_track}.cov'), iterator=qq('@{new_track}.meth'))
 
-    tidy_dirs <- .gpatterns.tidy_cpgs_dir(tracks)
-    .gpatterns.bind_tidy_cpgs(tidy_cpgs_dirs = tidy_dirs, track=new_track)
+    if (merge_tidy_cpgs){
+        tidy_dirs <- .gpatterns.tidy_cpgs_dir(tracks)
+        .do.call_ellipsis(gpatterns.import_from_tidy_cpgs, list(tidy_cpgs=tidy_dirs, track=new_track, description=description, steps=c('bind_tidy_cpgs', 'pat_freq', 'pat_cov')), ...)
+    }
+
+    if (all(.gpatterns.patterns_exist(tracks))){
+         pat_space <- reduce(.gpatterns.pat_space_intervs_name(tracks), function(x, y) gintervals.load(x) %>% full_join(gintervals.load(y), by=c('chrom', 'start', 'end', 'fid'))) %>% tbl_df
+         gpatterns.create_patterns_track(new_track, description, pat_space=pat_space, ...)
+    }
 
     return(new_track)
-
 }
+
+#' Get fragment coverage
+#'
+#' @description get number of molecules per each fragment for a track. This can
+#' give us some upper bound of the number of methylation patterns per fragment.
+#'
+#' @param track track
+#' @param intervals fragment intervals. if NULL - fragments would be based chrom,start,end positions
+#' of tidy_cpgs, assuming gpatterns.adjust_read_pos was called before (as in any
+#' run of gpatterns.import_* with frag_intervs parameter).
+#' @save_track save the result to \code{track}.fid_cov track
+#' @param parallel parallel
+#' @param ... other parameters of gpatterns.adjust_read_pos
+#'
+#' @return data frame with fragmets coordinates (chrom,start,end) and 'frag_cov'
+#' field with the fragment coverage
+#' @export
+gpatterns.get_fragment_cov <- function(track,
+                                       intervals=NULL,
+                                       save_track = FALSE,
+                                       parallel=getOption('gpatterns.parallel'),
+                                       ...){
+    get_frag_cov <- function(tcpgs, intervals=NULL){
+        if (is.null(intervals)){
+            return(tcpgs %>% distinct(read_id, chrom, start, end) %>% count(chrom, start, end))
+        } else {
+            return(tcpgs %>% gpatterns.adjust_read_pos(frag_intervs = intervals, ...) %>% distinct(read_id, chrom, start, end) %>% count(chrom, start, end))
+        }
+    }
+    res <- gpatterns.apply_tidy_cpgs(track, function(x) get_frag_cov(x), parallel=parallel) %>%  group_by(chrom, start, end) %>% summarise(n = sum(n, na.rm=T)) %>% rename(frag_cov=n)
+    if (save_track){
+        gtrack.create_sparse(paste0(track, '.frag_cov'), description = description, intervals = res %>% select(chrom, start, end), values = res$frag_cov)
+    }
+    return(res)
+}
+

@@ -17,7 +17,12 @@ gpatterns.adjust_read_pos(calls, frag_intervs, maxdist = 0,
 \item{rm_off_target}{if TRUE - remove reads with distance > maxdist from frag_intervs
 if FALSE - those reads would be left unchanged}
 }
+\value{
+tidy_cpgs data frame with chrom,start,end coordinates adjusted to fragment intervals
+}
 \description{
-Change tidy_cpgs coordinates to fragments coordinates
+changes the coordinates of tidy_cpgs to the fragment coordinates.
+This is necessary to avoid over-counting of reads with coordinates that are
+shifted by several bps from the restriction site.
 }
 

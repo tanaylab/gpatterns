@@ -9,8 +9,8 @@ gpatterns.global_meth_trend(tracks,
   = 0.002), intervals = .gpatterns.genome_cpgs_intervals,
   iterator = .gpatterns.genome_cpgs_intervals, min_cov = NULL,
   min_cgs = NULL, names = NULL, width = 500, height = 260,
-  fig_fn = NULL, xlab = strat_track, colors = NULL,
-  parallel = getOption("gpatterns.parallel"))
+  fig_fn = NULL, xlab = strat_track, title = "", legend = TRUE,
+  colors = NULL, parallel = getOption("gpatterns.parallel"))
 }
 \arguments{
 \item{tracks}{tracks to plot}
@@ -37,6 +37,10 @@ gpatterns.global_meth_trend(tracks,
 
 \item{xlab}{label for the x axis}
 
+\item{title}{title for the plot}
+
+\item{legend}{add legend}
+
 \item{colors}{custom colors}
 
 \item{parallel}{get trends parallely}
@@ -45,7 +49,11 @@ gpatterns.global_meth_trend(tracks,
 list with trend data frame (under 'trend') and the plot (under 'p')
 }
 \description{
-Plot global methylation stratified on other tracks
+calculates the average methylation \code{(m / m + um)} in each
+bin of \code{strat_track} and plots it. By default, plots the average methylation
+in different bins of CpG content. This can be used as a sanity check for methylation
+data - in general, methylation is high for regions with low CpG density,
+and low for CpG dense regions (e.g. CpG islands).
 }
 \examples{
 

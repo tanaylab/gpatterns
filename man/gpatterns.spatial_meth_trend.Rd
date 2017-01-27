@@ -8,8 +8,8 @@ gpatterns.spatial_meth_trend(tracks, intervals, method = "extract",
   dist_breaks = seq(-1000, 1000, 200),
   iterator = .gpatterns.genome_cpgs_intervals, min_cov = NULL,
   min_cgs = NULL, names = NULL, width = 500, height = 260,
-  fig_fn = NULL, xlab = "Distance (bp)", colors = NULL,
-  parallel = getOption("gpatterns.parallel"))
+  fig_fn = NULL, xlab = "Distance (bp)", title = "", legend = TRUE,
+  colors = NULL, parallel = getOption("gpatterns.parallel"))
 }
 \arguments{
 \item{tracks}{tracks to plot}
@@ -36,6 +36,10 @@ Can be any intervals set, or one of the following 'special' intervals:
 
 \item{xlab}{label for the x axis'}
 
+\item{title}{title for the plot}
+
+\item{legend}{add legend}
+
 \item{colors}{custom colors}
 
 \item{parallel}{get trends parallely}
@@ -44,6 +48,8 @@ Can be any intervals set, or one of the following 'special' intervals:
 list with trend data frame (under 'trend') and the plot (under 'p')
 }
 \description{
-Plot spatial trend of methylation around intervals
+calculates the distance of \code{tracks} values from \code{intervals}
+bins the distances based on \code{dist_breaks}, and then calculates the average
+methylation \code{m / (m + um)} in each bin and plots the results.
 }
 
