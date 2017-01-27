@@ -4,8 +4,9 @@
 \alias{gpatterns.merge_tracks}
 \title{Merge tracks}
 \usage{
-gpatterns.merge_tracks(tracks, new_track, description, iterator = NULL,
-  intervals = gintervals.all(), add_var = FALSE)
+gpatterns.merge_tracks(tracks, new_track, description,
+  intervals = gintervals.all(), iterator = NULL, add_var = FALSE,
+  merge_tidy_cpgs = TRUE, ...)
 }
 \arguments{
 \item{tracks}{tracks to merge}
@@ -14,16 +15,24 @@ gpatterns.merge_tracks(tracks, new_track, description, iterator = NULL,
 
 \item{description}{new track description}
 
-\item{iterator}{new track iterator}
+\item{intervals}{intervals scope. default is all the genome (gintrevals.all())}
 
-\item{intervals}{intervals scope}
+\item{iterator}{new track iterator. if left NULL, the iterator would be the union of all the covered CpGs of \code{tracks}}
 
 \item{add_var}{calculate variance (of tracks '.avg'). Will be created in new_track.var}
+
+\item{merge_tidy_cpgs}{merge also tidy cpgs and create pattern frequency and pattern coverage track.
+Does not work for tracks without the single molecule data (e.g. arrays, processed data)}
+
+\item{...}{additional parameters for \code{\link[gpatterns]{gpatterns.import_from_tidy_cpgs}}}
 }
 \value{
 name of the new_track
 }
 \description{
-Merge tracks
+Creates a track called \code{new_track} that is the sum of the methylation calls in \code{tracks}.
+In addition, if \code{merge_tidy_cpgs} is TRUE, creates a union of tidy_cpgs of \code{tracks} and generates
+pattern frequency and pattern coverage for the combined tidy_cpgs.
+If patterns attributes are present, they will be combined and calculated for the new track.
 }
 

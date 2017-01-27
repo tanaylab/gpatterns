@@ -73,11 +73,13 @@ gpatterns.epipoly_plot <- function(
     height = NULL,
     ncolumns = 3,
     separate_figs = FALSE) {
-
+    
+    intervals <- .gpatterns.get_intervals(intervals)
+    
     tab <- gpatterns.extract(tracks,
                              intervals = intervals,
                              colnames = colnames,
-                             elements = c("meth", "epipoly"),
+                             elements = c("pat_meth", "epipoly"),
                              tidy = TRUE) %>%
             filter(!is.na(fid))
 
@@ -120,7 +122,7 @@ gpatterns.epipoly_plot <- function(
                           parse = FALSE) +
                 theme(strip.background = element_blank(),
                       axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
-                      panel.margin = unit(2, "lines")) +
+                      panel.spacing = unit(2, "lines")) +
                 ggtitle(x$samp[1])
 
             if (!is.null(fig_ofn)) {
@@ -152,7 +154,7 @@ gpatterns.epipoly_plot <- function(
                       parse = FALSE) +
             theme(strip.background = element_blank(),
                   axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
-                  panel.margin = unit(2,"lines"))
+                  panel.spacing = unit(2,"lines"))
 
         if (!is.null(fig_ofn)) {
             width <- width %||% 1.6 * ncolumns

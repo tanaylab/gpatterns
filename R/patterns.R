@@ -802,6 +802,8 @@ gpatterns.plot_cg_cor <- function(tracks,
                                   parallel = getOption('gpatterns.parallel'),
                                   ...){
     names <- names %||% tracks
+    intervals <- .gpatterns.get_intervals(intervals)    
+    
     if (adjacent){
         cors <- tracks %>% plyr::adply(1, function(track)
             .gpatterns.get_cg_cor_adjacent(track, dist_breaks, intervals),

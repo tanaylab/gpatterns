@@ -37,10 +37,10 @@ gpatterns.import_from_tidy_cpgs(tidy_cpgs="Breast_2460_1.3_R1/tidy_cpgs", track=
 ```
 
 ## Generating methylation patterns
-In order to generate methylation patterns we first need to define the CpG scope, or 'pattern space', i.e. the set of adjacent CpGs we will be looking at. In theory, we could choose a different set of CpGs for each sample separatly, but then we would not be able to compare them directly. Therefore, the best practice is to define the 'pattern space' based on all the samples together. gpatterns provides two functions to calculate such space:
+In order to generate methylation patterns we first need to define the CpG scope, or 'pattern space', i.e. the set of adjacent CpGs we will be looking at. In theory, we could choose a different set of CpGs for each sample separately, but then we would not be able to compare them directly. Therefore, the best practice is to define the 'pattern space' based on all the samples together. gpatterns provides two functions to calculate such space:
 
-* `gpatterns.tracks_to_pat_space`: generates patterns space by dividing the genome to non-ovelapping chunks and taking the most covered streches of `pat_l` adjacent CpGs.
-* `gpatterns.intervs_to_pat_space`: genereates pattern space for specific intervals (e.g. MSP1 fragments, capture regions, enhancers, CpG islands etc.) by taking the most covered streches of `pat_l` CpGs than cover each interval, and only then calls `gpatterms.tracks_to_pat_space` to calculate for the rest of the genome. The function can be limited to only adjacent CpGs (`adjacent=TRUE`) or take the most covered CpGs even if there are other CpGs in the middle.
+* `gpatterns.tracks_to_pat_space`: generates patterns space by dividing the genome to non-overlapping chunks and taking the most covered stretches of `pat_l` adjacent CpGs.
+* `gpatterns.intervs_to_pat_space`: generates pattern space for specific intervals (e.g. MSP1 fragments, capture regions, enhancers, CpG islands etc.) by taking the most covered stretches of `pat_l` CpGs than cover each interval, and only then calls `gpatterms.tracks_to_pat_space` to calculate for the rest of the genome. The function can be limited to only adjacent CpGs (`adjacent=TRUE`) or take the most covered CpGs even if there are other CpGs in the middle.
 
 Since our example is from RRBS data we would use `gpatterns.intervs_to_pat_space` with the msp1 fragments:
 ```{r, eval = FALSE}
@@ -49,5 +49,5 @@ pat_space <- gpatterns.intervs_to_pat_space(tracks, intervals='intervs.msp1.fid'
 
 And now we can create the patterns attributes for each of our tracks: 
 ```{r, eval = FALSE}
-purrr::map(tracks, ~ gpatterns.create_patterns_track(track = .x, description = paste0('patterns of ', .x), pat_space=pat_space, max_missing=0))
+purrr::walk(tracks, ~ gpatterns.create_patterns_track(track = .x, description = paste0('patterns of ', .x), pat_space=pat_space, max_missing=0))
 ```

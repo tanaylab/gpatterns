@@ -27,13 +27,14 @@ install.packages("http://www.wisdom.weizmann.ac.il/~aviezerl/gpattrerns/misha_3.
 Download and install *gpatterns*: 
 ```
 #!r
-devtools::install_bitbucket("tanaylab/gpatterns", ref='default', vignette = TRUE)
+devtools::install_bitbucket("tanaylab/gpatterns", ref='default')
 library(gpatterns)
 ```
 
 #### Using the package
-Please refer to the package vignette for usage and workflow. 
+Please refer to the package vignettes for usage and workflow. 
 ```
 #!r
-browseVignettes('gpatterns') 
+browseVignettes('import') 
+browseVignettes('analysis')
 ```

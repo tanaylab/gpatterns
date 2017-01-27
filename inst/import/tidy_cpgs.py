@@ -24,6 +24,7 @@ class Read:
                  umi2_idx=None, 
                  min_mapq=30, 
                  max_insert=1000, 
+                 max_no_conv=3,
                  infer_umi_field=False,
                  template_conv_tag='XT',
                  meth_calls_tag='XP',
@@ -47,6 +48,15 @@ class Read:
             self.start1 = read1.pos
             self.qual1 = read1.qual
             self.patt1 = read1.get_tag(self.meth_calls_tag)
+            
+            self.H = 0 
+            self.h = 0
+            self.x = 0
+            self.X = 0
+            self.z = 0
+            self.Z = 0           
+            
+            get_conv(patt1)
 
             self.insert_len = read1.tlen
 
@@ -59,7 +69,18 @@ class Read:
                 self.start1 -= 1
                 if not self.single:
                     self.start2 -= 1
-
+            
+            if self.H + self.X > max_no_conv:
+                self.pairing = 'no_conv'
+    
+    def get_conv(patt):
+        self.H += self.patt.count('H')
+        self.h += self.patt.count('h')
+        self.x += self.patt.count('x')
+        self.X += self.patt.count('X')
+        self.z += self.patt.count('z')
+        self.Z += self.patt.count('Z')
+        
     def _process_single(self, read1):
         self.umi2 = '-'
         self.start = read1.pos
@@ -76,6 +97,7 @@ class Read:
         self.start2 = read2.pos
         self.qual2 = read2.qual
         self.patt2 = read2.get_tag(self.meth_calls_tag)
+        get_conv(patt2)
         if read1.is_reverse:
             self.start = read2.pos
             self.end = read1.pos + read1.alen
@@ -187,22 +209,23 @@ def bam_iter(bam,
              infer_umi_field=False, 
              single_end=False, 
              min_mapq=30, 
+             max_no_conv=3,
              template_conv_tag='XT', 
              meth_calls_tag='XP', 
              bismark_flags=False):
     if single_end:
         for read in bam:
-            yield Read(read, None, umi1_idx, umi2_idx, infer_umi_field=infer_umi_field, min_mapq=min_mapq, template_conv_tag=template_conv_tag, meth_calls_tag=meth_calls_tag, bismark_flags=bismark_flags)
+            yield Read(read, None, umi1_idx, umi2_idx, infer_umi_field=infer_umi_field, min_mapq=min_mapq, max_no_conv=max_no_conv, template_conv_tag=template_conv_tag, meth_calls_tag=meth_calls_tag, bismark_flags=bismark_flags)
     else:
         for read in bam:
             if read.is_read1:
                 read1 = read
             if read.is_read2 or read.flag & 772:
-                yield Read(read1, read, umi1_idx, umi2_idx, infer_umi_field=infer_umi_field, min_mapq=min_mapq, template_conv_tag=template_conv_tag, meth_calls_tag=meth_calls_tag, bismark_flags=bismark_flags)
+                yield Read(read1, read, umi1_idx, umi2_idx, infer_umi_field=infer_umi_field, min_mapq=min_mapq, max_no_conv=max_no_conv, template_conv_tag=template_conv_tag, meth_calls_tag=meth_calls_tag, bismark_flags=bismark_flags)
 
 ########################################################################
 def bam_reader(bam, chunk_size, stats, umi1_idx=None, umi2_idx=None, infer_umi_field=False, chrom=None,
-               genomic_range=None, single_end=False, show_progress=True, min_mapq=30, 
+               genomic_range=None, single_end=False, show_progress=True, min_mapq=30, max_no_conv=3,
                template_conv_tag='XT', meth_calls_tag='XP', add_chr_prefix=False,
                bismark_flags=False):
     while True:
@@ -220,7 +243,7 @@ def bam_reader(bam, chunk_size, stats, umi1_idx=None, umi2_idx=None, infer_umi_f
 
         for read in tqdm(
                 bam_iter(bam, umi1_idx=umi1_idx, umi2_idx=umi2_idx, infer_umi_field=infer_umi_field,
-                         single_end=single_end, min_mapq=min_mapq, template_conv_tag=template_conv_tag, 
+                         single_end=single_end, min_mapq=min_mapq, max_no_conv=max_no_conv, template_conv_tag=template_conv_tag, 
                          meth_calls_tag=meth_calls_tag, bismark_flags=bismark_flags),
                 unit='reads',
                 unit_scale=True, disable=not show_progress):
@@ -374,6 +397,7 @@ def main(argv):
                                                single_end=args.single_end,
                                                show_progress=not args.no_progress,
                                                min_mapq=args.min_mapq,
+                                               max_no_conv=args.max_no_conv,
                                                template_conv_tag=args.template_conv_tag,
                                                meth_calls_tag=args.meth_calls_tag,
                                                add_chr_prefix=args.add_chr_prefix,
@@ -465,6 +489,9 @@ def parse_args(argv):
                         help="minimum mapping quality. (default: %(default)s)")
     other.add_argument('--min-qual', metavar='MIN_QUAL', type=int, default=10,
                         help="minimum phred quality for CpG. (default: %(default)s)")
+    other.add_argument('--max-no-conv', metavar='MAX_NO_CONV', type=int, default=3,
+                        help="maximal number of non converted C (or G in GA mode) not in CpG context. (default: %(default)s)")
+    
     other.add_argument('--chunk-size', metavar='CHUNK_SIZE', type=int, default=1000000,
                         help="chunk size. (default: %(default)s)")
     other.add_argument('--sort-chunk', action='store_true', help='sort each chunk')
