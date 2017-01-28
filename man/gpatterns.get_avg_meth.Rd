@@ -6,9 +6,10 @@
 \usage{
 gpatterns.get_avg_meth(tracks, intervals, iterator = NULL, min_cov = NULL,
   mask_by_cov = FALSE, use_cpgs = FALSE, min_samples = NULL,
-  min_cpgs = NULL, min_var = NULL, var_quantile = NULL, names = NULL,
-  tidy = TRUE, pre_screen = FALSE, use_disk = FALSE, file = NULL,
-  intervals.set.out = NULL, sum_tracks = FALSE)
+  min_cpgs = NULL, min_var = NULL, var_quantile = NULL,
+  min_range = NULL, names = NULL, tidy = TRUE, pre_screen = FALSE,
+  use_disk = FALSE, file = NULL, intervals.set.out = NULL,
+  sum_tracks = FALSE)
 }
 \arguments{
 \item{tracks}{methylation tracks}
@@ -35,6 +36,8 @@ intervalID column may be incorrect.}
 
 \item{var_quantile}{minimal quantile of variance per iterator interval}
 
+\item{min_range}{take only iterator intervals with max(avg_meth) - min(avg_meth) >= \code{min_range}}
+
 \item{names}{alternative names to tracks. similar to colnames in
 \link[misha]{gextract} if tidy == FALSE. Note that names should be
 shorter than the maximal length of R data frame column name}
@@ -60,7 +63,6 @@ and if use_cpgs is TRUE, the intervals set would become the cpgs.}
 Extracts average methylation data from tracks.
 }
 \details{
-Performance:\cr
 There are two main modes:
 \itemize{
  \item{not tidy: }{returns a data frame with intervals (chrom,start,end) and a column with average methylation for each sample.}
@@ -68,13 +70,12 @@ There are two main modes:
 }
 the 'tidy' option is very conveniet in terms of further analysis, but note that for large amount of data it may be too slow. The 'not tidy' version, on the other hand, returns only average methylation and not the raw 'meth' and 'unmeth' calls. In general, choose the mode according to the following guidelines:
 \itemize{
-\item{For extremly large datasets use the 'not tidy' version with \code{use_disk == TURE}. Note that in general working with huge number of genomic regions is not useful, both in terms of performance (memory consumption, slow algorithms) and analysis (more 'noise'). A good practice is to select the genomic regions carefully, for example by requering minimal coverage (\code{min_cov}) in minimal number of samples \code{min_samples}, minimal number of CpGs \code{min_cpgs}, taking only the most variable regions (\code{min_var}, \code{var_quantile}) or by taking sets of annotated regioins (e.g. promoters, enhancers).}
+\item{For extremly large datasets use the 'not tidy' version with \code{use_disk == TURE}. Note that in general working with huge number of genomic regions is not useful, both in terms of performance (memory consumption, slow algorithms) and analysis (more 'noise'). A good practice is to select the genomic regions carefully, for example by requering minimal coverage (\code{min_cov}) in minimal number of samples (\code{min_samples}), minimal number of CpGs (\code{min_cpgs)}, taking only the most variable regions (\code{min_var}, \code{var_quantile}) or by taking sets of annotated regioins (e.g. promoters, enhancers).}
 \item{For large datasets use the 'not tidy' version.}
 \item{For intermediate size datasets use the 'tidy' version with \code{pre_screen = TRUE}. This would first filter the CpGs and only then exracts the methylation to memory. }
 \item{For small datasets use the 'vanilla' 'tidy' version.}
 }
-Iterators:\cr
-see \link[misha]{gextract}, and the \code{misha} package in general.\cr
+To understand the concept of iterators and intervals, see \link[misha]{gextract}, and the \code{misha} package in general.\cr
 The function works in the following way: for every interval in \code{intervals}
 the function extracts the methylation calls in each \code{iterator} interval
 and calculates the average. \cr
