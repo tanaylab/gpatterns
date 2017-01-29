@@ -141,7 +141,7 @@ gpatterns.get_avg_meth <- function(
                 iterator = iterator,
                 min_var = min_var,
                 var_quantile = var_quantile,
-                min_range = min_range, 
+                min_range = min_range,
                 names = names,
                 file = file,
                 intervals.set.out = intervals.set.out,
@@ -202,10 +202,10 @@ gpatterns.get_avg_meth <- function(
             ungroup %>%
             filter(v >= min_var)
     }
-    
+
     if (!is.null(min_range)){
         avgs <- avgs %>%
-            group_by(chrom, start, end) %>%            
+            group_by(chrom, start, end) %>%
             filter(max(avg, na.rm=T) - min(avg, na.rm=T) >= min_range)
     }
 
@@ -225,7 +225,7 @@ gpatterns.get_avg_meth <- function(
                                              iterator = NULL,
                                              min_var = NULL,
                                              var_quantile = NULL,
-                                             min_range = NULL, 
+                                             min_range = NULL,
                                              names = NULL,
                                              file = NULL,
                                              intervals.set.out = NULL,
@@ -270,7 +270,7 @@ gpatterns.get_avg_meth <- function(
         message(qq('Taking only intervals with variance >= @{round(min_var, digits = 2)}'))
         vars <- avgs %>% filter(vars >= min_var)
     }
-    
+
     if (!is.null(min_range)){
         ranges <- apply(avgs %>% select(-(chrom:end), -intervalID), 1, function(x) max(x, na.rm=T) - min(x, na.rm=T))
         vars <- avgs %>% filter(ranges >= min_range)
@@ -708,11 +708,15 @@ gpatterns.spatial_meth_trend <- function(tracks,
     if (length(tracks) == 1){
         p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, group=1)) + geom_line() + xlab(xlab) + ylab('Methylation') + geom_vline(xintercept=0, linetype='dashed', color='red') + ggtitle(title)
     } else {
-        p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, color=samp, group=samp)) + geom_line() + xlab(xlab) + ylab('Methylation') + scale_color_discrete(name='', guide=legend) + geom_vline(xintercept=0, linetype='dashed', color='red') + ggtitle(title)
+        p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, color=samp, group=samp)) + geom_line() + xlab(xlab) + ylab('Methylation') + scale_color_discrete(name='') + geom_vline(xintercept=0, linetype='dashed', color='red') + ggtitle(title)
     }
 
     if (!is.null(colors)){
-        p <- p + scale_color_manual(values=colors, guide=legend)
+        p <- p + scale_color_manual(values=colors)
+    }
+
+    if (!legend){
+        p <- p + theme(legend.position="none")
     }
 
     if (!is.null(fig_fn)){
@@ -784,11 +788,15 @@ gpatterns.global_meth_trend <- function(tracks,
     if (length(tracks) == 1){
         p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, group=1)) + geom_line() + xlab(xlab) + ylab('Methylation') + ggtitle(title)
     } else {
-        p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, color=samp, group=samp)) + geom_line() + xlab(xlab) + ylab('Methylation') + scale_color_discrete(name='', guide=legend) + ggtitle(title)
+        p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, color=samp, group=samp)) + geom_line() + xlab(xlab) + ylab('Methylation') + scale_color_discrete(name='') + ggtitle(title)
     }
 
     if (!is.null(colors)){
-        p <- p + scale_color_manual(values=colors, guide=legend)
+        p <- p + scale_color_manual(values=colors)
+    }
+
+    if (!legend){
+        p <- p + theme(legend.position="none")
     }
 
     if (!is.null(fig_fn)){
