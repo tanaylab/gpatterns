@@ -33,7 +33,7 @@ void UniformModel::simulate_sample(const Sample* original, ModelData* data) {
 	float r;
 	const MethylPatternSample* os = (MethylPatternSample*) original;
 	string s("");
-	for (unsigned int i=0; i<os->pattern.size(); i++) {
+	for (size_t i=0; i<os->pattern.size(); i++) {
 		if (os->pattern[i] < 0)
 			s += "*";
 		else {

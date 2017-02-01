@@ -14,7 +14,7 @@ class ModelDataMultiGroup {
 public:
     ModelDataMultiGroup();
     virtual ~ModelDataMultiGroup();
-    unsigned int get_number_of_groups() const { return(m_N); }
+    size_t get_number_of_groups() const { return(m_N); }
     virtual const ModelData* get_group(int group_id) const;
     virtual const vector<ModelData*>& get_groups() const { return(m_groups); }
     virtual void add_group(ModelData* d);
@@ -24,7 +24,7 @@ public:
     virtual void clear();
 
 protected:
-    unsigned int m_N;		//number of groups
+    size_t m_N;		//number of groups
     vector<ModelData*>	m_groups;
 };
 

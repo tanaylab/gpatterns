@@ -20,7 +20,7 @@ MethylPatternMixtureModelOneNoise::~MethylPatternMixtureModelOneNoise() {
 }
 
 MethylPatternMixtureModelOneNoise::MethylPatternMixtureModelOneNoise(const MethylPatternMixtureModelOneNoise& m): MethylPatternMixtureModel(m) {
-    for (unsigned int i=0; i<m.m_models.size()-1; i++) {
+    for (size_t i=0; i<m.m_models.size()-1; i++) {
         MethylPatternUniModelOneNoise* m_uni = (MethylPatternUniModelOneNoise*)m.m_models[i];
         MethylPatternUniModel* uni = new MethylPatternUniModelOneNoise(*m_uni);
         add_model(uni);
@@ -73,14 +73,14 @@ void MethylPatternMixtureModelOneNoise::init_models_hamming(const ModelData& dat
 
     //initializing all other methylpattern unimodels
     float noise = ((MethylPatternUniModelOneNoise*)(m_models[0]))->get_noise();
-    for (unsigned int c=1; c<m_models.size()-1; c++) {
+    for (size_t c=1; c<m_models.size()-1; c++) {
         int distance = 0;
         //locating data sample that is the farthest away
         int selected_data = 0;
         for (int i=0; i<data.get_number_of_samples(); i++) {
             MethylPatternSample* s = (MethylPatternSample*) data.get_sample(i);
             int sample_distance=0;
-            for (unsigned int prev_c=0; prev_c<c; prev_c++) {
+            for (size_t prev_c=0; prev_c<c; prev_c++) {
                 sample_distance +=
                     s->hamming_distance(((MethylPatternUniModel*)m_models[prev_c])->get_consensus_pattern());
             }
@@ -92,7 +92,7 @@ void MethylPatternMixtureModelOneNoise::init_models_hamming(const ModelData& dat
         //fix missing data
         //at this point we have a sample from the data for which will initialize the next model
         vector<int> next_consensus = ((MethylPatternSample*)(data.get_sample(selected_data)))->pattern;
-        for (unsigned int a=0; a<consensus.size(); a++) {
+        for (size_t a=0; a<consensus.size(); a++) {
             if (consensus[a] >= 0 && next_consensus[a] < 0) {
                 next_consensus[a] = 1-consensus[a];
             }

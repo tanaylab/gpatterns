@@ -1032,6 +1032,7 @@ gpatterns.merge_tracks <- function(tracks, new_track, description, intervals=gin
 #'
 #' @return data frame with fragmets coordinates (chrom,start,end) and 'frag_cov'
 #' field with the fragment coverage
+#'
 #' @export
 gpatterns.get_fragment_cov <- function(track,
                                        intervals=NULL,

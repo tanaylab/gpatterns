@@ -64,7 +64,6 @@
 #' @param sum_tracks get average methylation from all the tracks summed
 #'
 #'
-#'
 #' @return
 #' @export
 #'
@@ -130,7 +129,6 @@ gpatterns.get_avg_meth <- function(
         if (use_disk){
             intervals <- f_intervs
         }
-
     }
 
     if (!tidy || sum_tracks){
@@ -220,6 +218,7 @@ gpatterns.get_avg_meth <- function(
 }
 
 
+
 .gpatterns.get_avg_meth_not_tidy <- function(tracks,
                                              intervals,
                                              iterator = NULL,
@@ -233,6 +232,10 @@ gpatterns.get_avg_meth <- function(
                                              sum_tracks = FALSE) {
 
     names <- names %||% tracks
+    if (length(names) > 1 && sum_tracks){
+        names <- 'sum'
+        warning('sum_tracks == TRUE, setting names to "sum"')
+    }
 
     vtracks_pref <- .random_track_name()
     vtracks_meth <- paste0(vtracks_pref, '_', 1:length(tracks), '_meth')
@@ -416,6 +419,62 @@ gpatterns.filter_by_dist <- function(intervals,
     return(intervals)
 }
 
+
+#' Get coverage of intervals in multiple tracks
+#'
+#' @param tracks methylation tracks
+#' @param intervals genomic scope for which the function is applied
+#' @param iterator see iterator in \link[misha]{gextract}. if NULL iterator
+#' would be set to CpGs
+#' @param file save output to file (only in non tidy mode, would not filer by variance)
+#' @param intervals.set.out save output big intervals set (only in tidy mode,
+#' would not filter by variance)
+#' @param pre_screen screen for covered intervals before calculating the total coverage (for large intervals set)
+#' @param frag_cov use fragment coverage (if exists)
+#'
+#' @return intervals set with 'sum' column containing the total coverage (sum) in all the tracks
+#' @export
+#'
+#' @examples
+gpatterns.intervals_coverage <- function(tracks,
+                                         intervals,
+                                         iterator=NULL,
+                                         file=NULL,
+                                         intervals.set.out=NULL,
+                                         pre_screen = TRUE,
+                                         frag_cov = FALSE){
+    cov_tracks <- .gpatterns.cov_track_name(tracks)
+    frag_cov_tracks <- .gpatterns.frag_cov_track_name(tracks)
+
+    if (frag_cov && all(gtrack.exists(frag_cov_tracks))){
+        cov_tracks <- frag_cov_tracks
+        if (is.null(iterator)){
+            stop('need to supply iterator if frag_cov == TRUE')
+        }
+    }
+
+    if ((is.null(iterator) && length(tracks) > 1)) {
+        message("Using cpgs as iterator")
+        iterator <- .gpatterns.genome_cpgs_intervals
+    }
+
+    vtracks_pref <- .random_track_name()
+    vtracks <- paste0(vtracks_pref, '_', 1:length(tracks))
+    walk2(vtracks, cov_tracks, gvtrack.create, func='sum')
+
+    if (pre_screen){
+        intervals <- gpatterns.screen_by_coverage(tracks, intervals, iterator, 1, 1)
+    }
+
+    expr <- sprintf('sum(%s, na.rm=T)', paste(vtracks, collapse=', '))
+    covs <- gextract(expr, intervals=intervals, iterator=iterator, colnames='sum', file=file, intervals.set.out = intervals.set.out)
+    walk(vtracks, gvtrack.rm)
+
+    covs <- covs %>% filter(sum > 0)
+
+    return(covs %>% tbl_df)
+}
+
 .gpatterns.filter_coverage <- function(avgs,
                                        min_cov,
                                        min_samples = NULL,
@@ -575,6 +634,7 @@ gpatterns.cluster_avg_meth <- function(
                                              names = NULL,
                                              cg_breaks = seq(0, 200, 1),
                                              max_cgs = 1000,
+                                             include.lowest=TRUE,
                                              parallel = getOption('gpatterns.parallel')){
     names <- names %||% tracks
 
@@ -592,10 +652,11 @@ gpatterns.cluster_avg_meth <- function(
         } else {
             intervs <- intervals
         }
-        gm <- gbins.summary(strat_track, strat_breaks, .gpatterns.meth_track_name(track), iterator=iterator, intervals=intervs)
+        
+        gm <- gbins.summary(strat_track, strat_breaks, .gpatterns.meth_track_name(track), iterator=iterator, intervals=intervs, include.lowest=include.lowest)
         brks <- rownames(gm)
         gm <- gm %>% tbl_df
-        gum <- gbins.summary(strat_track, strat_breaks, .gpatterns.unmeth_track_name(track), iterator=iterator, intervals=intervs) %>% tbl_df
+        gum <- gbins.summary(strat_track, strat_breaks, .gpatterns.unmeth_track_name(track), iterator=iterator, intervals=intervs, include.lowest=include.lowest) %>% tbl_df
 
         res <- tibble(samp = name,
                       breaks=brks,
@@ -617,35 +678,6 @@ gpatterns.cluster_avg_meth <- function(
 }
 
 
-# .gpatterns.get_spatial_meth <- function(tracks,
-#                                         intervals,
-#                                         min_cov = NULL,
-#                                         min_samples = NULL,
-#                                         iterator=NULL,
-#                                         dist_breaks = seq(-1000, 1000, 200),
-#                                         names=NULL,
-#                                         min_cgs = NULL,
-#                                         add_cg_num = FALSE){
-#     trend <- gpatterns.get_avg_meth(tracks, intervals = intervals %>% gintervals.expand(max(dist_breaks)), iterator=iterator, min_cov=min_cov, min_samples=min_samples, names=names)
-#     trend <- trend %>% filter(cov >= min_cov)
-#     trend <- trend %>% gintervals.neighbors1(intervals) %>% select(chrom, start, end, samp, meth, unmeth, avg, cov, dist)
-#     trend <- trend %>% mutate(breaks = cut(dist, dist_breaks), breaks_numeric=as.numeric(as.character(cut(dist, dist_breaks, labels=zoo::rollmean(dist_breaks, k=2)))))
-#
-#     if (!is.null(min_cgs) || add_cg_num){
-#         trend <- trend %>% group_by(samp, breaks, breaks_numeric) %>% summarise(meth = sum(meth, na.rm=T) ,unmeth = sum(unmeth, na.rm=T), avg=meth / (meth + unmeth), cg_num=n()) %>% select(-meth, -unmeth) %>% rename(meth=avg)
-#         if (!is.null(min_cgs)){
-#             trend <- trend %>% filter(cg_num >= min_cgs)
-#         }
-#     } else {
-#         trend <- trend %>% group_by(samp, breaks, breaks_numeric) %>% summarise(meth = sum(meth, na.rm=T) ,unmeth = sum(unmeth, na.rm=T), avg=meth / (meth + unmeth)) %>% select(-meth, -unmeth) %>% rename(meth=avg)
-#     }
-#
-#     return(trend)
-#
-#
-# }
-
-
 #' Plot spatial trend of methylation around intervals
 #'
 #' @description calculates the distance of \code{tracks} values from \code{intervals}
@@ -661,10 +693,18 @@ gpatterns.cluster_avg_meth <- function(
 #' @param min_cov minimal coverage of each track
 #' @param min_cgs minimal number of CpGs per bin.
 #' @param names alternative names for the track
+#' @param include.lowest if 'TRUE', the lowest value of the range determined by breaks is included
+#' @param edges_right how many breaks from the right are 'edges', and the full interval would be plotted (x,y] in the label
+#' @param edges_left how many breaks from the right are 'edges', and the full interval would be plotted (x,y] in the label
+#' @param groups a vector the same length of \code{tracks} with group for each track. Each group will on a different facet. 
+#' @param group_name name of the grouping variable (e.g. tumor, sample, patient, experiment)
+#' @param ncol number of columns
+#' @param nrow number of rows
 #' @param width plot width (if fig_fn is not NULL)
 #' @param height plot height (if fig_fn is not NULL)
 #' @param fig_fn output filename for the figure (if NULL, figure would be returned)
 #' @param xlab label for the x axis'
+#' @param ylim ylim of the plot
 #' @param title title for the plot
 #' @param legend add legend
 #' @param colors custom colors
@@ -677,18 +717,26 @@ gpatterns.cluster_avg_meth <- function(
 gpatterns.spatial_meth_trend <- function(tracks,
                                          intervals,
                                          method = 'extract',
-                                         dist_breaks = seq(-1000, 1000, 200),
+                                         dist_breaks = c(-4e6, -1e6, seq(-1000, 1000, 200), 1e6, 4e6),
                                          iterator = .gpatterns.genome_cpgs_intervals,
                                          min_cov = NULL,
                                          min_cgs = NULL,
-                                         names = NULL,
+                                         names = NULL,   
+                                         include.lowest = TRUE,
+                                         edges_right = 2,
+                                         edges_left = 2,
+                                         groups=NULL,
+                                         group_name=NULL,
+                                         ncol = 2,
+                                         nrow = 2,
                                          width = 500,
                                          height = 260,
                                          fig_fn = NULL,
                                          xlab = 'Distance (bp)',
+                                         ylim = c(0,1),
                                          title = '',
                                          legend = TRUE,
-                                         colors = NULL,
+                                         colors = NULL,                                         
                                          parallel = getOption('gpatterns.parallel')){
     intervals <- .gpatterns.get_intervals(intervals)
     tryCatch({
@@ -701,15 +749,51 @@ gpatterns.spatial_meth_trend <- function(tracks,
                                                       min_cov = min_cov,
                                                       min_cgs=min_cgs,
                                                       names = names,
+                                                      include.lowest = include.lowest,
                                                       parallel = parallel)
         }, finally=gvtrack.rm('dist'))
+    
+    zero_bin <- cut(0, breaks=dist_breaks, include.lowest=include.lowest)  
+    zero_bin <- which(levels(zero_bin) == zero_bin)
+        
+    if (edges_right > 0 || edges_left > 0){
+        # we set the labels to the beraks on the bin that includes 0
+        lbs <- trend %>% ungroup %>% distinct(breaks, breaks_numeric) %>% mutate(r = rank(breaks_numeric), lr = n() - r + 1) %>%  mutate(label = ifelse(r == zero_bin, breaks, breaks_numeric))        
+        
+        if (edges_left > 0){
+            lbs <- lbs %>% mutate(label = ifelse(r %in% 1:edges_left, breaks, label))
+        }
+        if (edges_right > 0){
+            lbs <- lbs %>% mutate(label = ifelse(lr %in% 1:edges_right, breaks, label))
+        }     
 
-
-    if (length(tracks) == 1){
-        p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, group=1)) + geom_line() + xlab(xlab) + ylab('Methylation') + geom_vline(xintercept=0, linetype='dashed', color='red') + ggtitle(title)
+        lbs <- lbs %>% select(breaks, label)        
+        
+        trend <- trend %>% left_join(lbs, by='breaks')
     } else {
-        p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, color=samp, group=samp)) + geom_line() + xlab(xlab) + ylab('Methylation') + scale_color_discrete(name='') + geom_vline(xintercept=0, linetype='dashed', color='red') + ggtitle(title)
+        trend <- trend %>% mutate(label = breaks)
     }
+    
+    group_name <- group_name %||% 'group'
+    if (!is.null(groups)){        
+        grp <- tibble(track = tracks)
+        grp[group_name] <- groups
+        trend <- trend %>% left_join(grp, by='track')      
+    }
+    
+    if (length(tracks) == 1){
+        p <- trend %>% ggplot(aes(x=forcats::fct_reorder(breaks, breaks_numeric), y=meth, group=1)) + geom_line(size=1.1) + xlab(xlab) + ylab('Methylation') + scale_color_discrete(name='') + ggtitle(title) + scale_x_discrete(labels=trend$label)        
+    } else {
+        p <- trend %>% ggplot(aes(x=forcats::fct_reorder(breaks, breaks_numeric), y=meth, color=samp, group=samp)) + geom_line(size=1.1) + xlab(xlab) + ylab('Methylation') + scale_color_discrete(name='') + ggtitle(title) + scale_x_discrete(labels=trend$label)
+    }
+    
+    
+    if (!is.na(zero_bin)){        
+        zero_bin <- max(min(zero_bin + (0 - dist_breaks[zero_bin]) / (dist_breaks[zero_bin + 1] - dist_breaks[zero_bin]), 0), 1)
+        p <- p + geom_vline(xintercept=zero_bin, linetype='dashed', color='red')
+    }
+    
+    p <- p + coord_cartesian(ylim=ylim)
 
     if (!is.null(colors)){
         p <- p + scale_color_manual(values=colors)
@@ -718,7 +802,11 @@ gpatterns.spatial_meth_trend <- function(tracks,
     if (!legend){
         p <- p + theme(legend.position="none")
     }
-
+    
+    if (!is.null(groups)){
+        p <- p + facet_wrap(as.formula(paste("~", group_name)), ncol=ncol, nrow=nrow)
+    }
+    
     if (!is.null(fig_fn)){
         png(fig_fn, width = width, height = height)
         print(p)
@@ -745,10 +833,16 @@ gpatterns.spatial_meth_trend <- function(tracks,
 #' @param min_cov minimal coverage of each track
 #' @param min_cgs minimal number of CpGs per bin
 #' @param names alternative names for the track
+#' @param groups a vector the same length of \code{tracks} with group for each track. Each group will on a different facet. 
+#' @param group_name name of the grouping variable (e.g. tumor, sample, patient, experiment)
+#' @param include.lowest if 'TRUE', the lowest value of the range determined by breaks is included
+#' @param ncol number of columns
+#' @param nrow number of rows
 #' @param width plot width (if fig_fn is not NULL)
 #' @param height plot height (if fig_fn is not NULL)
 #' @param fig_fn output filename for the figure (if NULL, figure would be returned)
 #' @param xlab label for the x axis
+#' @param ylim ylim of the plot
 #' @param title title for the plot
 #' @param legend add legend
 #' @param colors custom colors
@@ -766,11 +860,17 @@ gpatterns.global_meth_trend <- function(tracks,
                                         iterator = .gpatterns.genome_cpgs_intervals,
                                         min_cov = NULL,
                                         min_cgs = NULL,
-                                        names=NULL,
-                                        width=500,
-                                        height=260,
+                                        names=NULL,                                        
+                                        groups=NULL,
+                                        group_name=NULL,
+                                        include.lowest = TRUE,
+                                        ncol = 2,
+                                        nrow = 2,
+                                        width=500*nrow,
+                                        height=260*ncol,
                                         fig_fn=NULL,
                                         xlab=strat_track,
+                                        ylim = c(0,1),
                                         title = '',
                                         legend = TRUE,
                                         colors = NULL,
@@ -784,12 +884,22 @@ gpatterns.global_meth_trend <- function(tracks,
                                               min_cov = min_cov,
                                               min_cgs = min_cgs,
                                               names = names,
+                                              include.lowest = include.lowest,
                                               parallel = parallel)
-    if (length(tracks) == 1){
-        p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, group=1)) + geom_line() + xlab(xlab) + ylab('Methylation') + ggtitle(title)
-    } else {
-        p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, color=samp, group=samp)) + geom_line() + xlab(xlab) + ylab('Methylation') + scale_color_discrete(name='') + ggtitle(title)
+    group_name <- group_name %||% 'group'
+    if (!is.null(groups)){        
+        grp <- tibble(track = tracks)
+        grp[group_name] <- groups
+        trend <- trend %>% left_join(grp, by='track')      
     }
+    
+    if (length(tracks) == 1){
+        p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, group=1)) + geom_line(size=1.1) + xlab(xlab) + ylab('Methylation') + ggtitle(title)
+    } else {
+        p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, color=samp, group=samp)) + geom_line(size=1.1) + xlab(xlab) + ylab('Methylation') + scale_color_discrete(name='') + ggtitle(title)
+    }
+    
+    p <- p + coord_cartesian(ylim=ylim)
 
     if (!is.null(colors)){
         p <- p + scale_color_manual(values=colors)
@@ -798,7 +908,11 @@ gpatterns.global_meth_trend <- function(tracks,
     if (!legend){
         p <- p + theme(legend.position="none")
     }
-
+    
+    if (!is.null(groups)){
+        p <- p + facet_wrap(as.formula(paste("~", group_name)), ncol=ncol, nrow=nrow)
+    }
+    
     if (!is.null(fig_fn)){
         png(fig_fn, width = width, height = height)
         print(p)
@@ -928,3 +1042,30 @@ gpatterns.smoothScatter <- function(
 
 
 
+# .gpatterns.get_spatial_meth <- function(tracks,
+#                                         intervals,
+#                                         min_cov = NULL,
+#                                         min_samples = NULL,
+#                                         iterator=NULL,
+#                                         dist_breaks = seq(-1000, 1000, 200),
+#                                         names=NULL,
+#                                         min_cgs = NULL,
+#                                         add_cg_num = FALSE){
+#     trend <- gpatterns.get_avg_meth(tracks, intervals = intervals %>% gintervals.expand(max(dist_breaks)), iterator=iterator, min_cov=min_cov, min_samples=min_samples, names=names)
+#     trend <- trend %>% filter(cov >= min_cov)
+#     trend <- trend %>% gintervals.neighbors1(intervals) %>% select(chrom, start, end, samp, meth, unmeth, avg, cov, dist)
+#     trend <- trend %>% mutate(breaks = cut(dist, dist_breaks), breaks_numeric=as.numeric(as.character(cut(dist, dist_breaks, labels=zoo::rollmean(dist_breaks, k=2)))))
+#
+#     if (!is.null(min_cgs) || add_cg_num){
+#         trend <- trend %>% group_by(samp, breaks, breaks_numeric) %>% summarise(meth = sum(meth, na.rm=T) ,unmeth = sum(unmeth, na.rm=T), avg=meth / (meth + unmeth), cg_num=n()) %>% select(-meth, -unmeth) %>% rename(meth=avg)
+#         if (!is.null(min_cgs)){
+#             trend <- trend %>% filter(cg_num >= min_cgs)
+#         }
+#     } else {
+#         trend <- trend %>% group_by(samp, breaks, breaks_numeric) %>% summarise(meth = sum(meth, na.rm=T) ,unmeth = sum(unmeth, na.rm=T), avg=meth / (meth + unmeth)) %>% select(-meth, -unmeth) %>% rename(meth=avg)
+#     }
+#
+#     return(trend)
+#
+#
+# }

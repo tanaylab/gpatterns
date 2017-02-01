@@ -5,11 +5,13 @@
 \title{Plot spatial trend of methylation around intervals}
 \usage{
 gpatterns.spatial_meth_trend(tracks, intervals, method = "extract",
-  dist_breaks = seq(-1000, 1000, 200),
-  iterator = .gpatterns.genome_cpgs_intervals, min_cov = NULL,
-  min_cgs = NULL, names = NULL, width = 500, height = 260,
-  fig_fn = NULL, xlab = "Distance (bp)", title = "", legend = TRUE,
-  colors = NULL, parallel = getOption("gpatterns.parallel"))
+  dist_breaks = c(-4000000, -1000000, seq(-1000, 1000, 200), 1000000,
+  4000000), iterator = .gpatterns.genome_cpgs_intervals, min_cov = NULL,
+  min_cgs = NULL, names = NULL, edges_right = 2, edges_left = 2,
+  groups = NULL, group_name = NULL, ncol = 2, nrow = 2, width = 500,
+  height = 260, fig_fn = NULL, xlab = "Distance (bp)", ylim = c(0, 1),
+  title = "", legend = TRUE, colors = NULL,
+  parallel = getOption("gpatterns.parallel"))
 }
 \arguments{
 \item{tracks}{tracks to plot}
@@ -28,6 +30,18 @@ Can be any intervals set, or one of the following 'special' intervals:
 
 \item{names}{alternative names for the track}
 
+\item{edges_right}{how many breaks from the right are 'edges', and the full interval would be plotted (x,y] in the label}
+
+\item{edges_left}{how many breaks from the right are 'edges', and the full interval would be plotted (x,y] in the label}
+
+\item{groups}{a vector the same length of \code{tracks} with group for each track. Each group will on a different facet.}
+
+\item{group_name}{name of the grouping variable (e.g. tumor, sample, patient, experiment)}
+
+\item{ncol}{number of columns}
+
+\item{nrow}{number of rows}
+
 \item{width}{plot width (if fig_fn is not NULL)}
 
 \item{height}{plot height (if fig_fn is not NULL)}
@@ -35,6 +49,8 @@ Can be any intervals set, or one of the following 'special' intervals:
 \item{fig_fn}{output filename for the figure (if NULL, figure would be returned)}
 
 \item{xlab}{label for the x axis'}
+
+\item{ylim}{ylim of the plot}
 
 \item{title}{title for the plot}
 

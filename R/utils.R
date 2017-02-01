@@ -40,18 +40,18 @@ p_smoothScatter <- function(.data, .x, .y, xlab = NULL, ylab = NULL, ...){
 #' @export
 #'
 #' @examples
-gpatterns.ls <- function(regex, ignore.case = FALSE, perl=FALSE, fixed=FALSE, useBytes=FALSE){
-    cov_tracks <- gtrack.ls(paste0(regex, '\\.cov$'),
+gpatterns.ls <- function(regex='', ignore.case = FALSE, perl=FALSE, fixed=FALSE, useBytes=FALSE){
+    cov_tracks <- gtrack.ls(paste0('.*', regex, '.*\\.cov$'),
                             ignore.case = ignore.case,
                             perl = perl,
                             fixed = fixed,
                             useBytes = useBytes) %>% gsub('\\.cov', '', .)
-    meth_tracks <- gtrack.ls(paste0(regex, '\\.meth$'),
+    meth_tracks <- gtrack.ls(paste0('.*', regex, '.*\\.meth$'),
                             ignore.case = ignore.case,
                             perl = perl,
                             fixed = fixed,
                             useBytes = useBytes) %>% gsub('\\.meth', '', .)
-    unmeth_tracks <- gtrack.ls(paste0(regex, '\\.unmeth$'),
+    unmeth_tracks <- gtrack.ls(paste0('.*', regex, '.*\\.unmeth$'),
                              ignore.case = ignore.case,
                              perl = perl,
                              fixed = fixed,

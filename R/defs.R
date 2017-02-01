@@ -16,6 +16,7 @@ NULL
 .gpatterns.avg_track_name <- function(track) { qqv('@{track}.avg') }
 .gpatterns.meth_track_name <- function(track) { qqv('@{track}.meth') }
 .gpatterns.unmeth_track_name <- function(track) { qqv('@{track}.unmeth') }
+.gpatterns.frag_cov_track_name     <- function(track) { qqv('@{track}.frag_cov')}
 .gpatterns.pat_cov_track_name <- function(track, pat_len) { paste0(track, '.pat_cov', pat_len) }
 .gpatterns.fid_track_name     <- function(track) { qqv('@{track}.fid')}
 .gpatterns.ncpg_track_name    <- function(track) { qqv('@{track}.ncpg')}
