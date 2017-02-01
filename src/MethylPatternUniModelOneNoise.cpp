@@ -59,14 +59,14 @@ int MethylPatternUniModelOneNoise::learn(const ModelData& data, const vector<flo
             m_consensus_pattern.resize(s->pattern.size(), -1);
         }
 
-        for (unsigned int a=0; a<s->pattern.size(); a++) {
+        for (size_t a=0; a<s->pattern.size(); a++) {
             if (s->pattern[a] == 0)
                 n_zero[a] += factors[i];
             if (s->pattern[a] == 1)
                 n_one[a] += factors[i];
         }
     }
-    for (unsigned int i=0; i<n_zero.size(); i++) {
+    for (size_t i=0; i<n_zero.size(); i++) {
         if (n_zero[i] + n_one[i] > 0) {
             if (n_zero[i] >= n_one[i]) {
                 m_consensus_pattern[i] = 0;
@@ -78,7 +78,7 @@ int MethylPatternUniModelOneNoise::learn(const ModelData& data, const vector<flo
     //compute the noise
     float error_bits=0;
     float total_bits=0;
-    for (unsigned int index=0;index < m_consensus_pattern.size(); index++) {
+    for (size_t index=0;index < m_consensus_pattern.size(); index++) {
         if (m_consensus_pattern[index] == 0) {
             error_bits += n_one[index];
         }
@@ -123,7 +123,7 @@ int MethylPatternUniModelOneNoise::learn_noise(const ModelData& data) {
 	            n_one.resize(s->pattern.size(),0);
 	        }
 
-	        for (unsigned int a=0; a<s->pattern.size(); a++) {
+	        for (size_t a=0; a<s->pattern.size(); a++) {
 	            if (s->pattern[a] == 0)
 	                n_zero[a]++;
 	            if (s->pattern[a] == 1)
@@ -136,7 +136,7 @@ int MethylPatternUniModelOneNoise::learn_noise(const ModelData& data) {
 	//calc noise
     float error_bits=0;
     float total_bits=0;
-    for (unsigned int index=0;index < m_consensus_pattern.size(); index++) {
+    for (size_t index=0;index < m_consensus_pattern.size(); index++) {
         if (m_consensus_pattern[index] == 0) {
             error_bits += n_one[index];
         }
@@ -165,7 +165,7 @@ void MethylPatternUniModelOneNoise::simulate_sample(const Sample* original, Mode
     float r;
     const MethylPatternSample* os = (MethylPatternSample*)original;
     string s("");
-    for (unsigned int i=0; i<os->pattern.size(); i++) {
+    for (size_t i=0; i<os->pattern.size(); i++) {
         if (os->pattern[i] < 0)
             s += "*";
         else {
@@ -198,7 +198,7 @@ MethylPatternSample MethylPatternUniModelOneNoise::simulate(const MethylPatternS
     MethylPatternSample center(original, hamming_dist);
     for (int i = 0; i < sample_num; i++) {
         string s("");
-        for (unsigned int i = 0; i < center.pattern.size(); i++) {
+        for (size_t i = 0; i < center.pattern.size(); i++) {
             if (center.pattern[i] < 0)
                 s += "*";
             else {
@@ -227,7 +227,7 @@ float MethylPatternUniModelOneNoise::get_log_prob(const Sample* s) const {
     int correct=0;
     int errors=0;
     MethylPatternSample* ms = (MethylPatternSample*) s;
-    for (unsigned int i=0; i<ms->pattern.size(); i++) {
+    for (size_t i=0; i<ms->pattern.size(); i++) {
         if (ms->pattern[i] == m_consensus_pattern[i]) {
             if (m_consensus_pattern[i] >= 0)
                 correct++;

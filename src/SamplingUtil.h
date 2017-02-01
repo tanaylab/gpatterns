@@ -76,7 +76,7 @@ inline vector<float> p_adjust(const vector<float>& p) {
     }
 
     vector<float> qvals(n);
-    for (unsigned int i=0; i < ro.size(); i++){
+    for (size_t i=0; i < ro.size(); i++){
     	qvals[i] = q[ro[i]];
     }
     return(qvals);

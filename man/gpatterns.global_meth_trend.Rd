@@ -8,9 +8,11 @@ gpatterns.global_meth_trend(tracks,
   strat_track = .gpatterns.cg_cont_500_track, strat_breaks = seq(0, 0.08, by
   = 0.002), intervals = .gpatterns.genome_cpgs_intervals,
   iterator = .gpatterns.genome_cpgs_intervals, min_cov = NULL,
-  min_cgs = NULL, names = NULL, width = 500, height = 260,
-  fig_fn = NULL, xlab = strat_track, title = "", legend = TRUE,
-  colors = NULL, parallel = getOption("gpatterns.parallel"))
+  min_cgs = NULL, names = NULL, groups = NULL, group_name = NULL,
+  ncol = 2, nrow = 2, width = 500 * nrow, height = 260 * ncol,
+  fig_fn = NULL, xlab = strat_track, ylim = c(0, 1), title = "",
+  legend = TRUE, colors = NULL,
+  parallel = getOption("gpatterns.parallel"))
 }
 \arguments{
 \item{tracks}{tracks to plot}
@@ -29,6 +31,14 @@ gpatterns.global_meth_trend(tracks,
 
 \item{names}{alternative names for the track}
 
+\item{groups}{a vector the same length of \code{tracks} with group for each track. Each group will on a different facet.}
+
+\item{group_name}{name of the grouping variable (e.g. tumor, sample, patient, experiment)}
+
+\item{ncol}{number of columns}
+
+\item{nrow}{number of rows}
+
 \item{width}{plot width (if fig_fn is not NULL)}
 
 \item{height}{plot height (if fig_fn is not NULL)}
@@ -36,6 +46,8 @@ gpatterns.global_meth_trend(tracks,
 \item{fig_fn}{output filename for the figure (if NULL, figure would be returned)}
 
 \item{xlab}{label for the x axis}
+
+\item{ylim}{ylim of the plot}
 
 \item{title}{title for the plot}
 

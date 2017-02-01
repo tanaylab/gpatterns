@@ -36,8 +36,8 @@ void ModelDataMultiGroup::remove_groups(vector<int>& inds, bool hard_remove){
 	}
 	vector<ModelData*> temp_groups;
 	int j=0;
-	for (unsigned int i=0; i < m_groups.size(); i++){
-		if (i == (unsigned int)inds[j]){
+	for (size_t i=0; i < m_groups.size(); i++){
+		if (i == (size_t)inds[j]){
 			if (hard_remove){
 				delete(m_groups[i]);
 			}
@@ -53,7 +53,7 @@ void ModelDataMultiGroup::remove_groups(vector<int>& inds, bool hard_remove){
 void ModelDataMultiGroup::print_groups(ostream& out) {
     out << m_N << endl;
 
-    for (unsigned int i=0; i<m_N; i++) {
+    for (size_t i=0; i<m_N; i++) {
         m_groups[i]->print_samples(out);
         out << endl;
     }
@@ -61,7 +61,7 @@ void ModelDataMultiGroup::print_groups(ostream& out) {
 
 void ModelDataMultiGroup::clear() {
     //cerr << "Model Data :: clear" << endl;
-    for (unsigned int i=0; i<m_N; i++) {
+    for (size_t i=0; i<m_N; i++) {
         delete(m_groups[i]);
     }
     m_groups.clear();

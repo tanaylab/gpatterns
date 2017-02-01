@@ -4,8 +4,8 @@
 \alias{gpatterns.ls}
 \title{Returns a list of track names}
 \usage{
-gpatterns.ls(regex, ignore.case = FALSE, perl = FALSE, fixed = FALSE,
-  useBytes = FALSE)
+gpatterns.ls(regex = "", ignore.case = FALSE, perl = FALSE,
+  fixed = FALSE, useBytes = FALSE)
 }
 \arguments{
 \item{regex}{regular expression of track names}

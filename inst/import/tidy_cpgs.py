@@ -56,7 +56,7 @@ class Read:
             self.z = 0
             self.Z = 0           
             
-            get_conv(patt1)
+            self._get_conv(self.patt1)
 
             self.insert_len = read1.tlen
 
@@ -73,13 +73,13 @@ class Read:
             if self.H + self.X > max_no_conv:
                 self.pairing = 'no_conv'
     
-    def get_conv(patt):
-        self.H += self.patt.count('H')
-        self.h += self.patt.count('h')
-        self.x += self.patt.count('x')
-        self.X += self.patt.count('X')
-        self.z += self.patt.count('z')
-        self.Z += self.patt.count('Z')
+    def _get_conv(self, patt):
+        self.H += patt.count('H')
+        self.h += patt.count('h')
+        self.x += patt.count('x')
+        self.X += patt.count('X')
+        self.z += patt.count('z')
+        self.Z += patt.count('Z')
         
     def _process_single(self, read1):
         self.umi2 = '-'
@@ -97,7 +97,7 @@ class Read:
         self.start2 = read2.pos
         self.qual2 = read2.qual
         self.patt2 = read2.get_tag(self.meth_calls_tag)
-        get_conv(patt2)
+        self._get_conv(self.patt2)
         if read1.is_reverse:
             self.start = read2.pos
             self.end = read1.pos + read1.alen

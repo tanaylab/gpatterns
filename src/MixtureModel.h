@@ -52,7 +52,7 @@ public:
 protected:
     float					m_loglikelihood;
     float 					m_delta_likelihood_converged;
-    unsigned int						m_number_of_models;
+    size_t						m_number_of_models;
     vector<float>			m_mixing_probs;			//pai
     vector<UniModel*> 		m_models;
     vector< vector<float> >	m_mixture_posteriors; //gama

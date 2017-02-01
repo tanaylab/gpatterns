@@ -29,7 +29,7 @@ struct MethylPatternSample : public Sample {
      }
 
     void print(ostream& out) const override{
-        for (unsigned int j=0; j<pattern.size(); j++) {
+        for (size_t j=0; j<pattern.size(); j++) {
             if (pattern[j] < 0 )
                 out << "*";
             else
@@ -43,7 +43,7 @@ struct MethylPatternSample : public Sample {
 
     int hamming_distance(const vector<int>& p) const {
         int dist=0;
-        for (unsigned int j=0; j<pattern.size(); j++) {
+        for (size_t j=0; j<pattern.size(); j++) {
             if (pattern[j] >= 0 && p[j] >= 0) {
                 if (pattern[j] != p[j])
                     dist++;
@@ -53,7 +53,7 @@ struct MethylPatternSample : public Sample {
     }
 
     MethylPatternSample* make_sample(MethylPatternSample* samp, const int& dist) const{
-//    	assert((unsigned int)dist < pattern.size());
+//    	assert((size_t)dist < pattern.size());
     	return(new MethylPatternSample(*this, dist));
     }
 

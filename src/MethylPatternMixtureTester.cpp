@@ -24,7 +24,7 @@ MethylPatternMixtureTester::~MethylPatternMixtureTester() {
 
 void MethylPatternMixtureTester::remove_unimodal_groups(ModelDataMultiGroup& data, const float& qval_thresh, vector<int>& remove_inds, const bool& hard_remove) {
     vector<float> pvals;
-    for (unsigned int i=0; i < data.get_number_of_groups(); i++) {
+    for (size_t i=0; i < data.get_number_of_groups(); i++) {
         pvals.push_back( get_mixture_pval(*((MethylPatternData*)data.get_group(i))) );
     }
     adjust_pvals_and_remove(data, qval_thresh, remove_inds, pvals, hard_remove);
@@ -32,7 +32,7 @@ void MethylPatternMixtureTester::remove_unimodal_groups(ModelDataMultiGroup& dat
 
 void MethylPatternMixtureTester::remove_unimodal_groups(ModelDataMultiGroup& data, const float& qval_thresh, vector<int>& remove_inds, const vector<float>& mixing_probs, const bool& hard_remove) {
     vector<float> pvals;
-    for (unsigned int i=0; i < data.get_number_of_groups(); i++) {
+    for (size_t i=0; i < data.get_number_of_groups(); i++) {
         pvals.push_back( get_mixture_pval(*((MethylPatternData*)data.get_group(i)), mixing_probs) );
     }
     adjust_pvals_and_remove(data, qval_thresh, remove_inds, pvals, hard_remove);
@@ -40,7 +40,7 @@ void MethylPatternMixtureTester::remove_unimodal_groups(ModelDataMultiGroup& dat
 
 void MethylPatternMixtureTester::adjust_pvals_and_remove(ModelDataMultiGroup& data, const float& qval_thresh, vector<int>& remove_inds, const vector<float>& pvals, const bool& hard_remove) {
     vector<float> qvals = p_adjust(pvals);
-    for (unsigned int i=0; i < qvals.size(); i++) {
+    for (size_t i=0; i < qvals.size(); i++) {
         if (qvals[i] > qval_thresh) {
             remove_inds.push_back(i);
         }

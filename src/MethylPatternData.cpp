@@ -15,12 +15,12 @@ using namespace Rcpp;
 MethylPatternSample::MethylPatternSample(const MethylPatternSample& samp, const int& dist) {
     pattern  = samp.pattern;
     vector<int> inds(pattern.size(), -1);
-    for (unsigned int i=0; i < inds.size(); i++) {
+    for (size_t i=0; i < inds.size(); i++) {
         inds[i] = i;
     }
 
     vector<int> flip_inds = random_sampling_without_replacement(inds, dist);
-    for (unsigned int i = 0; i < flip_inds.size(); i++) {
+    for (size_t i = 0; i < flip_inds.size(); i++) {
         if (samp.pattern[i] == 0) {
             pattern[i] = 1;
         } else if (samp.pattern[i] == 1) {

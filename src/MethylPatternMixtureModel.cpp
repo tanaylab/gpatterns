@@ -80,7 +80,7 @@ void MethylPatternMixtureModel::init_models_comb(const vector<Sample*>& uniq_sam
 
         //select a random sample for each model
         default_random_engine generator( rd() );
-        for (unsigned int i=0; (i <  m_number_of_models - 1) && (freqs.size() > 0); i++) {
+        for (size_t i=0; (i <  m_number_of_models - 1) && (freqs.size() > 0); i++) {
             discrete_distribution<int> d(freqs.begin(), freqs.end());
             int c = d(generator);
 
@@ -102,13 +102,13 @@ void MethylPatternMixtureModel::init_models_comb(const vector<Sample*>& uniq_sam
 
 
     //initialize the models with the chosen samples
-    for (unsigned int c=0; c< chosen_inds_i.size(); c++) {
+    for (size_t c=0; c< chosen_inds_i.size(); c++) {
         ((MethylPatternUniModel*)(m_models[c]))->init_params(((MethylPatternSample*)uniq_samples[ chosen_inds_i[c] ])->pattern, data);
         adjust_params(c);
     }
 
     //if there are more models than samples assign the first chosen sample to the rest of the samples
-    for (unsigned int c=chosen_inds_i.size(); c< m_number_of_models - 1; c++) {
+    for (size_t c=chosen_inds_i.size(); c< m_number_of_models - 1; c++) {
         ((MethylPatternUniModel*)(m_models[c]))->init_params(((MethylPatternSample*)uniq_samples[ chosen_inds_i[0] ])->pattern, data);
         adjust_params(c);
     }
@@ -139,10 +139,10 @@ int MethylPatternMixtureModel::learn(const ModelData& data) {
     //number of initializations is m_K unless there aren't enough unique samples, which can happen when:
     //a. number of unique samples < m_K
     //b. number of combinations of samples < m_K
-    unsigned int num_of_inits = (m_number_of_models - 1) > uniq_samples.size() ? min(m_K, (int)uniq_samples.size()) : min(m_K, nchoosek(uniq_samples.size(), m_number_of_models - 1));
+    size_t num_of_inits = (m_number_of_models - 1) > uniq_samples.size() ? min(m_K, (int)uniq_samples.size()) : min(m_K, nchoosek(uniq_samples.size(), m_number_of_models - 1));
 
     // on each initialization we choose two patterns, learn the model and save it in res_models
-    for (unsigned int k=0; k<num_of_inits; k++) {
+    for (size_t k=0; k<num_of_inits; k++) {
         init_models_comb(uniq_samples, uniq_sample_freqs, data, chosen_inds);
         MixtureModel::learn(data);
         res_models.push_back(clone());
@@ -175,7 +175,7 @@ void MethylPatternMixtureModel::init_models(const ModelData& data) {
         int preferred_model=0;
         MethylPatternSample* s = (MethylPatternSample*) data.get_sample(i);
         int minimal_distance = s->pattern.size();
-        for (unsigned int c=0; c<m_models.size()-1; c++) {
+        for (size_t c=0; c<m_models.size()-1; c++) {
             int dist = s->hamming_distance(((MethylPatternUniModel*)m_models[c])->get_consensus_pattern());
             if ( dist < minimal_distance) {
                 minimal_distance = dist;
@@ -184,7 +184,7 @@ void MethylPatternMixtureModel::init_models(const ModelData& data) {
         }
         associated_samples[preferred_model]++;
     }
-    for (unsigned int c=0; c<m_models.size()-1; c++) {
+    for (size_t c=0; c<m_models.size()-1; c++) {
         m_mixing_probs[c] = ((float) associated_samples[c] / data.get_number_of_samples()) * (1-m_uniform_prior);
     }
     m_mixing_probs[m_models.size()-1] = m_uniform_prior;
@@ -200,7 +200,7 @@ void MethylPatternMixtureModel::init_models(const ModelData& data) {
 float MethylPatternMixtureModel::m_step(const ModelData& data) {
     MixtureModel::m_step(data);
     float uniform_mix = m_mixing_probs[m_mixing_probs.size()-1];
-    for (unsigned int c=0; c<m_models.size()-1; c++) {
+    for (size_t c=0; c<m_models.size()-1; c++) {
         m_mixing_probs[c] = m_mixing_probs[c] / (1-uniform_mix) * (1-m_uniform_prior);
     }
     m_mixing_probs[m_models.size()-1] = m_uniform_prior;
@@ -213,7 +213,7 @@ float MethylPatternMixtureModel::center_error(const MethylPatternSample& center,
 
 vector<float> MethylPatternMixtureModel::center_error(const vector<MethylPatternSample>& centers) {
     vector<float> errors;
-    for (unsigned int i=0; i < m_models.size() - 1; i++) {
+    for (size_t i=0; i < m_models.size() - 1; i++) {
         errors.push_back(center_error(centers[i], i));
     }
     return(errors);
