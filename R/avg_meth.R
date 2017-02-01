@@ -694,10 +694,9 @@ gpatterns.cluster_avg_meth <- function(
 #' @param min_cgs minimal number of CpGs per bin.
 #' @param names alternative names for the track
 #' @param include.lowest if 'TRUE', the lowest value of the range determined by breaks is included
-#' @param edges_right how many breaks from the right are 'edges', and the full interval would be plotted (x,y] in the label
-#' @param edges_left how many breaks from the right are 'edges', and the full interval would be plotted (x,y] in the label
 #' @param groups a vector the same length of \code{tracks} with group for each track. Each group will on a different facet. 
 #' @param group_name name of the grouping variable (e.g. tumor, sample, patient, experiment)
+#' @param add_vline add vertical line at 0 coordinate
 #' @param ncol number of columns
 #' @param nrow number of rows
 #' @param width plot width (if fig_fn is not NULL)
@@ -717,16 +716,15 @@ gpatterns.cluster_avg_meth <- function(
 gpatterns.spatial_meth_trend <- function(tracks,
                                          intervals,
                                          method = 'extract',
-                                         dist_breaks = c(-4e6, -1e6, seq(-1000, 1000, 200), 1e6, 4e6),
+                                         dist_breaks = c(-4e6, -1e6, seq(-1000, 1000, 50), 1e6, 4e6),
                                          iterator = .gpatterns.genome_cpgs_intervals,
                                          min_cov = NULL,
                                          min_cgs = NULL,
                                          names = NULL,   
                                          include.lowest = TRUE,
-                                         edges_right = 2,
-                                         edges_left = 2,
                                          groups=NULL,
                                          group_name=NULL,
+                                         add_vline = TRUE,
                                          ncol = 2,
                                          nrow = 2,
                                          width = 500,
@@ -753,27 +751,6 @@ gpatterns.spatial_meth_trend <- function(tracks,
                                                       parallel = parallel)
         }, finally=gvtrack.rm('dist'))
     
-    zero_bin <- cut(0, breaks=dist_breaks, include.lowest=include.lowest)  
-    zero_bin <- which(levels(zero_bin) == zero_bin)
-        
-    if (edges_right > 0 || edges_left > 0){
-        # we set the labels to the beraks on the bin that includes 0
-        lbs <- trend %>% ungroup %>% distinct(breaks, breaks_numeric) %>% mutate(r = rank(breaks_numeric), lr = n() - r + 1) %>%  mutate(label = ifelse(r == zero_bin, breaks, breaks_numeric))        
-        
-        if (edges_left > 0){
-            lbs <- lbs %>% mutate(label = ifelse(r %in% 1:edges_left, breaks, label))
-        }
-        if (edges_right > 0){
-            lbs <- lbs %>% mutate(label = ifelse(lr %in% 1:edges_right, breaks, label))
-        }     
-
-        lbs <- lbs %>% select(breaks, label)        
-        
-        trend <- trend %>% left_join(lbs, by='breaks')
-    } else {
-        trend <- trend %>% mutate(label = breaks)
-    }
-    
     group_name <- group_name %||% 'group'
     if (!is.null(groups)){        
         grp <- tibble(track = tracks)
@@ -782,18 +759,21 @@ gpatterns.spatial_meth_trend <- function(tracks,
     }
     
     if (length(tracks) == 1){
-        p <- trend %>% ggplot(aes(x=forcats::fct_reorder(breaks, breaks_numeric), y=meth, group=1)) + geom_line(size=1.1) + xlab(xlab) + ylab('Methylation') + scale_color_discrete(name='') + ggtitle(title) + scale_x_discrete(labels=trend$label)        
+        p <- trend %>% ggplot(aes(x=forcats::fct_reorder(breaks, breaks_numeric), y=meth, group=1)) 
     } else {
-        p <- trend %>% ggplot(aes(x=forcats::fct_reorder(breaks, breaks_numeric), y=meth, color=samp, group=samp)) + geom_line(size=1.1) + xlab(xlab) + ylab('Methylation') + scale_color_discrete(name='') + ggtitle(title) + scale_x_discrete(labels=trend$label)
+        p <- trend %>% ggplot(aes(x=forcats::fct_reorder(breaks, breaks_numeric), y=meth, color=samp, group=samp)) + scale_color_discrete(name='') 
     }
     
+    p <- p + geom_line(size=1.1) + xlab(xlab) + ylab('Methylation') + ggtitle(title) +coord_cartesian(ylim=ylim) + geom_vline(xintercept=0, linetype='dashed', color='red') 
     
-    if (!is.na(zero_bin)){        
-        zero_bin <- max(min(zero_bin + (0 - dist_breaks[zero_bin]) / (dist_breaks[zero_bin + 1] - dist_breaks[zero_bin]), 0), 1)
-        p <- p + geom_vline(xintercept=zero_bin, linetype='dashed', color='red')
+    if (add_vline){
+        zero_bin <- cut(0, breaks=dist_breaks, include.lowest=include.lowest)  
+        zero_bin <- which(levels(zero_bin) == zero_bin)
+        if (!is.na(zero_bin)){
+            p <- p + geom_vline(xintercept=zero_bin, linetype='dashed', color='red')
+        }
     }
     
-    p <- p + coord_cartesian(ylim=ylim)
 
     if (!is.null(colors)){
         p <- p + scale_color_manual(values=colors)
