@@ -652,7 +652,7 @@ gpatterns.cluster_avg_meth <- function(
         } else {
             intervs <- intervals
         }
-        
+
         gm <- gbins.summary(strat_track, strat_breaks, .gpatterns.meth_track_name(track), iterator=iterator, intervals=intervs, include.lowest=include.lowest)
         brks <- rownames(gm)
         gm <- gm %>% tbl_df
@@ -694,13 +694,16 @@ gpatterns.cluster_avg_meth <- function(
 #' @param min_cgs minimal number of CpGs per bin.
 #' @param names alternative names for the track
 #' @param include.lowest if 'TRUE', the lowest value of the range determined by breaks is included
-#' @param groups a vector the same length of \code{tracks} with group for each track. Each group will on a different facet. 
+#' @param groups a vector the same length of \code{tracks} with group for each track. Each group will on a different facet.
 #' @param group_name name of the grouping variable (e.g. tumor, sample, patient, experiment)
 #' @param add_vline add vertical line at 0 coordinate
 #' @param ncol number of columns
 #' @param nrow number of rows
 #' @param width plot width (if fig_fn is not NULL)
 #' @param height plot height (if fig_fn is not NULL)
+#' @param units see \code{png}
+#' @param pointsize see \code{png}
+#' @param res see \code{png}
 #' @param fig_fn output filename for the figure (if NULL, figure would be returned)
 #' @param xlab label for the x axis'
 #' @param ylim ylim of the plot
@@ -720,21 +723,25 @@ gpatterns.spatial_meth_trend <- function(tracks,
                                          iterator = .gpatterns.genome_cpgs_intervals,
                                          min_cov = NULL,
                                          min_cgs = NULL,
-                                         names = NULL,   
+                                         names = NULL,
                                          include.lowest = TRUE,
                                          groups=NULL,
                                          group_name=NULL,
                                          add_vline = TRUE,
                                          ncol = 2,
                                          nrow = 2,
-                                         width = 500,
-                                         height = 260,
+                                         width = 5,
+                                         height = 4,
+                                         units='in',
+                                         pointsize=12,
+                                         res=150,
                                          fig_fn = NULL,
                                          xlab = 'Distance (bp)',
                                          ylim = c(0,1),
+                                         linewidth = 0.8,
                                          title = '',
                                          legend = TRUE,
-                                         colors = NULL,                                         
+                                         colors = NULL,
                                          parallel = getOption('gpatterns.parallel')){
     intervals <- .gpatterns.get_intervals(intervals)
     tryCatch({
@@ -750,30 +757,29 @@ gpatterns.spatial_meth_trend <- function(tracks,
                                                       include.lowest = include.lowest,
                                                       parallel = parallel)
         }, finally=gvtrack.rm('dist'))
-    
+
     group_name <- group_name %||% 'group'
-    if (!is.null(groups)){        
+    if (!is.null(groups)){
         grp <- tibble(track = tracks)
         grp[group_name] <- groups
-        trend <- trend %>% left_join(grp, by='track')      
+        trend <- trend %>% left_join(grp, by='track')
     }
-    
+
     if (length(tracks) == 1){
-        p <- trend %>% ggplot(aes(x=forcats::fct_reorder(breaks, breaks_numeric), y=meth, group=1)) 
+        p <- trend %>% ggplot(aes(x=forcats::fct_reorder(breaks, breaks_numeric), y=meth, group=1))
     } else {
-        p <- trend %>% ggplot(aes(x=forcats::fct_reorder(breaks, breaks_numeric), y=meth, color=samp, group=samp)) + scale_color_discrete(name='') 
+        p <- trend %>% ggplot(aes(x=forcats::fct_reorder(breaks, breaks_numeric), y=meth, color=samp, group=samp)) + scale_color_discrete(name='')
     }
-    
-    p <- p + geom_line(size=1.1) + xlab(xlab) + ylab('Methylation') + ggtitle(title) +coord_cartesian(ylim=ylim) + geom_vline(xintercept=0, linetype='dashed', color='red') 
-    
+
+    p <- p + geom_line(size=linewidth) + xlab(xlab) + ylab('Methylation') + ggtitle(title) + coord_cartesian(ylim=ylim) + geom_vline(xintercept=0, linetype='dashed', color='red') + theme(axis.text.x  = element_text(size=5))
+
     if (add_vline){
-        zero_bin <- cut(0, breaks=dist_breaks, include.lowest=include.lowest)  
+        zero_bin <- cut(0, breaks=dist_breaks, include.lowest=include.lowest)
         zero_bin <- which(levels(zero_bin) == zero_bin)
         if (!is.na(zero_bin)){
             p <- p + geom_vline(xintercept=zero_bin, linetype='dashed', color='red')
         }
     }
-    
 
     if (!is.null(colors)){
         p <- p + scale_color_manual(values=colors)
@@ -782,13 +788,13 @@ gpatterns.spatial_meth_trend <- function(tracks,
     if (!legend){
         p <- p + theme(legend.position="none")
     }
-    
+
     if (!is.null(groups)){
         p <- p + facet_wrap(as.formula(paste("~", group_name)), ncol=ncol, nrow=nrow)
     }
-    
+
     if (!is.null(fig_fn)){
-        png(fig_fn, width = width, height = height)
+        png(fig_fn, width = width, height = height, res=res, units=units, pointsize=pointsize)
         print(p)
         dev.off()
     }
@@ -813,7 +819,7 @@ gpatterns.spatial_meth_trend <- function(tracks,
 #' @param min_cov minimal coverage of each track
 #' @param min_cgs minimal number of CpGs per bin
 #' @param names alternative names for the track
-#' @param groups a vector the same length of \code{tracks} with group for each track. Each group will on a different facet. 
+#' @param groups a vector the same length of \code{tracks} with group for each track. Each group will on a different facet.
 #' @param group_name name of the grouping variable (e.g. tumor, sample, patient, experiment)
 #' @param include.lowest if 'TRUE', the lowest value of the range determined by breaks is included
 #' @param ncol number of columns
@@ -840,14 +846,14 @@ gpatterns.global_meth_trend <- function(tracks,
                                         iterator = .gpatterns.genome_cpgs_intervals,
                                         min_cov = NULL,
                                         min_cgs = NULL,
-                                        names=NULL,                                        
+                                        names=NULL,
                                         groups=NULL,
                                         group_name=NULL,
                                         include.lowest = TRUE,
                                         ncol = 2,
                                         nrow = 2,
-                                        width=500*nrow,
-                                        height=260*ncol,
+                                        width=600,
+                                        height=560,
                                         fig_fn=NULL,
                                         xlab=strat_track,
                                         ylim = c(0,1),
@@ -867,18 +873,18 @@ gpatterns.global_meth_trend <- function(tracks,
                                               include.lowest = include.lowest,
                                               parallel = parallel)
     group_name <- group_name %||% 'group'
-    if (!is.null(groups)){        
+    if (!is.null(groups)){
         grp <- tibble(track = tracks)
         grp[group_name] <- groups
-        trend <- trend %>% left_join(grp, by='track')      
+        trend <- trend %>% left_join(grp, by='track')
     }
-    
+
     if (length(tracks) == 1){
         p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, group=1)) + geom_line(size=1.1) + xlab(xlab) + ylab('Methylation') + ggtitle(title)
     } else {
         p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, color=samp, group=samp)) + geom_line(size=1.1) + xlab(xlab) + ylab('Methylation') + scale_color_discrete(name='') + ggtitle(title)
     }
-    
+
     p <- p + coord_cartesian(ylim=ylim)
 
     if (!is.null(colors)){
@@ -888,11 +894,11 @@ gpatterns.global_meth_trend <- function(tracks,
     if (!legend){
         p <- p + theme(legend.position="none")
     }
-    
+
     if (!is.null(groups)){
         p <- p + facet_wrap(as.formula(paste("~", group_name)), ncol=ncol, nrow=nrow)
     }
-    
+
     if (!is.null(fig_fn)){
         png(fig_fn, width = width, height = height)
         print(p)
@@ -1016,6 +1022,59 @@ gpatterns.smoothScatter <- function(
         right_join(d, by=keys) %>%
         arrange(ord)
     return(d)
+}
+
+#' Define putative enhancer regions from chip-seq tracks
+#' 
+#' @param min_tss_dist minimal (absolute) distance from TSS
+#' @inheritParams gpatterns.chip2peaks
+#' 
+#' @return intervals set with putative enhancers
+#' @export
+#'
+#' @examples 
+gpatterns.putative_enhancers <- function(chip_tracks,
+                                             quant_thresh=0.999,
+                                             normalize=NULL,
+                                             min_tss_dist=2000,
+                                             logical_gate = '|'){
+    enh <- gpatterns.chip2peaks(chip_tracks=chip_tracks, quant_thresh=quant_thresh, normalize=normalize, logical_gate=logical_gate)
+
+    if (!is.null(min_tss_dist)){
+        enh <- enh %>% gintervals.neighbors1('intervs.global.tss') %>% filter(abs(dist) >= min_tss_dist) %>% select(chrom, start, end)
+    }
+
+    return(enh)
+}
+
+#' Get peak intervals from chip-seq tracks
+#'
+#' @param chip_tracks names of chpseq tracks
+#' @param quant_thresh quantile of chip signal that would be considered as putative enhancer
+#' @param normalize normalize all the regions to have the same size.
+#' if NULL no normalization would be done.
+#' @param logical_gate logical function to combine the different tracks, e.g. '|' '&'
+#'
+#' @return intervals set with peaks
+#' @export
+#'
+#' @examples
+gpatterns.chip2peaks <- function(chip_tracks,
+                                 quant_thresh=0.999,
+                                 normalize=NULL,                                 
+                                 logical_gate = '|'){
+    vtracks <- paste0('v_', chip_tracks)
+    walk2(vtracks, chip_tracks, function(vt, t) gvtrack.create(vt, t, 'global.percentile.max'))
+
+    expr <- paste(sprintf("%s >= %s", vtracks, quant_thresh), collapse=qq(' @{logical_gate} '))
+    peaks <- gscreen(expr)
+
+    if (!is.null(normalize)){
+        peaks <- gintervals.normalize(peaks, normalize)
+    }
+
+    walk(vtracks, gvtrack.rm)
+    return(tbl_df(peaks))
 }
 
 

@@ -9,9 +9,9 @@ gpatterns.global_meth_trend(tracks,
   = 0.002), intervals = .gpatterns.genome_cpgs_intervals,
   iterator = .gpatterns.genome_cpgs_intervals, min_cov = NULL,
   min_cgs = NULL, names = NULL, groups = NULL, group_name = NULL,
-  ncol = 2, nrow = 2, width = 500 * nrow, height = 260 * ncol,
-  fig_fn = NULL, xlab = strat_track, ylim = c(0, 1), title = "",
-  legend = TRUE, colors = NULL,
+  include.lowest = TRUE, ncol = 2, nrow = 2, width = 500 * nrow,
+  height = 260 * ncol, fig_fn = NULL, xlab = strat_track, ylim = c(0,
+  1), title = "", legend = TRUE, colors = NULL,
   parallel = getOption("gpatterns.parallel"))
 }
 \arguments{
@@ -34,6 +34,8 @@ gpatterns.global_meth_trend(tracks,
 \item{groups}{a vector the same length of \code{tracks} with group for each track. Each group will on a different facet.}
 
 \item{group_name}{name of the grouping variable (e.g. tumor, sample, patient, experiment)}
+
+\item{include.lowest}{if 'TRUE', the lowest value of the range determined by breaks is included}
 
 \item{ncol}{number of columns}
 
