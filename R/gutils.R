@@ -114,7 +114,7 @@ gintervals.expand <- function(inv, expansion = 100) {
         gintervals.force_range()
 }
 
-
+#' @export
 gintervals.normalize <- function(inv, size) {
     centers <- gintervals.centers(inv) %>%
         mutate(end = end - 1)
