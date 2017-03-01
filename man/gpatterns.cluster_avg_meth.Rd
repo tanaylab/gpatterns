@@ -5,11 +5,12 @@
 \title{Cluster average methylation of multiple tracks}
 \usage{
 gpatterns.cluster_avg_meth(avgs, K, verbose = FALSE,
-  clust_order_func = mean, clust_columns = TRUE, column_k = NULL,
-  ret_hclust = FALSE)
+  clust_order_func = partial(mean, na.rm = T), clust_columns = FALSE,
+  column_k = NULL, ret_hclust = FALSE, tidy = TRUE,
+  intra_clust_order = TRUE)
 }
 \arguments{
-\item{avgs}{avgs pre-computed intervals set with average methylation, output of gpatterns.get_avg_meth}
+\item{avgs}{avgs pre-computed intervals set with average methylation, output of gpatterns.get_avg_meth.}
 
 \item{K}{number of clusters for kmeans++}
 
@@ -24,9 +25,13 @@ gpatterns.cluster_avg_meth(avgs, K, verbose = FALSE,
 
 \item{ret_hclust}{return a list with avgs (the clustering result) and
 hc (the hclust object)}
+
+\item{tidy}{is the input tidy}
+
+\item{intra_clust_order}{order within each cluster using hclust (otherwise, the order would be by genomic position)}
 }
 \value{
-data frame with the following fields:
+if tidy: data frame with the following fields:
 \itemize{
      \item{'chrom'}{}
      \item{'start'}{}
@@ -36,6 +41,16 @@ data frame with the following fields:
      \item{'samp_clust'}{id of the column cluster (hclust cutree)}
      \item{'clust'}{cluster id}
      \item{'original columns'}{original columns of avgs (meth,unmeth,avg,cov)}
+} 
+if not tidy: data frame with the following fields:
+\itemize{
+     \item{'chrom'}{}
+     \item{'start'}{}
+     \item{'end'}{}
+     \item{'ord'}{order of intervals within the cluster}
+     \item{'samp_clust'}{id of the column cluster (hclust cutree)}
+     \item{'clust'}{cluster id}
+     \item{'original columns'}{original columns of avgs}
 }
 }
 \description{

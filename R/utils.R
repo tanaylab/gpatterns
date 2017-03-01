@@ -233,7 +233,7 @@ gpatterns.track_exists <- function(track){
 #' overrides gtrack.create_sparse without rescaning database
 #' @export
 gtrack.create_sparse <- function (track = NULL, description = NULL, intervals = NULL,
-           values = NULL, rescan = FALSE)
+           values = NULL, rescan = TRUE)
 {
     if (is.null(substitute(track)) || is.null(description) ||
         is.null(intervals) || is.null(values))
@@ -358,7 +358,7 @@ gtrack.array.import <- function (track = NULL, description = NULL, ...)
 }
 
 gtrack.create <- function (track = NULL, description = NULL, expr = NULL, iterator = NULL,
-          band = NULL, rescan=FALSE){
+          band = NULL, rescan=TRUE){
     if (is.null(substitute(track)) || is.null(description) ||
         is.null(substitute(expr)))
         stop("Usage: gtrack.create(track, description, expr, iterator = NULL, band = NULL)",

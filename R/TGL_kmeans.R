@@ -27,6 +27,7 @@ TGL_kmeans <- function(tab,
     if(!tab_file){
         if (is.null(fn)){
             fn <- tempfile()
+            on.exit(system(qq('rm -f @{fn}')))
         }
         if (id_column){
             id.col.name <- colnames(tab)[1]
@@ -35,8 +36,8 @@ TGL_kmeans <- function(tab,
             tab <- data.frame(id = 1:nrow(tab), tab)
         }
 
-        message("writing table...")
-        write.table(tab, fn, sep="\t", quote=F, row.names=FALSE)
+        message("writing table...")        
+        fwrite(tab, fn, row.names=FALSE, sep="\t", quote=FALSE, na='NA')
     } else {
         fn <- tab
     }

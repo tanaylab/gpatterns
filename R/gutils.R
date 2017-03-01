@@ -18,7 +18,7 @@ gintervals.neighbors1 <- function(intervals1 = NULL,
                                   maxneighbors = 1,
                                   mindist = -1e+09,
                                   maxdist = 1e+09,
-                                  na.if.notfound = FALSE) {
+                                  na.if.notfound = TRUE) {
 
     res <-
         gintervals.neighbors(

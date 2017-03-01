@@ -103,18 +103,21 @@ gpatterns.get_pipeline_stats <- function(track,
 
     for (dsn in dsns){
         message(qq('doing @{dsn}'))
-        tcpgs <- gpatterns.get_tidy_cpgs(track, intervals=intervals)
-        all_tcpgs <- gpatterns.get_tidy_cpgs(track)
+        tcpgs <- gpatterns.get_tidy_cpgs(track, intervals=intervals, only_tcpgs=TRUE)
+        all_tcpgs <- gpatterns.get_tidy_cpgs(track, only_tcpgs=TRUE)
 
         if (!is.null(fastq)){
             message('sampling from fastq')
             cmd <- qq('gzip -d -c @{paste(fastq, collapse=" ")} | sed -n 1~4p | @{sort_rand_str} head -n @{dsn}')
             ids <- fread(cmd, sep='\t', header=F)[,1] %>%
-                gsub('^@', '', .)
+                gsub('^@', '', .) %>%
+                str_split(' ') %>% 
+                map_chr(~ .x[1])                
         } else if (!is.null(bam)){
             message('sampling from bam')
             cmd <- qq('samtools view @{bam} | sed -n 1~2p | cut -f1 | @{sort_rand_str} head -n @{dsn}')
-            ids <- fread(cmd, sep='\t', header=F)[,1]
+            ids <- fread(cmd, 
+                sep='\t', header=F)[,1]
         } else {
             message('sampling from tidy cpgs')
             ids <- tcpgs %>% distinct(read_id, num) %>% sample_n(dsn) %>% .$read_id

@@ -5,7 +5,7 @@
 \title{overrides gtrack.create_sparse without rescaning database}
 \usage{
 gtrack.create_sparse(track = NULL, description = NULL, intervals = NULL,
-  values = NULL, rescan = FALSE)
+  values = NULL, rescan = TRUE)
 }
 \description{
 overrides gtrack.create_sparse without rescaning database
