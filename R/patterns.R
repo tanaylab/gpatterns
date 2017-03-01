@@ -5,17 +5,22 @@
 #'
 #' @param track name of track
 #' @param intervals intervals
+#' @param only_tcpgs use also tracks that have only tidy_cpgs (without cov,meth,unmeth tracks)
 #'
 #' @return
 #' @export
 #'
 #' @examples
 gpatterns.get_tidy_cpgs <- function(track,
-                                    intervals = NULL){
-    if (!gpatterns.track_exists(track)){
+                                    intervals = NULL,
+                                    only_tcpgs = FALSE){
+    if (!gpatterns.track_exists(track) & !only_tcpgs){
         stop('track does not exists')
     }
     files <- .gpatterns.tidy_cpgs_files(track)
+    if (length(files) == 0){
+        stop('no tidy cpgs found')
+    }
 
     .get_tcpgs <- function(files){
         res <- files %>%
@@ -246,7 +251,7 @@ gpatterns.tidy_cpgs_to_pats <- function(track,
         if (nrow(pats) == 0){
             return(tibble(read_id=character(), fid=character(), pat=character()))
         }
-        
+
         pats <- pats %>%
             reshape2::dcast(read_id + fid ~ pat_pos, value.var='meth', fill='*') %>%
             tbl_df
@@ -381,7 +386,7 @@ gpatterns.tracks_to_pat_space <- function(tracks,
                 space <- space %>%
                     mutate(m = cov)
             }
-            
+
             space <- space %>%
                 filter(max(m) >= min_cov) %>%
                 mutate(cg_num=1:n(), chosen_start=which.max(m)) %>%
@@ -398,7 +403,7 @@ gpatterns.tracks_to_pat_space <- function(tracks,
 
         return(space)
     }
-    
+
     res <- gdply(get_max_cov, expr, intervals = intervals, iterator = iterator, nchunks=nchunks, parallel=parallel, gfunc = gextract.left_join, colnames='cov', verbose=verbose)
 
     options(old_opt)
@@ -658,8 +663,6 @@ gpatterns.tidy_cpgs_2_pat_freq <- function(calls, pat_length = 2, min_cov = 1, t
 
 
 
-
-
 #' Generate pileup form tidy_cpgs
 #'
 #' @param calls tidy_cpgs
@@ -802,8 +805,8 @@ gpatterns.plot_cg_cor <- function(tracks,
                                   parallel = getOption('gpatterns.parallel'),
                                   ...){
     names <- names %||% tracks
-    intervals <- .gpatterns.get_intervals(intervals)    
-    
+    intervals <- .gpatterns.get_intervals(intervals)
+
     if (adjacent){
         cors <- tracks %>% plyr::adply(1, function(track)
             .gpatterns.get_cg_cor_adjacent(track, dist_breaks, intervals),

@@ -271,7 +271,7 @@ gpatterns.get_avg_meth <- function(
         }
 
         message(qq('Taking only intervals with variance >= @{round(min_var, digits = 2)}'))
-        vars <- avgs %>% filter(vars >= min_var)
+        avgs <- avgs %>% filter(vars >= min_var)
     }
 
     if (!is.null(min_range)){
@@ -353,6 +353,23 @@ gpatterns.filter_cpgs <- function(intervals,
                          iterator = intervals)
     gvtrack.rm("cpg_count")
     return(intervals)
+}
+
+#' count CpGs in intervals
+#'
+#' @param intervals intervals to filter
+#' @param cgs_track cpgs track (has '1' at every CpG in the genome and '0' or NA otherwise)
+#'
+#' @return
+#' @export
+#'
+#' @examples
+gpatterns.count_cpgs <- function(intervals,
+                                  cgs_track = .gpatterns.genome_cpgs_track) {
+    gvtrack.create("cpg_count", cgs_track, func = "sum")
+    cgs <- gextract.left_join('cpg_count', intervals=intervals, iterator=intervals, colnames=('cpg_num')) %>% select(one_of(c(colnames(intervals), 'cpg_num'))) %>% tbl_df
+    gvtrack.rm("cpg_count")
+    return(cgs)
 }
 
 
@@ -497,7 +514,7 @@ gpatterns.intervals_coverage <- function(tracks,
 
 #' Cluster average methylation of multiple tracks
 #'
-#' @param avgs avgs pre-computed intervals set with average methylation, output of gpatterns.get_avg_meth
+#' @param avgs avgs pre-computed intervals set with average methylation, output of gpatterns.get_avg_meth. 
 #' @param K number of clusters for kmeans++
 #' @param verbose display kmeans++ messages
 #' @param clust_order_func order clusters by clust_order_func [default: mean]
@@ -506,8 +523,10 @@ gpatterns.intervals_coverage <- function(tracks,
 #' 'samp_clust' column with the column cluster
 #' @param ret_hclust return a list with avgs (the clustering result) and
 #' hc (the hclust object)
+#' @param tidy is the input tidy
+#' @param intra_clust_order order within each cluster using hclust (otherwise, the order would be by genomic position)
 #'
-#' @return data frame with the following fields:
+#' @return if tidy: data frame with the following fields:
 #' \itemize{
 #'      \item{'chrom'}{}
 #'      \item{'start'}{}
@@ -517,7 +536,18 @@ gpatterns.intervals_coverage <- function(tracks,
 #'      \item{'samp_clust'}{id of the column cluster (hclust cutree)}
 #'      \item{'clust'}{cluster id}
 #'      \item{'original columns'}{original columns of avgs (meth,unmeth,avg,cov)}
-#' }
+#' } 
+#' if not tidy: data frame with the following fields:
+#' \itemize{
+#'      \item{'chrom'}{}
+#'      \item{'start'}{}
+#'      \item{'end'}{}
+#'      \item{'ord'}{order of intervals within the cluster}
+#'      \item{'samp_clust'}{id of the column cluster (hclust cutree)}
+#'      \item{'clust'}{cluster id}
+#'      \item{'original columns'}{original columns of avgs}
+#' } 
+#' 
 #' @export
 #'
 #' @examples
@@ -525,99 +555,243 @@ gpatterns.cluster_avg_meth <- function(
     avgs,
     K,
     verbose = FALSE,
-    clust_order_func = mean,
-    clust_columns = TRUE,
+    clust_order_func = partial(mean, na.rm=T),
+    clust_columns = FALSE,
     column_k = NULL,
-    ret_hclust = FALSE) {
-
-    avgs_mat <- avgs %>%
+    ret_hclust = FALSE,
+    tidy = TRUE,
+    intra_clust_order = TRUE) {
+    
+    if (tidy){
+        avgs_mat <- avgs %>%
         select(chrom, start, end, samp, avg) %>%
         spread(samp, avg)
+    } else {
+        avgs_mat <- avgs
+    }
+    
     clust <- avgs_mat %>%
         unite('id', chrom, start, end, sep='_') %>%
         TGL_kmeans(K=K,
                    verbose=verbose,
-                   id_column=T) %>%
+                   id_column=TRUE) %>%
         separate(id, c('chrom', 'start', 'end')) %>%
         mutate_at(vars(start, end), as.numeric)
 
-    avgs <- avgs %>%
-        left_join(clust, by=c('chrom', 'start', 'end'))
+    # order clusters    
+    avgs_mat <- avgs_mat %>% left_join(clust, by=c('chrom', 'start', 'end'))
+    summarise_clust <- function(x, clust_order_func) tibble(clust = x$clust[1], m = x %>% select(-clust) %>% as.matrix() %>% clust_order_func())    
 
-    # order clusters
-    avgs <- avgs %>%
-        group_by(clust) %>%
-        mutate(m = clust_order_func(avg)) %>%
-        ungroup %>%
-        group_by(chrom, start, end) %>%
-        mutate(row_mean = mean(avg, na.rm=T)) %>%
-        ungroup %>%
-        arrange(m, row_mean) %>%
-        select(-m, -row_mean)
+    clust_ord <- avgs_mat %>% select(-(chrom:end)) %>% group_by(clust) %>% do({summarise_clust(., clust_order_func)}) %>% ungroup %>% arrange(m) %>% mutate(new_clust = 1:n()) %>% select(-m)
+    avgs_mat <- avgs_mat %>% left_join(clust_ord, by='clust') %>% select(-clust) %>% rename(clust=new_clust) %>% arrange(clust) 
 
-    #order within cluster using hclust
-    avgs <- avgs %>%
-        distinct(clust) %>%
-        mutate(new_clust = 1:(nrow(.))) %>%
-        right_join(avgs, by='clust') %>%
-        select(chrom, start, end, samp, clust=new_clust, meth, unmeth, avg, cov)
-    avgs <- avgs %>%
-        group_by(clust) %>%
-        do(.hclust_order(.,
-                         c('chrom', 'start', 'end'),
-                         'samp',
-                         'avg',
-                         method='ward.D2')) %>%
-        ungroup
+    # order within cluster
+    if (intra_clust_order & !any(is.na(avgs_mat))){
+        # use hclust  
+        avgs_mat <- avgs_mat %>% group_by(clust) %>% do(.hclust_order(., c('chrom', 'start', 'end', 'clust'), NULL, NULL, tidy=FALSE, method='ward.D2')) %>% ungroup     
+    } else {
+        avgs_mat <- avgs_mat %>% group_by(clust) %>% mutate(ord = 1:n())
+    }    
 
+    if (tidy){
+        avgs_mat <- avgs_mat %>% gather('samp', 'avg', -(chrom:end), -clust, -ord) %>% select(chrom, start, end, ord, samp, clust, avg)           
+        avgs <- avgs_mat %>% left_join(avgs %>% select(-avg), by=c('chrom', 'start', 'end', 'samp')) %>% select(chrom, start, end, ord, clust, avg, everything())
+    } else {
+        avgs <- avgs_mat %>% select(chrom, start, end, ord, clust, everything())
+    }
 
     if (clust_columns) {
-        avgs <- .gpatterns.cluster_columns(avgs, column_k = column_k)
+        return(.gpatterns.cluster_columns(avgs, column_k = column_k, ret_hclust=ret_hclust, tidy=tidy))
     }
 
-    if(ret_hclust){
-        return(list(avgs=avgs, hc=hc))
-    }
-
-    return(avgs)
+    return(avgs %>% ungroup)
 }
 
-.gpatterns.cluster_columns <- function(avgs, column_k = NULL){
-    avgs_mat <- avgs %>%
-        select(chrom, start, end, clust, ord, samp, avg) %>%
-        spread(samp, avg)
+#TODO implement for not tidy
+.gpatterns.cluster_columns <- function(avgs, column_k = NULL, ret_hclust=FALSE, tidy=TRUE){
+    if (tidy){
+        avgs_mat <- avgs %>%
+            select(chrom, start, end, clust, ord, samp, avg) %>%
+            spread(samp, avg)    
+    } else {
+        avgs_mat <- avgs
+    }    
+    
     dist_mat <-  avgs_mat %>%
         select(-(chrom:ord)) %>%
         as.matrix() %>%
         t %>%
         dist
+    
     hc <- dist_mat %>%
         hclust(method = "ward.D2")
     hc <- gclus::reorder.hclust(hc, dist_mat)
     ord <- hc$order
 
     samples <- colnames(avgs_mat %>% select(-(chrom:ord)))
-
-    if (!is.null(column_k)){
-        ct <- cutree(hc, k=column_k)
-        samp_clust <- data_frame(samp = as.character(names(ct)), samp_clust=ct) %>%
-            left_join(data_frame(
-                samp = samples[ord],
-                samp_ord = 1:length(samples)), by='samp') %>%
-            arrange(samp_ord)
-        clust_ord <- samp_clust %>%
-            distinct(samp_clust) %>%
-            .$samp_clust
-        samp_clust <- samp_clust %>%
-            mutate(samp_clust = plyr::mapvalues(samp_clust, clust_ord, 1:max(clust_ord))) %>%
-            select(-samp_ord)
-        avgs <- avgs %>%
-            left_join(samp_clust, by='samp') %>%
-            select(chrom, start, end, ord, samp, samp_clust, clust, meth, unmeth, avg, cov)
-
+    if (tidy){
+        if (!is.null(column_k)){
+            ct <- cutree(hc, k=column_k)
+            samp_clust <- data_frame(samp = as.character(names(ct)), samp_clust=ct) %>%
+                left_join(data_frame(
+                    samp = samples[ord],
+                    samp_ord = 1:length(samples)), by='samp') %>%
+                arrange(samp_ord)
+            clust_ord <- samp_clust %>%
+                distinct(samp_clust) %>%
+                .$samp_clust
+            samp_clust <- samp_clust %>%
+                mutate(samp_clust = plyr::mapvalues(samp_clust, clust_ord, 1:max(clust_ord))) %>%
+                select(-samp_ord)
+            avgs <- avgs %>%
+                    left_join(samp_clust, by='samp') %>%
+                    select(chrom, start, end, ord, samp, samp_clust, clust, meth, unmeth, avg, cov) 
+            avgs$samp <- factor(avgs$samp, levels=samples[ord])
+        }
+    } else {
+        browser()
     }
-    avgs$samp <- factor(avgs$samp, levels=samples[ord])
+
+    if (ret_hclust){
+        return(list(avgs=avgs, hc=hc))
+    }
+    
     return(avgs)
+}
+
+#' Plot a heatmap of average methylation clustering
+#'
+#' @inheritParams pheatmap::pheatmap
+#' @param avgs output of gpatterns.cluster_avg_meth
+#' @param fig_ofn output filename of the figure. if NULL would plot to current device
+#' @param width width ('png' parameter)
+#' @param height height ('png' parameter)
+#' @param device plotting device
+#' @param cluster_gaps add gaps between the row clusters
+#' @param annotations data frame with column 'samp' with the sample names and
+#' additional columns of annotation
+#' @param annotation_colors data frame with column 'catergory' with the annotation
+#' field (corresponds to a column in 'annotation', e.g. 'tumor'), 'variable' with the
+#' variable (e.g. 'P1') and 'color' with the color of the variable.
+#' @param annotate_clust annotate the clusters (rows)
+#' @param ... other pheatmap parameters
+#'
+#' @return intervals set with clust column binded to a matrix with loci in rows and samples in columns (ordered by clustering)
+#' @export
+#'
+#' @examples
+gpatterns.plot_clustering <- function(avgs,
+                                      fig_ofn=NULL,
+                                      width=500,
+                                      height=800,
+                                      device='png',
+                                      cluster_gaps=FALSE,
+                                      annotation=NULL,
+                                      annotation_colors=NULL,
+                                      annotate_clust=FALSE,
+                                      color=.blue_red_pal,
+                                      breaks=seq(0,1,0.001),
+                                      main=paste0(comify(n_loci), ' loci'),
+                                      border_color=NA,
+                                      show_rownames=FALSE,
+                                      cluster_rows=FALSE,
+                                      cluster_cols=TRUE,
+                                      method="ward.D2",
+                                      clustering_callback = function(hc, ...){dendsort::dendsort(hc)},
+                                      ...){
+    mat <- avgs %>% arrange(clust, ord, samp) %>% select(chrom, start, end, ord, clust, samp, avg) %>% spread(samp, avg)
+
+    pmat <- mat %>% select(-(chrom:clust)) %>% as.data.frame
+    rownames(pmat) <- paste0(mat$chrom, '_', mat$start, '_', mat$end)
+
+    if (!is.null(annotation)){
+        annots <- annotation %>%
+            filter(samp %in% colnames(pmat)) %>%
+            mutate_if(is.character, factor) %>%
+            as.data.frame
+        rownames(annots) <- annots$samp
+        annots <- annots %>% select(-samp)
+
+        if (!is.null(annotation_colors)){
+            annot_cols <- plyr::dlply(annotation_colors,
+                                      .(type),
+                                      function(x) x %>%
+                                        select(-type) %>%
+                                        spread(variable, color) %>%
+                                         unlist)  
+            annot_cols <- annot_cols[colnames(annots)]         
+        } else {
+            annot_cols <- NA
+        }
+    } else {
+        annots <- NA
+    }
+
+    if (annotate_clust){
+        annots_clust <- avgs %>%
+            distinct(chrom, start, end, clust) %>%
+            unite('id', chrom, start, end, sep='_') %>%
+            mutate(clust = factor(clust)) %>%
+            as.data.frame
+        rownames(annots_clust) <- annots_clust$id
+        annots_clust <- annots_clust %>% select(-id)
+    } else {
+        annots_clust <- NA
+    }
+
+
+    n_loci <- nrow(pmat)
+    if (cluster_gaps){
+        gaps <- annots_clust %>%
+            mutate(i = 1:n()) %>%
+            distinct(clust, .keep_all=T) %>%
+            .$i %>%
+            .[-1]
+    } else {
+        gaps <- NULL
+    }
+    
+    if (!is.null(fig_ofn)){        
+        do.call(device, list(fig_ofn, width = width, height = height))
+    }
+    
+    p <- pheatmap::pheatmap(pmat,
+                            cluster_rows=cluster_rows,
+                            cluster_cols=cluster_cols,
+                            clustering_callback=clustering_callback,
+                            method=method,
+                            color=color,
+                            breaks=breaks,
+                            border_color=border_color,
+                            annotation_col=annots,
+                            show_rownames=show_rownames,
+                            annotation_colors=annot_cols,
+                            annotation_row=annots_clust,
+                            main=main,
+                            gaps_row=gaps,
+                             ...)    
+
+    if (!is.null(fig_ofn)){
+        dev.off()
+    }
+
+    # arrange matrix to return
+    if (cluster_cols){
+        pmat <- pmat[, p$tree_col$order]
+    }
+    if (cluster_rows){
+        pmat <- pmat[p$tree_row$order, ]
+    }
+
+    pmat <- pmat %>%
+        mutate(id = rownames(pmat)) %>%
+        separate(id, c('chrom', 'start', 'end')) %>%
+        mutate_at(c('start', 'end'), as.numeric) %>%
+        left_join(mat %>% distinct(chrom, start, end, clust)) %>%
+        select(chrom, start, end, clust, everything()) %>%
+        tbl_df
+
+    return(pmat)
 }
 
 
@@ -923,9 +1097,10 @@ gpatterns.global_meth_trend <- function(tracks,
 #' @param width plot width
 #' @param height plot height
 #' @param color.pal color pallete
-#' @param device function to open a device if fig.ofn is not NULL. default: 'png'
+#' @param device function to open a device if fig_ofn is not NULL. default: 'png'
 #' @param title_text title text
 #' @param add_n add 'n = number_of_observations' to the title
+#' @param min_cov  minimal coverage for iterator interval.
 #' @param ... other parameters for smoothScatter / gpatterns.get_avg_meth.
 #'
 #' @return None
@@ -944,9 +1119,11 @@ gpatterns.smoothScatter <- function(
     device = "png",
     title_text = NULL,
     add_n = TRUE,
+    min_cov = NULL,
+    min_samples = 2,
     ...) {
 
-    avgs <- avgs %||% .do.call_ellipsis(gpatterns.get_avg_meth, list(tracks=samples, tidy=TRUE), ...)
+    avgs <- avgs %||% .do.call_ellipsis(gpatterns.get_avg_meth, list(tracks=samples, tidy=TRUE, min_cov=min_cov, min_samples=min_samples), ...)
 
 
     if (length(samples) != 2) {
@@ -959,7 +1136,7 @@ gpatterns.smoothScatter <- function(
     stopifnot(length(sample_names) == 2)
 
     if (!is.null(fig_ofn)) {
-        do.call(device, list(fig.ofn, width = width, height = height))
+        do.call(device, list(fig_ofn, width = width, height = height))
     }
 
     if (add_n){
@@ -1007,10 +1184,18 @@ gpatterns.smoothScatter <- function(
     }
 }
 
-.hclust_order <- function(d, keys, variable, value, ...){
-    d_mat <- d %>%
+.hclust_order <- function(d, keys, variable, value, tidy=TRUE, ...){    
+    if (tidy){
+        d_mat <- d %>%
         select(one_of(c(keys, variable, value))) %>%
-        spread_(variable, value)
+        spread_(variable, value)    
+    } else {
+        d_mat <- d
+    }
+
+    # remove empty columns
+    d_mat <- d_mat[, apply(d_mat, 2, function(x) any(!is.na(x)))]
+    
     hc <- d_mat  %>%
         select(-one_of(keys)) %>%
         as.matrix %>%
@@ -1024,61 +1209,20 @@ gpatterns.smoothScatter <- function(
     return(d)
 }
 
-#' Define putative enhancer regions from chip-seq tracks
-#' 
-#' @param min_tss_dist minimal (absolute) distance from TSS
-#' @inheritParams gpatterns.chip2peaks
-#' 
-#' @return intervals set with putative enhancers
 #' @export
-#'
-#' @examples 
-gpatterns.putative_enhancers <- function(chip_tracks,
-                                             quant_thresh=0.999,
-                                             normalize=NULL,
-                                             min_tss_dist=2000,
-                                             logical_gate = '|'){
-    enh <- gpatterns.chip2peaks(chip_tracks=chip_tracks, quant_thresh=quant_thresh, normalize=normalize, logical_gate=logical_gate)
-
-    if (!is.null(min_tss_dist)){
-        enh <- enh %>% gintervals.neighbors1('intervs.global.tss') %>% filter(abs(dist) >= min_tss_dist) %>% select(chrom, start, end)
-    }
-
-    return(enh)
-}
-
-#' Get peak intervals from chip-seq tracks
-#'
-#' @param chip_tracks names of chpseq tracks
-#' @param quant_thresh quantile of chip signal that would be considered as putative enhancer
-#' @param normalize normalize all the regions to have the same size.
-#' if NULL no normalization would be done.
-#' @param logical_gate logical function to combine the different tracks, e.g. '|' '&'
-#'
-#' @return intervals set with peaks
-#' @export
-#'
-#' @examples
-gpatterns.chip2peaks <- function(chip_tracks,
-                                 quant_thresh=0.999,
-                                 normalize=NULL,                                 
-                                 logical_gate = '|'){
-    vtracks <- paste0('v_', chip_tracks)
-    walk2(vtracks, chip_tracks, function(vt, t) gvtrack.create(vt, t, 'global.percentile.max'))
-
-    expr <- paste(sprintf("%s >= %s", vtracks, quant_thresh), collapse=qq(' @{logical_gate} '))
-    peaks <- gscreen(expr)
-
-    if (!is.null(normalize)){
-        peaks <- gintervals.normalize(peaks, normalize)
-    }
-
-    walk(vtracks, gvtrack.rm)
-    return(tbl_df(peaks))
+gpatterns.get_promoters <- function(upstream=500, downstream=50){
+    gintervals.load('intervs.global.tss') %>% mutate(start = ifelse(strand == 1, start - upstream, start - downstream), end = ifelse(strand == 1, end + downstream, end + upstream))
 }
 
 
 
+
+
+gpatterns.get_meth_quantile <- function(tracks, intervals, iterator=NULL, percentiles=seq(0,1,0.01), names=NULL, parallel=TRUE, fig_ofn=NULL, width=800, height=600){
+    names <- names %||% tracks
+    res <- paste0(tracks, '.avg') %>% adply(1, function(x) gquantiles(x, intervals=intervals, iterator=iterator, percentiles=percentiles), .parallel=parallel) %>% tbl_df %>% mutate(sample = names) %>% select(-X1) %>% gather('quant', 'avg', 1:length(percentiles))
+    return(res)
+}
 
 
 # .gpatterns.get_spatial_meth <- function(tracks,

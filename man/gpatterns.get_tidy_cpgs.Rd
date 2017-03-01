@@ -4,12 +4,14 @@
 \alias{gpatterns.get_tidy_cpgs}
 \title{Get tidy cpgs from a track}
 \usage{
-gpatterns.get_tidy_cpgs(track, intervals = NULL)
+gpatterns.get_tidy_cpgs(track, intervals = NULL, only_tcpgs = FALSE)
 }
 \arguments{
 \item{track}{name of track}
 
 \item{intervals}{intervals}
+
+\item{only_tcpgs}{use also tracks that have only tidy_cpgs (without cov,meth,unmeth tracks)}
 }
 \description{
 Get tidy cpgs from a track

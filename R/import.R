@@ -1,6 +1,11 @@
-# Bissli Functions ------------------------------------------------
+# standard tracks generation ------------------------------------------------
 .gpatterns.gen_cg_track <- function(){
 
+}
+
+.gpatterns.gen_next_CG_track <- function(){
+    df <- map_df(gintervals.all()$chrom, ~ gintervals.load(.gpatterns.genome_cpgs_intervals, chrom=.x) %>%  mutate(nextcg = lead(start))) %>% arrange(chrom, start, end)
+    gintervals.save(.gpatterns.genome_next_cpg_intervals, df)
 }
 
 .gpatterns.gen_re_fragments <- function(){
@@ -592,42 +597,44 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
 
 #'@export
 .gpatterns.pat_freq <- function(track, description, pat_freq_len, nbins=NULL, split_by_bin = TRUE, overwrite=TRUE, ...){
-    message(qq('calculating pattern frequency (pattern length: @{pat_freq_len})...'))
+    for (pat_freq_l in pat_freq_len){
+        message(qq('calculating pattern frequency (pattern length: @{pat_freq_l})...'))
 
-    if (!is.null(nbins)){
-        intervals <- gbin_intervals(intervals = gintervals.all(), nbins)
-    } else {
-        intervals <- nbins
-    }
-    pat_freq <- gpatterns.apply_tidy_cpgs(
-            track,
-            function(x)
-                gpatterns.tidy_cpgs_2_pat_freq(x,
-                                               pat_length =
-                                                   pat_freq_len,
-                                               tidy =
-                                                   FALSE),
-            intervals = intervals,
-            split_by_bin = split_by_bin,
-            ...)
-
-
-
-    if (nrow(pat_freq) == 0){
-        warning('no patterns were found. Skipping creation of pattern frequency tracks')
-    } else {
-        message('importing pat_freq to misha...')
-        new_track <- qq('@{track}.pat@{pat_freq_len}')
-        if (gtrack.exists(new_track)){
-            if (overwrite){
-                gtrack.rm(new_track, force=TRUE)
-            } else {
-                return(NULL)
-            }
+        if (!is.null(nbins)){
+            intervals <- gbin_intervals(intervals = gintervals.all(), nbins)
+        } else {
+            intervals <- nbins
         }
-        message(qq('creating @{new_track}'))
-        gtrack.array.import_from_df(df = pat_freq, track=new_track, description=description)
-    }
+        pat_freq <- gpatterns.apply_tidy_cpgs(
+                track,
+                function(x)
+                    gpatterns.tidy_cpgs_2_pat_freq(x,
+                                                   pat_length =
+                                                       pat_freq_l,
+                                                   tidy =
+                                                       FALSE),
+                intervals = intervals,
+                split_by_bin = split_by_bin,
+                ...)
+
+
+
+        if (nrow(pat_freq) == 0){
+            warning('no patterns were found. Skipping creation of pattern frequency tracks')
+        } else {
+            message('importing pat_freq to misha...')
+            new_track <- qq('@{track}.pat@{pat_freq_l}')
+            if (gtrack.exists(new_track)){
+                if (overwrite){
+                    gtrack.rm(new_track, force=TRUE)
+                } else {
+                    return(NULL)
+                }
+            }
+            message(qq('creating @{new_track}'))
+            gtrack.array.import_from_df(df = pat_freq, track=new_track, description=description)
+        }    
+    }    
 }
 
 

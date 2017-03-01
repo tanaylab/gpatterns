@@ -8,9 +8,10 @@ gpatterns.spatial_meth_trend(tracks, intervals, method = "extract",
   dist_breaks = c(-4000000, -1000000, seq(-1000, 1000, 50), 1000000, 4000000),
   iterator = .gpatterns.genome_cpgs_intervals, min_cov = NULL,
   min_cgs = NULL, names = NULL, include.lowest = TRUE, groups = NULL,
-  group_name = NULL, add_vline = TRUE, ncol = 2, nrow = 2,
-  width = 500, height = 260, fig_fn = NULL, xlab = "Distance (bp)",
-  ylim = c(0, 1), title = "", legend = TRUE, colors = NULL,
+  group_name = NULL, add_vline = TRUE, ncol = 2, nrow = 2, width = 5,
+  height = 4, units = "in", pointsize = 12, res = 150, fig_fn = NULL,
+  xlab = "Distance (bp)", ylim = c(0, 1), linewidth = 0.8, title = "",
+  legend = TRUE, colors = NULL,
   parallel = getOption("gpatterns.parallel"))
 }
 \arguments{
@@ -45,6 +46,12 @@ Can be any intervals set, or one of the following 'special' intervals:
 \item{width}{plot width (if fig_fn is not NULL)}
 
 \item{height}{plot height (if fig_fn is not NULL)}
+
+\item{units}{see \code{png}}
+
+\item{pointsize}{see \code{png}}
+
+\item{res}{see \code{png}}
 
 \item{fig_fn}{output filename for the figure (if NULL, figure would be returned)}
 

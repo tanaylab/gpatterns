@@ -7,7 +7,7 @@
 gpatterns.smoothScatter(samples, avgs = NULL, fig_ofn = NULL,
   sample_names = NULL, width = 300, height = 300,
   color.pal = .smooth_scatter_pal2, device = "png", title_text = NULL,
-  add_n = TRUE, ...)
+  add_n = TRUE, min_cov = NULL, min_samples = 2, ...)
 }
 \arguments{
 \item{samples}{a vector of 2 sample names as present in 'samp' filed of avgs, or track names if
@@ -29,11 +29,13 @@ if NULL the sample names would be used.}
 
 \item{color.pal}{color pallete}
 
-\item{device}{function to open a device if fig.ofn is not NULL. default: 'png'}
+\item{device}{function to open a device if fig_ofn is not NULL. default: 'png'}
 
 \item{title_text}{title text}
 
 \item{add_n}{add 'n = number_of_observations' to the title}
+
+\item{min_cov}{minimal coverage for iterator interval.}
 
 \item{...}{other parameters for smoothScatter / gpatterns.get_avg_meth.}
 }
