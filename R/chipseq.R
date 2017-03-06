@@ -41,7 +41,7 @@ gpatterns.chip2peaks <- function(chip_tracks,
     walk2(vtracks, chip_tracks, function(vt, t) gvtrack.create(vt, t, 'global.percentile.max'))
     on.exit(walk(vtracks, gvtrack.rm))
 
-    expr <- paste(sprintf("%s >= %s", vtracks, quant_thresh), collapse=qq(' @{logical_gate} '))
+    expr <- paste(sprintf("%s >= %s", vtracks, quant_thresh), collapse=qq(' @{logical_gate} '))    
     peaks <- gscreen(expr)
 
     if (!is.null(normalize)){
@@ -69,5 +69,5 @@ gpatterns.plot_chip_quantiles <- function(chip_track,
     sig <- gextract(vtrack, intervals=intervals, colnames='signal')
     quant_threshes <- tibble(thresh=quant_threshes, quant=factor(quantiles))
 
-    sig %>% ggplot(aes(x=start, y=-log2(1 - signal))) + geom_col() + geom_hline(data=quant_threshes, aes(yintercept=-log10(1-thresh), color=quant)) + scale_color_discrete(name='threshold\nquantile') + scale_x_continuous(labels=comify) + ylab(qq('-log2(1 - @{chip_track})'))
+    sig %>% ggplot(aes(x=start, y=-log2(1 - signal))) + geom_col() + geom_hline(data=quant_threshes, aes(yintercept=-log2(1-thresh), color=quant)) + scale_color_discrete(name='threshold\nquantile') + scale_x_continuous(labels=comify) + ylab(qq('-log2(1 - @{chip_track})'))
 }
