@@ -141,7 +141,7 @@ gpatterns.set_parallel <- function(thread_num) {
                                               intervals = NULL,
                                               uniq = TRUE){
 
-    files <- list.files(dir, full.names=TRUE, pattern='tcpgs.gz')
+    files <- list.files(gsub('/$', '', dir), full.names=TRUE, pattern='tcpgs.gz')
 
 
     .get_tcpgs <- function(files){
@@ -163,7 +163,7 @@ gpatterns.set_parallel <- function(thread_num) {
 
 
     if (!is.null(intervals)){
-        tidy_intervals <- .gpatterns.get_tidy_cpgs_intervals(path=dir)
+        tidy_intervals <- .gpatterns.get_tidy_cpgs_intervals(path=dir)        
         if (!is.character(intervals)){
             if (all(
                 unite(intervals, 'coord', (chrom:end))$coord %in%
@@ -172,10 +172,12 @@ gpatterns.set_parallel <- function(thread_num) {
                 return(.intervals2files(intervals, files) %>% .get_tcpgs)
             }
         }
+        
         tcpgs <- tidy_intervals %>%
             gintervals.filter(intervals) %>%
             .intervals2files(files) %>%
             .get_tcpgs()
+        
         f <- tcpgs %>%
             select(chrom, start=cg_pos) %>%
             mutate(end = start+1) %>%
@@ -518,5 +520,55 @@ gtrack.create <- function (track = NULL, description = NULL, expr = NULL, iterat
 
 
 
+.check_tracks_exist <- function(tracks, suffixes = c("")) {
+    for (suffix in suffixes) {
+        trs <- paste0(tracks, ".", suffix)
+        if (any(!gtrack.exists(trs))) {
+            message("The following tracks do not exist:")
+            print(trs[!gtrack.exists(trs)])
+            stop()
+        }
+    }
+}
+
+#' @export
+do.call_ellipsis <- function(f, additional_params=list(), ...){
+    f_args <- names(as.list(args(f)))
+    elipsis <- list(...)        
+    if (!is.null(names(elipsis))){
+        new_elipsis <- list()        
+        for (x in names(elipsis)[names(elipsis) %in% f_args]) { 
+            new_elipsis[[x]] <- elipsis[[x]] 
+        }                
+        do.call(f, c(additional_params, new_elipsis))
+    } else {
+        do.call(f, additional_params)
+    }
+}
+
+.hclust_order <- function(d, keys, variable, value, tidy=TRUE, ...){
+    if (tidy){
+        d_mat <- d %>%
+        select(one_of(c(keys, variable, value))) %>%
+        spread_(variable, value)
+    } else {
+        d_mat <- d
+    }
+
+    # remove empty columns
+    d_mat <- d_mat[, apply(d_mat, 2, function(x) any(!is.na(x)))]
+
+    hc <- d_mat  %>%
+        select(-one_of(keys)) %>%
+        as.matrix %>%
+        dist %>%
+        hclust(...)
+    d <- d_mat %>%
+        select(one_of(keys)) %>%
+        mutate(ord=hc$ord) %>%
+        right_join(d, by=keys) %>%
+        arrange(ord)
+    return(d)
+}
 
 
