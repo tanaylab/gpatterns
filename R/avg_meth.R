@@ -1123,9 +1123,12 @@ gpatterns.smoothScatter <- function(
     add_n = TRUE,
     min_cov = NULL,
     min_samples = 2,
+    iterator=NULL,
     ...) {
-
-    avgs <- avgs %||% do.call_ellipsis(gpatterns.get_avg_meth, list(tracks=samples, tidy=TRUE, min_cov=min_cov, min_samples=min_samples), ...)
+    if (is.null(iterator)){
+        iterator <- .gpatterns.cov_track_name(samples[1])        
+    }
+    avgs <- avgs %||% do.call_ellipsis(gpatterns.get_avg_meth, list(tracks=samples, tidy=TRUE, min_cov=min_cov, min_samples=min_samples, iterator=iterator), ...)
 
 
     if (length(samples) != 2) {
@@ -1164,56 +1167,6 @@ gpatterns.smoothScatter <- function(
 
 # Utility Functions ------------------------------------------------
 
-.check_tracks_exist <- function(tracks, suffixes = c("")) {
-    for (suffix in suffixes) {
-        trs <- paste0(tracks, ".", suffix)
-        if (any(!gtrack.exists(trs))) {
-            message("The following tracks do not exist:")
-            print(trs[!gtrack.exists(trs)])
-            stop()
-        }
-    }
-}
-
-#' @export
-do.call_ellipsis <- function(f, additional_params=list(), ...){
-    f_args <- names(as.list(args(f)))
-    elipsis <- list(...)        
-    if (!is.null(names(elipsis))){
-        new_elipsis <- list()        
-        for (x in names(elipsis)[names(elipsis) %in% f_args]) { 
-            new_elipsis[[x]] <- elipsis[[x]] 
-        }                
-        do.call(f, c(additional_params, new_elipsis))
-    } else {
-        do.call(f, additional_params)
-    }
-}
-
-.hclust_order <- function(d, keys, variable, value, tidy=TRUE, ...){
-    if (tidy){
-        d_mat <- d %>%
-        select(one_of(c(keys, variable, value))) %>%
-        spread_(variable, value)
-    } else {
-        d_mat <- d
-    }
-
-    # remove empty columns
-    d_mat <- d_mat[, apply(d_mat, 2, function(x) any(!is.na(x)))]
-
-    hc <- d_mat  %>%
-        select(-one_of(keys)) %>%
-        as.matrix %>%
-        dist %>%
-        hclust(...)
-    d <- d_mat %>%
-        select(one_of(keys)) %>%
-        mutate(ord=hc$ord) %>%
-        right_join(d, by=keys) %>%
-        arrange(ord)
-    return(d)
-}
 
 #' Define promoter regions
 #' @param upstream bp upstream to TSS
