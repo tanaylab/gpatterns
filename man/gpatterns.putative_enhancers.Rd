@@ -25,4 +25,3 @@ intervals set with putative enhancers
 \description{
 Define putative enhancer regions from chip-seq tracks
 }
-

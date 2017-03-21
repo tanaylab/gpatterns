@@ -17,4 +17,3 @@ data frame with chrom,start,end,meth,unmeth,cov,avg
 \description{
 Generate pileup form tidy_cpgs
 }
-

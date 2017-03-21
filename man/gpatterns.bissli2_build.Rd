@@ -23,4 +23,3 @@ Note that bissli2-build can only handle FASTA files as input. Therefore the '-f'
 \description{
 Create an bowtie2 index for a bisulfite converted genome
 }
-

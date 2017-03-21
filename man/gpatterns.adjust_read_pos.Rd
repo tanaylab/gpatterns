@@ -25,4 +25,3 @@ changes the coordinates of tidy_cpgs to the fragment coordinates.
 This is necessary to avoid over-counting of reads with coordinates that are
 shifted by several bps from the restriction site.
 }
-

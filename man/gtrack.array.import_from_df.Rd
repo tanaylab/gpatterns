@@ -16,4 +16,3 @@ gtrack.array.import_from_df(df, track, description)
 \description{
 Import array from data frame
 }
-

@@ -66,4 +66,3 @@ intervals set with clust column binded to a matrix with loci in rows and samples
 \description{
 Plot a heatmap of average methylation clustering
 }
-

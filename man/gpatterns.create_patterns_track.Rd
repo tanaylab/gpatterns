@@ -38,4 +38,3 @@ warning: may lose data}
 \description{
 Creates patterns attributes of track
 }
-

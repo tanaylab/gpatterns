@@ -72,4 +72,3 @@ and low for CpG dense regions (e.g. CpG islands).
 \examples{
 
 }
-

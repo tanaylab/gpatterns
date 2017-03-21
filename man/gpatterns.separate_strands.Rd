@@ -24,4 +24,3 @@ none
 \description{
 Separate a track by strands (for QC purposes)
 }
-

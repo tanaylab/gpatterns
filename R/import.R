@@ -52,7 +52,7 @@
 #' if 'ct_ga' reads would be aligned to both C->T and G->A, and the best match would
 #' be chosen.
 #'
-#' @param tmp_dir Directorhy for storing temporary files
+#' @param tmp_dir Directory for storing temporary files
 #' @param bissli2_params additional parameters to bissli2/bowtie2
 #'
 #' @return
@@ -633,8 +633,8 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
             }
             message(qq('creating @{new_track}'))
             gtrack.array.import_from_df(df = pat_freq, track=new_track, description=description)
-        }    
-    }    
+        }
+    }
 }
 
 

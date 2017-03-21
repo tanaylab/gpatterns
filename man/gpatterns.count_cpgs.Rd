@@ -14,4 +14,3 @@ gpatterns.count_cpgs(intervals, cgs_track = .gpatterns.genome_cpgs_track)
 \description{
 count CpGs in intervals
 }
-

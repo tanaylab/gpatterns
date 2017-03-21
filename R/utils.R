@@ -229,6 +229,108 @@ gpatterns.track_exists <- function(track){
 }
 
 
+# Plotting functions
+
+
+
+#' wrapper around pheatmap
+#' 
+#' @export
+pheatmap1 <- function(pmat, annotation=NULL, annotation_colors=NULL, annotation_col=NULL, annotation_row = NULL, id_column = TRUE, border_color=NA, clustering_callback = function(hc, ...){dendsort::dendsort(hc)}, ...){
+    pmat <- as.data.frame(pmat)
+    id_colname <- 'samp'
+    if (id_column){
+        id_colname <- colnames(pmat)[1]
+        ids <- pmat[, 1]
+        pmat <- pmat[, -1]
+        rownames(pmat) <- ids
+    }
+    
+    if (!is.null(annotation)){
+
+        annotation <- annotation %>% rename_(.dots = setNames(id_colname, 'samp') )
+        annots <- annotation %>%
+            filter(samp %in% colnames(pmat) | samp %in% rownames(pmat)) %>%
+            mutate_if(is.character, factor) %>%
+            as.data.frame
+        rownames(annots) <- annots$samp
+        annots <- annots %>% select(-samp)
+
+        if (!is.null(annotation_colors)){
+            annot_cols <- plyr::dlply(annotation_colors,
+                                      .(type),
+                                      function(x) x %>%
+                                        select(-type) %>%
+                                        spread(variable, color) %>%
+                                         unlist)  
+            annot_cols <- annot_cols[colnames(annots)]         
+        } else {
+            annot_cols <- NA
+        }
+    } else {
+        annots <- NA
+    }
+
+    if (!is.null(annotation_col)){
+        annotation_col <- annots[, annotation_col]
+    } else {
+        annotation_col <- NA
+    }
+
+    if (!is.null(annotation_row)){
+        annotation_row <- annots[, annotation_row]
+    } else {
+        annotation_row <- NA
+    }
+    
+    pheatmap::pheatmap(pmat,
+                            border_color=border_color,
+                            annotation_col=annotation_col,                            
+                            annotation_colors=annot_cols,
+                            annotation_row=annotation_row,   
+                            clustering_callback=clustering_callback,                 
+                             ...)    
+}
+
+
+
+#' Build a gradient pallete based on colors at specific values.
+#' 
+#' @param shades dataframe with columns:
+#'     - point - the values at which the pure colors should be set
+#'     - color - the pure colors 
+#' @param length number of colors
+#' 
+#' @export
+build_pallette <- function(shades, length)
+
+{
+
+    from <- min(shades$point)
+
+    to <- max(shades$point)
+
+    values <- seq(from, to, length.out=length)
+
+    
+
+    colors <- shades$color[order(shades$point)]
+
+    points <- sapply(sort(shades$point), function(p) which.min(abs(values-p)))
+
+    lens <- points[-1] - points[-length(points)] + 1
+
+
+
+    palette <- lapply(1:(length(points)-1), function(i) colorRampPalette(c(colors[i], colors[i+1]), space="Lab")(lens[i]))
+
+    palette[-1] <- lapply(palette[-1], function(p) p[-1])
+
+    return (do.call(c, palette))
+
+}
+
+
 
 # Misha overrides ------------------------------------------------
 

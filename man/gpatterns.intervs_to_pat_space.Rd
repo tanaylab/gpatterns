@@ -37,4 +37,3 @@ gpatterns.intervs_to_pat_space(tracks, intervals, pat_len, adjacent = TRUE,
 \description{
 Generate pattern space for specific genomic loci
 }
-

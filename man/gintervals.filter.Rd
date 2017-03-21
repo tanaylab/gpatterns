@@ -25,4 +25,3 @@ gintervals.filter(intervals1, intervals2, max_distance = 0, abs_dist = TRUE,
 Filter intervals set by distance to another.
 A wrapper around gintervals.neighbours and filter(dist <= max_distance)
 }
-

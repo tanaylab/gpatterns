@@ -17,4 +17,3 @@ gpatterns.filter_cpgs(intervals, min_cpgs,
 \description{
 Filter intervals by number of CpGs
 }
-

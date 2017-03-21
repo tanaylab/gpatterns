@@ -89,7 +89,10 @@ gpatterns.get_avg_meth <- function(
     sum_tracks = FALSE) {
 
     .check_tracks_exist(tracks, c('meth', 'unmeth'))
-    min_samples <- min_samples %||% 1
+    if (!is.null(min_cov)){
+        min_samples <- min_samples %||% 1    
+    }
+    
 
     if (is.null(iterator) && length(tracks) == 1){
         iterator <- .gpatterns.meth_track_name(tracks)
@@ -250,7 +253,7 @@ gpatterns.get_avg_meth <- function(
         expr <- qq('@{meth_expr} / ( @{meth_expr} + @{unmeth_expr} )')
     } else {
         expr <- qqv('@{vtracks_meth} / ( @{vtracks_meth} + @{vtracks_unmeth} )')
-    }
+    }    
 
     avgs <- gextract(expr, intervals=intervals, iterator=iterator, colnames=names, file=file, intervals.set.out = intervals.set.out)
 

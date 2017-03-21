@@ -12,4 +12,3 @@ gpatterns.calc_epipoly(patterns)
 \description{
 Calculate epipolymorphism of samples
 }
-

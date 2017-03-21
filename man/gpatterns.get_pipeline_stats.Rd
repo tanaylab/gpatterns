@@ -19,4 +19,3 @@ gpatterns.get_pipeline_stats(track, tidy_cpgs_stats_dir,
 \description{
 Get QC statistics for track
 }
-

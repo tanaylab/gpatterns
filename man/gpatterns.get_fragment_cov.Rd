@@ -26,4 +26,3 @@ field with the fragment coverage
 get number of molecules per each fragment for a track. This can
 give us some upper bound of the number of methylation patterns per fragment.
 }
-

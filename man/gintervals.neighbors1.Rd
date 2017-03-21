@@ -14,4 +14,3 @@ Finds neighbors between two sets of intervals (and does not return conflicting c
 \seealso{
 \link[misha]{gintrevals.neighbours}
 }
-

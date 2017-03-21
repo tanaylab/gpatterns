@@ -30,4 +30,3 @@ gvextract(tracks, intervals, colnames = NULL, iterator = NULL,
 \description{
 Creates a virtual track and runs gextract
 }
-

@@ -12,4 +12,3 @@ gpatterns.clean_pattern(pattern)
 \description{
 Returns TRUE if pattern is fully methylated / unmethylated and FALSE if not
 }
-

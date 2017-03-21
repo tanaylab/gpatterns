@@ -17,4 +17,3 @@ gpatterns.plot_chip_quantiles(chip_track, intervals, quantiles = c(0.8, 0.9,
 \description{
 Plot chip-seq singal with quantile lines
 }
-

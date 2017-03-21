@@ -14,4 +14,3 @@ gpatterns.downsample_patterns(patterns, dsn)
 \description{
 Downsample patterns table
 }
-

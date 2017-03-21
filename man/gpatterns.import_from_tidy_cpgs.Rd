@@ -43,4 +43,3 @@ gpatterns.import_from_tidy_cpgs(tidy_cpgs, track, description, steps = "all",
 \description{
 Create a track from tidy_cpgs files
 }
-

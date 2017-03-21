@@ -5,8 +5,11 @@
 \title{Effiecient implementation of kmeans++ algorithm}
 \usage{
 TGL_kmeans(tab, K, id_column = FALSE, allow_nas = TRUE, verbose = FALSE,
-  fn = NULL, tab_file = FALSE, TGL_kmeans_bin = sprintf("\%s/\%s",
-  system.file("bin", package = "gpatterns"), "TGLKMeans_static"))
+  fn = NULL, tab_file = FALSE, order_rows = TRUE,
+  clust_order_func = partial(mean, na.rm = T), row_order_func = NULL,
+  method = "ward.D2", row_order_column = FALSE,
+  TGL_kmeans_bin = sprintf("\%s/\%s", system.file("bin", package =
+  "gpatterns"), "TGLKMeans_static"))
 }
 \arguments{
 \item{tab}{table}
@@ -23,9 +26,18 @@ TGL_kmeans(tab, K, id_column = FALSE, allow_nas = TRUE, verbose = FALSE,
 
 \item{tab_file}{tab_file}
 
+\item{order_rows}{order_rows}
+
+\item{clust_order_func}{clust_order_func}
+
+\item{row_order_func}{row_order_func}
+
+\item{method}{method}
+
+\item{row_order_column}{row_order_column}
+
 \item{TGL_kmeans_bin}{TGL_kmeans_bin}
 }
 \description{
 Effiecient implementation of kmeans++ algorithm
 }
-

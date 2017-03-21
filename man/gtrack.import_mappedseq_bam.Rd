@@ -17,4 +17,3 @@ Wrapper around gtrack.import_mappedseq for (multiple) bam files
 \seealso{
 \link[misha]{gtrack.import_mappedseq}
 }
-

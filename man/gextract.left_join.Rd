@@ -33,4 +33,3 @@ iterator intervals, and cbinds the intervals (instead of intervalID)
 \seealso{
 \link[misha]{gextract}
 }
-

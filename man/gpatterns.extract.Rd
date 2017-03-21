@@ -37,4 +37,3 @@ gpatterns.extract(..., intervals, colnames = NULL, elements = c("fid",
 \description{
 Extract pattern data
 }
-

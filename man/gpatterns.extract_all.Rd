@@ -24,4 +24,3 @@ gpatterns.extract_all(..., samples = NULL, elements = c("fid", "ncpg", "n",
 \description{
 Extract pattern data from tracks without specifying coordinates
 }
-

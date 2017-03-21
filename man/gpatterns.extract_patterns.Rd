@@ -18,4 +18,3 @@ gpatterns.extract_patterns(track, fids = NULL, tidy = TRUE, dsn = NULL)
 \description{
 Extract patterns of a track
 }
-

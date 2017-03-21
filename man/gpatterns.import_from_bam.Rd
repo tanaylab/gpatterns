@@ -74,4 +74,3 @@ if 'stats' is one of the steps - data frame with statistics. Otherwise none.
 \description{
 Creates a track from bam files.
 }
-
