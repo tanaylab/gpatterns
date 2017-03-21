@@ -40,4 +40,3 @@ Plots epipolymorphism
 \examples{
 
 }
-

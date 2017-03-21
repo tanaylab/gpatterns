@@ -11,4 +11,3 @@ cume_dist_min(x)
 For every value of x, return the number of values with a strictly
 lower rank than x.
 }
-

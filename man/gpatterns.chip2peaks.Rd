@@ -23,4 +23,3 @@ intervals set with peaks
 \description{
 Calculate peaks of chip-seq tracks
 }
-

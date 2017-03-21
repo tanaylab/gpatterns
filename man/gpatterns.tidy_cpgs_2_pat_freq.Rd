@@ -20,4 +20,3 @@ be 00,01,10,11}
 \description{
 Generate CpG pattern frequency from tidy_cpgs
 }
-

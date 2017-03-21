@@ -42,4 +42,3 @@ list with trend data frame (under 'trend') and the plot (under 'p')
 \description{
 Plot CpG correlation (pearson) as a function of distance between CpGs
 }
-

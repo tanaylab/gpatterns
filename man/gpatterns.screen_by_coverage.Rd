@@ -27,4 +27,3 @@ is NULL it would be set to 1.}
 \description{
 screen intervals by coverage in multiple tracks
 }
-

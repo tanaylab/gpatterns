@@ -42,4 +42,3 @@ gpatterns.calc_bipolarity(track, uniform_mix = 0.05, max_sampling_n = 1000,
 \description{
 Run bipolar model
 }
-

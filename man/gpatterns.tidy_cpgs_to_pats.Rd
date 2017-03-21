@@ -29,4 +29,3 @@ needs to have the following fields: chrom,start,end,fid}
 \description{
 Extracts patterns given pattern space
 }
-

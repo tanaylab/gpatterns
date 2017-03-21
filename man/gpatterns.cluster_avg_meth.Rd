@@ -41,7 +41,7 @@ if tidy: data frame with the following fields:
      \item{'samp_clust'}{id of the column cluster (hclust cutree)}
      \item{'clust'}{cluster id}
      \item{'original columns'}{original columns of avgs (meth,unmeth,avg,cov)}
-} 
+}
 if not tidy: data frame with the following fields:
 \itemize{
      \item{'chrom'}{}
@@ -56,4 +56,3 @@ if not tidy: data frame with the following fields:
 \description{
 Cluster average methylation of multiple tracks
 }
-

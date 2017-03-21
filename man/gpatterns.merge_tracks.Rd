@@ -35,4 +35,3 @@ In addition, if \code{merge_tidy_cpgs} is TRUE, creates a union of tidy_cpgs of 
 pattern frequency and pattern coverage for the combined tidy_cpgs.
 If patterns attributes are present, they will be combined and calculated for the new track.
 }
-

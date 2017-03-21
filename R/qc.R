@@ -90,7 +90,7 @@ gpatterns.get_pipeline_stats <- function(track,
 #' @return
 #'
 #' @examples
-.gpatterns.ds_stats <- function(track, dsns, bam = NULL, fastq = NULL, intervals=NULL, sort_rand=FALSE){
+.gpatterns.ds_stats <- function(track, dsns, bam = NULL, fastq = NULL, tidy_cpgs_dir = NULL, intervals=NULL, sort_rand=FALSE){
     stats <- list()
     stats[['cg_num']] <- tibble(dsn=numeric(), cg_num=numeric())
     stats[['meth_calls']] <- tibble(dsn=numeric(), meth_calls=numeric())
@@ -103,9 +103,14 @@ gpatterns.get_pipeline_stats <- function(track,
 
     for (dsn in dsns){
         message(qq('doing @{dsn}'))
+        if (!is.null(tidy_cpgs_dir)){
+            non_uniq_tcpgs <- .gpatterns.get_tidy_cpgs_from_dir(tidy_cpgs_dir, intervals=intervals, uniq=FALSE)
+        }
         tcpgs <- gpatterns.get_tidy_cpgs(track, intervals=intervals, only_tcpgs=TRUE)
+ 
         all_tcpgs <- gpatterns.get_tidy_cpgs(track, only_tcpgs=TRUE)
 
+        ids <- -1
         if (!is.null(fastq)){
             message('sampling from fastq')
             cmd <- qq('gzip -d -c @{paste(fastq, collapse=" ")} | sed -n 1~4p | @{sort_rand_str} head -n @{dsn}')
@@ -118,12 +123,19 @@ gpatterns.get_pipeline_stats <- function(track,
             cmd <- qq('samtools view @{bam} | sed -n 1~2p | cut -f1 | @{sort_rand_str} head -n @{dsn}')
             ids <- fread(cmd, 
                 sep='\t', header=F)[,1]
+        } else if (!is.null(tidy_cpgs_dir)){
+            message('sampling from non unique tidy cpgs')            
+            if (length(unique(tcpgs$read_id)) >= dsn){
+                ids <- non_uniq_tcpgs %>% distinct(read_id) %>% sample_n(dsn) %>% .$read_id
+            }                        
         } else {
             message('sampling from tidy cpgs')
-            ids <- tcpgs %>% distinct(read_id, num) %>% sample_n(dsn) %>% .$read_id
+            if (length(unique(tcpgs$read_id)) >= dsn){
+                ids <- tcpgs %>% distinct(read_id, num) %>% sample_n(dsn) %>% .$read_id
+            }            
         }
 
-        if (length(ids) == dsn){
+        if (length(ids) == dsn){            
             tcpgs <- tcpgs %>% filter(read_id %in% ids)
             all_tcpgs <- all_tcpgs %>% filter(read_id %in% ids)
             stats[['cg_num']] <- stats[['cg_num']] %>% bind_rows(tibble(dsn=dsn, cg_num = tcpgs %>% distinct(chrom, cg_pos) %>% nrow))

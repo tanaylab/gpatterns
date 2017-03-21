@@ -89,4 +89,3 @@ intervals would not be limited to a specific part of the genome, and, for
 example, if iterator=NULL, methylation would be extracted from all the
 genomic CpGs.
 }
-

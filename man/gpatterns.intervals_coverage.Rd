@@ -31,4 +31,3 @@ intervals set with 'sum' column containing the total coverage (sum) in all the t
 \description{
 Get coverage of intervals in multiple tracks
 }
-

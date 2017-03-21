@@ -12,4 +12,3 @@ gpatterns.border_pattern(pattern)
 \description{
 Returns TRUE if pattern is a 'border' pattern
 }
-

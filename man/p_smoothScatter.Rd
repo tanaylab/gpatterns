@@ -9,4 +9,3 @@ p_smoothScatter(.data, .x, .y, xlab = NULL, ylab = NULL, ...)
 \description{
 Smoothscatter that works with the pipe operator
 }
-

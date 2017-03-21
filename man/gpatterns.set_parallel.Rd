@@ -19,4 +19,3 @@ Set parallel threads
 gpatterns.set_parallel(8)
 
 }
-

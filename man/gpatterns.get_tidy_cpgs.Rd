@@ -16,4 +16,3 @@ gpatterns.get_tidy_cpgs(track, intervals = NULL, only_tcpgs = FALSE)
 \description{
 Get tidy cpgs from a track
 }
-

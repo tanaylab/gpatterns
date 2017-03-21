@@ -10,4 +10,3 @@ gtrack.create_sparse(track = NULL, description = NULL, intervals = NULL,
 \description{
 overrides gtrack.create_sparse without rescaning database
 }
-

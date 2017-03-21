@@ -22,4 +22,3 @@ gpatterns.get_pat_cov(track, pat_len, max_span = 500, by_coord_bin = TRUE,
 \description{
 Calculate pattern coverage for each CpG
 }
-

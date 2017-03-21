@@ -8,6 +8,11 @@
 #' @param verbose verbose
 #' @param fn fn
 #' @param tab_file tab_file
+#' @param order_rows order_rows
+#' @param clust_order_func clust_order_func
+#' @param row_order_func row_order_func
+#' @param method method
+#' @param row_order_column row_order_column 
 #' @param TGL_kmeans_bin TGL_kmeans_bin
 #'
 #' @return
@@ -20,7 +25,12 @@ TGL_kmeans <- function(tab,
                         allow_nas = TRUE,
                         verbose = FALSE,
                         fn = NULL,
-                        tab_file = FALSE,
+                        tab_file = FALSE,           
+                        order_rows = TRUE,
+                        clust_order_func = partial(mean, na.rm=T),
+                        row_order_func = NULL,
+                        method='ward.D2',
+                        row_order_column = FALSE,
                         TGL_kmeans_bin = sprintf("%s/%s",
                                                  system.file("bin", package="gpatterns"),
                                                  'TGLKMeans_static')){
@@ -48,11 +58,38 @@ TGL_kmeans <- function(tab,
         ignore.stdout = !verbose,
         ignore.stderr = !verbose)
 
-    tab_k <- fread(paste(fn, "kclust", sep="."), header=T, colClasses=c('character', 'numeric'))
-    if (id_column){
-        colnames(tab_k)[1] <- id.col.name
+    tab_k <- fread(paste(fn, "kclust", sep='.'), header=T, colClasses=c('character', 'numeric'))    
+    tab$clust <- tab_k$clust    
+
+    summarise_clust <- function(x, clust_order_func) {
+        tibble(clust = x$clust[1], m = x %>% select(-clust) %>% as.matrix() %>% clust_order_func())
     }
-    return(tab_k)
+    clust_ord <- tab %>% select(-id) %>% group_by(clust) %>% do({summarise_clust(., clust_order_func)}) %>% ungroup %>% arrange(m) %>% mutate(new_clust = 1:n()) %>% select(-m)
+    tab <- tab %>% left_join(clust_ord, by='clust') %>% select(-clust) %>% rename(clust=new_clust) %>% arrange(clust)
+    
+    if (order_rows){
+        if (!is.null(row_order_func)) {        
+            tab <- tab %>% plyr::ddply(.(clust), function(x) {
+                    x$m <- apply(x %>% select(-id, -clust), 1, row_order_func)
+                    x %>% arrange(m) %>% mutate(ord=1:nrow(x)) %>% select(-m)} ) %>%
+                select(id, clust, ord, everything())
+            tab <- tab %>% group_by(clust) %>% mutate(ord = 1:n()) %>% ungroup %>% select(id, clust, ord, everything()) %>% arrange(clust, ord)
+        } else {
+            tab <- tab %>% group_by(clust) %>% do(.hclust_order(., c('id', 'clust'), NULL, NULL, tidy=FALSE, method=method)) %>% ungroup %>% arrange(clust, ord)
+        }
+    } else {
+        tab <- tab %>% group_by(clust) %>% mutate(ord = 1:n()) %>% ungroup %>% select(id, clust, ord, everything()) %>% arrange(clust, ord)
+    }
+   
+    if (id_column){
+        colnames(tab)[1] <- id.col.name
+    }
+
+    if (!row_order_column){
+        tab <- tab %>% select(-ord)
+    }
+
+    return(tab)
 }
 
 

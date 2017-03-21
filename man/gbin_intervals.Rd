@@ -18,4 +18,3 @@ intervals the original intervals would be returned
 \description{
 split genomic intervals to bins
 }
-

@@ -32,4 +32,3 @@ of \code{track}
 \description{
 Apply a function on tidy cpgs (internally separated by coordinates)
 }
-

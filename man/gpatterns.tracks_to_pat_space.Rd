@@ -23,4 +23,3 @@ gpatterns.tracks_to_pat_space(tracks, pat_len, max_span = NULL,
 \description{
 Generate pattern space
 }
-

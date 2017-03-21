@@ -41,11 +41,10 @@ conversion while read 2 underwent C->T conversion.
 if 'ct_ga' reads would be aligned to both C->T and G->A, and the best match would
 be chosen.}
 
-\item{tmp_dir}{Directorhy for storing temporary files}
+\item{tmp_dir}{Directory for storing temporary files}
 
 \item{bissli2_params}{additional parameters to bissli2/bowtie2}
 }
 \description{
 Align bisulfite converted reads to a reference genome using bowtie2
 }
-

@@ -75,4 +75,3 @@ calculates the distance of \code{tracks} values from \code{intervals}
 bins the distances based on \code{dist_breaks}, and then calculates the average
 methylation \code{m / (m + um)} in each bin and plots the results.
 }
-

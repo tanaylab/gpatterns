@@ -61,4 +61,3 @@ Runs R commands on a cluster that supports SGE
 \seealso{
 \link[misha]{gcluster.run}
 }
-

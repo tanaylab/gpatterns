@@ -24,4 +24,3 @@ An array that contains the names of tracks that match the supplied patterns
 \description{
 Returns a list of gpatterns tracks in the genomic database
 }
-

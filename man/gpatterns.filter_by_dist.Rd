@@ -24,4 +24,3 @@ gpatterns.filter_by_dist(intervals, annot_intervs = NULL,
 \description{
 Filter intervals set by distance from another intervals set
 }
-
