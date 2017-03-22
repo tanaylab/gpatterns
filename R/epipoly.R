@@ -251,7 +251,6 @@ gpatterns.calc_bipolarity <- function(track,
         res <- gcluster.run2(command_list = commands,
                              max.jobs = max_jobs,
                              debug = verbose,
-                             packages = 'gpatterns',
                              jobs_title = 'gpatterns.bipolar_model',
                              collapse_results = TRUE,
                              ...)
