@@ -1,3 +1,5 @@
+// [[Rcpp::depends(BH)]]
+
 /*
  * MethylPatternData.h
  *
@@ -8,6 +10,8 @@
 #ifndef METHYLPATTERNDATA_H_
 #define METHYLPATTERNDATA_H_
 
+
+#include <Rcpp.h>
 #include "ModelData.h"
 #include <boost/functional/hash.hpp>
 #include <unordered_set>

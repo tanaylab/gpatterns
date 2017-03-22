@@ -5,7 +5,7 @@
 \title{Plot spatial trend of methylation around intervals}
 \usage{
 gpatterns.spatial_meth_trend(tracks, intervals, method = "extract",
-  dist_breaks = c(-4000000, -1000000, seq(-1000, 1000, 50), 1000000, 4000000),
+  dist_breaks = c(-4e+06, -1e+06, seq(-1000, 1000, 50), 1e+06, 4e+06),
   iterator = .gpatterns.genome_cpgs_intervals, min_cov = NULL,
   min_cgs = NULL, names = NULL, include.lowest = TRUE, groups = NULL,
   group_name = NULL, add_vline = TRUE, ncol = 2, nrow = 2, width = 5,
