@@ -25,35 +25,11 @@ gpatterns.plot_clustering(avgs, fig_ofn = NULL, width = 500, height = 800,
 
 \item{cluster_gaps}{add gaps between the row clusters}
 
-\item{annotation}{deprecated parameter that currently sets the annotation_col if it is missing}
-
 \item{annotation_colors}{data frame with column 'catergory' with the annotation
 field (corresponds to a column in 'annotation', e.g. 'tumor'), 'variable' with the
 variable (e.g. 'P1') and 'color' with the color of the variable.}
 
 \item{annotate_clust}{annotate the clusters (rows)}
-
-\item{color}{vector of colors used in heatmap.}
-
-\item{breaks}{a sequence of numbers that covers the range of values in mat and is one
-element longer than color vector. Used for mapping values to colors. Useful, if needed
-to map certain values to certain colors, to certain values. If value is NA then the
-breaks are calculated automatically.}
-
-\item{main}{the title of the plot}
-
-\item{border_color}{color of cell borders on heatmap, use NA if no border should be
-drawn.}
-
-\item{show_rownames}{boolean specifying if column names are be shown.}
-
-\item{cluster_rows}{boolean values determining if rows should be clustered or \code{hclust} object,}
-
-\item{cluster_cols}{boolean values determining if columns should be clustered or \code{hclust} object.}
-
-\item{clustering_callback}{callback function to modify the clustering. Is
-called with two parameters: original \code{hclust} object and the matrix
-used for clustering. Must return a \code{hclust} object.}
 
 \item{...}{other pheatmap parameters}
 

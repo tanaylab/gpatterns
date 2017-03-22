@@ -10,7 +10,7 @@ Description: Package for import and analysis of DNA methylation (5mC) data.
     both average methylation and epipolymorphism of multiple samples.
 URL: https://bitbucket.org/tanaylab/gpatterns
 Depends:
-    R (>= 3.2.4),
+    R (>= 3.2.2),
     misha
 Imports:
     plyr,
@@ -30,7 +30,8 @@ Imports:
     doMC,
     parallel,
     GetoptLong,
-    Rcpp
+    Rcpp,
+    BH
 BinaryFiles: inst/bin/mpms
     inst/bin/TGLKmeans_static
 SystemRequirements: C++11
@@ -42,5 +43,7 @@ Suggests:
     testthat,
     knitr,
     rmarkdown
-LinkingTo: Rcpp
+LinkingTo: 
+	Rcpp,
+        BH
 VignetteBuilder: knitr
