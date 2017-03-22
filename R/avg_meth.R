@@ -573,28 +573,18 @@ gpatterns.cluster_avg_meth <- function(
         avgs_mat <- avgs
     }
 
-    clust <- avgs_mat %>%
+    avgs_mat <- avgs_mat %>%
         unite('id', chrom, start, end, sep='_') %>%
         TGL_kmeans(K=K,
                    verbose=verbose,
-                   id_column=TRUE) %>%
+                   id_column=TRUE,
+                   clust_order_func=clust_order_func,
+                   order_rows=TRUE,
+                   row_order_func=NULL,
+                   method='ward.D2',
+                   row_order_column = TRUE) %>%
         separate(id, c('chrom', 'start', 'end')) %>%
-        mutate_at(vars(start, end), as.numeric)
-
-    # order clusters
-    avgs_mat <- avgs_mat %>% left_join(clust, by=c('chrom', 'start', 'end'))
-    summarise_clust <- function(x, clust_order_func) tibble(clust = x$clust[1], m = x %>% select(-clust) %>% as.matrix() %>% clust_order_func())
-
-    clust_ord <- avgs_mat %>% select(-(chrom:end)) %>% group_by(clust) %>% do({summarise_clust(., clust_order_func)}) %>% ungroup %>% arrange(m) %>% mutate(new_clust = 1:n()) %>% select(-m)
-    avgs_mat <- avgs_mat %>% left_join(clust_ord, by='clust') %>% select(-clust) %>% rename(clust=new_clust) %>% arrange(clust)
-
-    # order within cluster
-    if (intra_clust_order & !any(is.na(avgs_mat))){
-        # use hclust
-        avgs_mat <- avgs_mat %>% group_by(clust) %>% do(.hclust_order(., c('chrom', 'start', 'end', 'clust'), NULL, NULL, tidy=FALSE, method='ward.D2')) %>% ungroup
-    } else {
-        avgs_mat <- avgs_mat %>% group_by(clust) %>% mutate(ord = 1:n())
-    }
+        mutate_at(vars(start, end), as.numeric)  
 
     if (tidy){
         avgs_mat <- avgs_mat %>% gather('samp', 'avg', -(chrom:end), -clust, -ord) %>% select(chrom, start, end, ord, samp, clust, avg)
@@ -701,8 +691,14 @@ gpatterns.plot_clustering <- function(avgs,
                                       cluster_cols=TRUE,
                                       method="ward.D2",
                                       clustering_callback = function(hc, ...){dendsort::dendsort(hc)},
+                                      tidy = TRUE,
                                       ...){
-    mat <- avgs %>% arrange(clust, ord, samp) %>% select(chrom, start, end, ord, clust, samp, avg) %>% spread(samp, avg)
+    if (tidy){
+        mat <- avgs %>% arrange(clust, ord, samp) %>% select(chrom, start, end, ord, clust, samp, avg) %>% spread(samp, avg)    
+    } else {
+        mat <- avgs
+    }
+    
 
     pmat <- mat %>% select(-(chrom:clust)) %>% as.data.frame
     rownames(pmat) <- paste0(mat$chrom, '_', mat$start, '_', mat$end)    

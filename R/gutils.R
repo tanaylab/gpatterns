@@ -399,13 +399,9 @@ gcluster.run2 <- function (...,
                            memory_flag = '-l mem_free=@{memory}G',
                            threads_flag = '-pe threads @{threads}',
                            io_saturation_flag = '-l io_saturation=@{io_saturation}',
-                           script = paste(get(".GLIBDIR"), "exec", "sgjob.sh", sep = "/")){
+                           script =paste(Sys.getenv('ANALYSIS_HOME'), 'common', 'sgjob.sh', sep='/')){
 
-    if (!is.null(command_list)){
-        if (!is.null(packages)){
-            packages_command <- paste(sprintf("library('%s');", packages), collapse=' ')
-            commands <- purrr::map(command_list, function(x) paste('{ ', packages_command, x, ' }'))
-        }
+    if (!is.null(command_list)){ 
         commands <- purrr::map(command_list, function(x) parse(text=x))
     } else {
         commands <- as.list(substitute(list(...))[-1L])
@@ -422,7 +418,7 @@ gcluster.run2 <- function (...,
     }
 
     if (length(commands) < 1)
-        stop("Usage: gculster.run2(..., command_list = NULL, opt.flags = \"\" max.jobs = 400, debug = FALSE)",
+        stop("Usage: gcluster.run2(..., command_list = NULL, opt.flags = \"\" max.jobs = 400, debug = FALSE)",
             call. = F)
     if (!length(system("which qsub", ignore.stderr = T, intern = T)))
         stop("gcluster.run2 must run on a host that supports Sun Grid Engine (qsub)",
@@ -444,6 +440,7 @@ gcluster.run2 <- function (...,
             envir <- parent.env(envir)
             vars <- union(vars, ls(all.names = TRUE, envir = envir))
         }
+
         suppressWarnings(save(list = vars, file = paste(tmp.dirname, "envir",
             sep = "/"), envir = parent.frame()))
         .GSGECMD <- commands
@@ -451,6 +448,13 @@ gcluster.run2 <- function (...,
             sep = "/"))
         opts <- options()
         save(opts, file = paste(tmp.dirname, "opts", sep = "/"))
+        if (!is.null(packages)){
+            .GPACKAGES <- as.list(packages)
+        } else {
+            .GPACKAGES <- as.list(.packages())    
+        }        
+        save(.GPACKAGES, file = paste(tmp.dirname, "packages", sep = "/"))
+
         cat("Running the commands...\n")
         completed.jobs <- c()
         progress <- -1
@@ -465,9 +469,7 @@ gcluster.run2 <- function (...,
                   out.file <- sprintf("%s/%d.out", tmp.dirname,
                     i)
                   err.file <- sprintf("%s/%d.err", tmp.dirname,
-                    i)
-                  script <- paste(get(".GLIBDIR"), "exec", "sgjob.sh",
-                    sep = "/")
+                    i)                  
                     if (!is.null(job_names)){
                         job.name <-job_names[i]
                     } else if (!is.null(jobs_title)){
