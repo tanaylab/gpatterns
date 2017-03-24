@@ -594,14 +594,14 @@ gpatterns.cluster_avg_meth <- function(
     }
 
     if (clust_columns) {
-        return(.gpatterns.cluster_columns(avgs, column_k = column_k, ret_hclust=ret_hclust, tidy=tidy))
+        return(gpatterns.cluster_columns(avgs, column_k = column_k, ret_hclust=ret_hclust, tidy=tidy))
     }
 
     return(avgs %>% ungroup)
 }
 
 #TODO implement for not tidy
-.gpatterns.cluster_columns <- function(avgs, column_k = NULL, ret_hclust=FALSE, tidy=TRUE){
+gpatterns.cluster_columns <- function(avgs, column_k = NULL, ret_hclust=FALSE, tidy=TRUE, method='ward.D2'){
     if (tidy){
         avgs_mat <- avgs %>%
             select(chrom, start, end, clust, ord, samp, avg) %>%
@@ -611,13 +611,14 @@ gpatterns.cluster_avg_meth <- function(
     }
 
     dist_mat <-  avgs_mat %>%
-        select(-(chrom:ord)) %>%
+        select(-(chrom:clust)) %>%
         as.matrix() %>%
         t %>%
         dist
 
     hc <- dist_mat %>%
-        hclust(method = "ward.D2")
+        hclust(method = method)
+    hc <- dendsort::dendsort(hc)
     hc <- gclus::reorder.hclust(hc, dist_mat)
     ord <- hc$order
 
@@ -641,8 +642,8 @@ gpatterns.cluster_avg_meth <- function(
                     select(chrom, start, end, ord, samp, samp_clust, clust, meth, unmeth, avg, cov)
             avgs$samp <- factor(avgs$samp, levels=samples[ord])
         }
-    } else {
-        browser()
+    } else {        
+        avgs <- avgs_mat[, c(1:5, ord + 5)]
     }
 
     if (ret_hclust){
@@ -699,7 +700,6 @@ gpatterns.plot_clustering <- function(avgs,
         mat <- avgs
     }
     
-
     pmat <- mat %>% select(-(chrom:clust)) %>% as.data.frame
     rownames(pmat) <- paste0(mat$chrom, '_', mat$start, '_', mat$end)    
 
@@ -739,7 +739,6 @@ gpatterns.plot_clustering <- function(avgs,
     } else {
         annots_clust <- NA
     }
-
 
     n_loci <- nrow(pmat)
     if (cluster_gaps){

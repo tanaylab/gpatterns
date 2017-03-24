@@ -246,9 +246,7 @@ pheatmap1 <- function(pmat, annotation=NULL, annotation_colors=NULL, annotation_
         rownames(pmat) <- ids
     }
     
-    if (!is.null(annotation)){
-
-        annotation <- annotation %>% rename_(.dots = setNames(id_colname, 'samp') )
+    if (!is.null(annotation)){                
         annots <- annotation %>%
             filter(samp %in% colnames(pmat) | samp %in% rownames(pmat)) %>%
             mutate_if(is.character, factor) %>%
