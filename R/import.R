@@ -300,6 +300,14 @@ gpatterns.import_from_bam <- function(bams,
 
     stopifnot(all(steps %in% c(all_steps)))
 
+    if (is.null(workdir) && !is.null(track)){        
+        workdir <- paste0(GROOT, '/tracks/', gsub('\\.', '/', track))        
+    }
+
+    if (is.null(workdir) && !is.null(track)){
+        stop('need to supply either workdir or track')
+    }
+
     # get genomic bins
     genomic_bins <- gbin_intervals(intervals = gintervals.all(), nbins)
 
@@ -589,7 +597,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
 
 #' @export
 .gpatterns.pileup <- function(track, description, dsn = NULL, columns = c('meth', 'unmeth', 'cov', 'avg'), overwrite=TRUE, ...){
-    message('calculating pileup...')
+    message('calculating pileup...')    
     pileup <- gpatterns.apply_tidy_cpgs(track, function(x) gpatterns.tidy_cpgs_2_pileup(x, dsn=dsn), ...)
     message('importing pileup to misha...')
     .gpatterns.import_intervs_table(track, description, pileup, columns=columns, overwrite = overwrite)
@@ -656,7 +664,9 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
 #' @export
 .gpatterns.import_intervs_table <- function(track_pref, description, tab, columns = NULL, overwrite = FALSE, rescan = FALSE){
     tab <- tbl_df(tab)
-    gdir.create(gsub('\\.', '/', track_pref))
+    if (!dir.exists(gsub('\\.', '/', track_pref))){
+        gdir.create(gsub('\\.', '/', track_pref))    
+    }
     columns <- columns %||% colnames(tab)[!(colnames(tab) %in% c('chrom', 'start', 'end'))]
     walk(columns, function(col){
         track_name <- qq('@{track_pref}.@{col}')
@@ -747,7 +757,9 @@ gpatterns.create_patterns_track <- function(track,
 
 
     # Create base dir for tracks
-    dir.create(.gpatterns.base_dir(track), showWarnings=FALSE, recursive=TRUE)
+    if (!dir.exists(.gpatterns.base_dir(track))){
+        dir.create(.gpatterns.base_dir(track), showWarnings=FALSE, recursive=TRUE)    
+    }    
 
     # save pattern_space
     if (gintervals.exists(.gpatterns.pat_space_intervs_name(track))){
@@ -806,7 +818,9 @@ gpatterns.create_downsampled_track <- function(track,
     track_ds <- gpatterns.downsampled_track_name(track, dsn)
 
     # Create base dir for tracks
-    dir.create(.gpatterns.base_dir(track_ds), showWarnings=FALSE, recursive=TRUE)
+    if (!dir.exists(.gpatterns.base_dir(track))){
+        dir.create(.gpatterns.base_dir(track_ds), showWarnings=FALSE, recursive=TRUE)
+    }
 
     message("creating tables...")
     loci_tab <- .gpatterns.load_fids_tab(track) %>% select(chrom, start, end, fid)
