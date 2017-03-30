@@ -600,7 +600,7 @@ gpatterns.cluster_avg_meth <- function(
     return(avgs %>% ungroup)
 }
 
-#TODO implement for not tidy
+#TODO add roxygen
 gpatterns.cluster_columns <- function(avgs, column_k = NULL, ret_hclust=FALSE, tidy=TRUE, method='ward.D2'){
     if (tidy){
         avgs_mat <- avgs %>%
@@ -796,10 +796,9 @@ gpatterns.plot_clustering <- function(avgs,
 
 
 # Plotting Functions ------------------------------------------------
-
-.gpatterns.get_global_meth_trend <- function(tracks,
-                                             strat_track,
-                                             strat_breaks,
+#' @export
+.gpatterns.get_global_meth_trend <- function(...,
+                                             tracks,
                                              intervals,
                                              iterator,
                                              min_cov = NULL,
@@ -815,6 +814,8 @@ gpatterns.plot_clustering <- function(avgs,
     if (length(names) != length(tracks)){
         stop('tracks and names are not the same length!')
     }
+    nstrat_tracks <- length(list(...)) / 2
+    strat_breaks <- list(...)[[2]]
 
     trend <- plyr::adply(tibble(track=tracks, name=names), 1, function(x){
         track <- x$track
@@ -825,21 +826,30 @@ gpatterns.plot_clustering <- function(avgs,
             intervs <- gpatterns.screen_by_coverage(track, intervals, iterator, min_cov=min_cov)
         } else {
             intervs <- intervals
-        }
+        }        
 
-        gm <- gbins.summary(strat_track, strat_breaks, .gpatterns.meth_track_name(track), iterator=iterator, intervals=intervs, include.lowest=include.lowest)
-        brks <- rownames(gm)
-        gm <- gm %>% tbl_df
-        gum <- gbins.summary(strat_track, strat_breaks, .gpatterns.unmeth_track_name(track), iterator=iterator, intervals=intervs, include.lowest=include.lowest) %>% tbl_df
+        gm <- gbins.summary(..., .gpatterns.meth_track_name(track), iterator=iterator, intervals=intervs, include.lowest=include.lowest)
+        gm <- adply(gm, 1:length(dim(gm)))
+        colnames(gm) <- c(paste0('breaks', 1:nstrat_tracks), 'stat', 'val')
+        gm <- gm %>% spread('stat', 'val', -1:nstrat_tracks) %>% mutate(meth = Sum, cg_num=`Total intervals` - `NaN intervals`) %>% select(one_of(c(paste0('breaks', 1:nstrat_tracks), 'meth', 'cg_num'))) %>% tbl_df
+        
+        gum <- gbins.summary(..., .gpatterns.unmeth_track_name(track), iterator=iterator, intervals=intervs, include.lowest=include.lowest) #%>% tbl_df
+        gum <- adply(gum, 1:length(dim(gum)))
+        colnames(gum) <- c(paste0('breaks', 1:nstrat_tracks), 'stat', 'val')
+        gum <- gum %>% spread('stat', 'val', -1:nstrat_tracks) %>% mutate(unmeth = Sum, cg_num=`Total intervals` - `NaN intervals`) %>% select(one_of(c(paste0('breaks', 1:nstrat_tracks), 'unmeth', 'cg_num'))) %>% tbl_df
 
-        res <- tibble(samp = name,
-                      breaks=brks,
-                      meth=gm[['Sum']],
-                      unmeth=gum[['Sum']],
+        if (nstrat_tracks == 1){            
+            res <- tibble(samp = name,
+                      breaks=gm[['breaks1']],
+                      meth=gm[['meth']],
+                      unmeth=gum[['unmeth']],
                       breaks_numeric=zoo::rollmean(strat_breaks, k=2),
-                      cg_num=gm[['Total intervals']] - gm[['NaN intervals']]) %>%
+                      cg_num=gm[['cg_num']]) %>%
             mutate(avg = meth / (meth + unmeth)) %>%
-            select(samp, breaks, meth=avg, breaks_numeric, cg_num)
+            select(samp, breaks, meth=avg, breaks_numeric, cg_num)    
+        } else {
+            res <- bind_cols(gm, select(gum, unmeth)) %>% mutate(meth = meth / (meth + unmeth)) %>% mutate(samp = name) %>% select(one_of('samp', paste0('breaks', 1:nstrat_tracks), 'meth', 'cg_num'))            
+        }        
 
         return(res)
     }, .parallel=parallel)
@@ -920,16 +930,16 @@ gpatterns.spatial_meth_trend <- function(tracks,
     intervals <- .gpatterns.get_intervals(intervals)
     tryCatch({
             gvtrack.create('dist', intervals, 'distance')
-            trend <- .gpatterns.get_global_meth_trend(tracks = tracks,
-                                                      strat_track = 'dist',
-                                                      strat_breaks = dist_breaks,
+            trend <- do.call(.gpatterns.get_global_meth_trend, list('dist', 
+                                                      dist_breaks,
+                                                      tracks = tracks,                                                  
                                                       intervals = iterator,
                                                       iterator = iterator,
                                                       min_cov = min_cov,
                                                       min_cgs=min_cgs,
                                                       names = names,
                                                       include.lowest = include.lowest,
-                                                      parallel = parallel)
+                                                      parallel = parallel))
         }, finally=gvtrack.rm('dist'))
 
     group_name <- group_name %||% 'group'
@@ -1035,17 +1045,18 @@ gpatterns.global_meth_trend <- function(tracks,
                                         legend = TRUE,
                                         colors = NULL,
                                         parallel = getOption('gpatterns.parallel')){
-    intervals <- .gpatterns.get_intervals(intervals)
-    trend <- .gpatterns.get_global_meth_trend(tracks = tracks,
-                                              strat_track = strat_track,
-                                              strat_breaks = strat_breaks,
+    intervals <- .gpatterns.get_intervals(intervals)    
+    
+    trend <- do.call(.gpatterns.get_global_meth_trend, list(strat_track,
+                                              strat_breaks,
+                                              tracks = tracks,                                              
                                               intervals = intervals,
                                               iterator = iterator,
                                               min_cov = min_cov,
                                               min_cgs = min_cgs,
                                               names = names,
                                               include.lowest = include.lowest,
-                                              parallel = parallel)
+                                              parallel = parallel))
     group_name <- group_name %||% 'group'
     if (!is.null(groups)){
         grp <- tibble(track = tracks)

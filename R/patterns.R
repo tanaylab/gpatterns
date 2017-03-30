@@ -13,10 +13,11 @@
 #' @examples
 gpatterns.get_tidy_cpgs <- function(track,
                                     intervals = NULL,
-                                    only_tcpgs = FALSE){
+                                    only_tcpgs = TRUE){
     if (!gpatterns.track_exists(track) & !only_tcpgs){
         stop('track does not exists')
-    }
+    }    
+    
     files <- .gpatterns.tidy_cpgs_files(track)
     if (length(files) == 0){
         stop('no tidy cpgs found')
