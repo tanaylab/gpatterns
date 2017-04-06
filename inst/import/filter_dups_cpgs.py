@@ -46,9 +46,9 @@ class Read:
         self.key = "%s:%s-%s" % (self.chrom, self.start, self.strand)
         self.key2 = self.end
 
-    def write(self, out_file, n_umis):
+    def write(self, writer, n_umis):
         for cg_pos, meth, qual in zip(self.cg_pos, self.meth, self.qual):
-            out_file.write(','.join([self.read_id,
+            writer.writerow([self.read_id,
                                      self.chrom,
                                      self.start,
                                      self.end,
@@ -58,8 +58,8 @@ class Read:
                                      self.insert_len,
                                      str(n_umis),
                                      cg_pos,
-                                     meth,
-                                     qual]) + '\n')
+                                     meth,                                     
+                                     qual])
 
     def is_duplicate(self, other_read, two_sides=True, use_seq=False, only_seq=False, min_hamming=4):
         if not only_seq:
@@ -160,10 +160,8 @@ def main(argv):
 
     with open(args.input, "rb") if args.input is not '-' else sys.stdin as in_file, \
             open(args.output, 'w') if args.output is not '-' else sys.stdout as out_file:
-
-        out_file.write(','.join(
-            ['read_id', 'chrom', 'start', 'end', 'strand', 'umi1', 'umi2', 'insert_len', 'num', 'cg_pos', 'meth',
-             'qual']) + '\n')
+        writer = csv.writer(out_file, delimiter=',')
+        writer.writerow(['read_id', 'chrom', 'start', 'end', 'strand', 'umi1', 'umi2', 'insert_len', 'num', 'cg_pos', 'meth', 'qual'])
 
         cmd_prefix = ''
         if args.input is not '-':
@@ -194,8 +192,8 @@ def main(argv):
                     not read.is_duplicate(last_read, two_sides=not args.only_R1, use_seq=args.use_seq,
                                           only_seq=args.only_seq,
                                           min_hamming=args.min_hamming)):
-                for r in reads:
-                    r.write(out_file, n_umis)
+                for r in reads:                    
+                    r.write(writer, n_umis)
                 stats['uniq_reads'] += 1
                 reads = [read]
                 last_read = read
@@ -203,8 +201,8 @@ def main(argv):
             else:
                 n_umis += 1
 
-        for r in reads:
-            r.write(out_file, n_umis)
+        for r in reads:            
+            r.write(writer, n_umis)
 
     with open(args.stats, 'w') if args.stats is not '-' else sys.stderr as out_stats:
         out_stats.write('\t'.join(['total_reads', 'uniq_reads', 'uniq_frac']) + '\n')
