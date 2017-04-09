@@ -16,7 +16,7 @@ gpatterns.import_from_bam(bams, workdir = NULL, track = NULL,
 \arguments{
 \item{bams}{character vector with path of bam files}
 
-\item{workdir}{directory in which the files would be saved}
+\item{workdir}{directory in which the files would be saved (please provide full path)}
 
 \item{track}{name of the track to generate}
 
