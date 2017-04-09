@@ -670,5 +670,3 @@ do.call_ellipsis <- function(f, additional_params=list(), ...){
         arrange(ord)
     return(d)
 }
-
-

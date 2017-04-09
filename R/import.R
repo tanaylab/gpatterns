@@ -3,6 +3,19 @@
 
 }
 
+.get_nucs_df <- function(intervals, nucs=c('T', 'C', 'G', 'A')){   
+    dinucs <- expand.grid(nucs, nucs)  %>% unite(Var1, Var2, col='dinucs', sep='') %>% .$dinucs 
+    nuc_df <- tibble(start = seq(intervals$start, intervals$end - 1, 1), seq=(gseq.extract(intervals) %>% toupper %>% str_split('') %>% .[[1]])) %>% mutate(next_nuc = lead(seq)) %>% unite(seq, next_nuc, col='dinuc', sep='', remove=F) %>% mutate(chrom = intervals$chrom, end = start + 1) %>% select(chrom, start, end, seq, dinuc)
+    for (nuc in nucs){
+        nuc_df[nuc] <- as.numeric(nuc_df$seq == nuc)
+    }
+    for (nuc in dinucs){
+        nuc_df[nuc] <- as.numeric(nuc_df$dinuc == nuc)
+    }
+    nuc_df <- nuc_df %>% select(-seq, -dinuc)
+    return(nuc_df)        
+}
+
 .gpatterns.gen_next_CG_track <- function(){
     df <- map_df(gintervals.all()$chrom, ~ gintervals.load(.gpatterns.genome_cpgs_intervals, chrom=.x) %>%  mutate(nextcg = lead(start))) %>% arrange(chrom, start, end)
     gintervals.save(.gpatterns.genome_next_cpg_intervals, df)
@@ -132,6 +145,7 @@ gpatterns.bissli2_build <- function(reference,
 #' @param steps steps of the pipeline. Possible options are:
 #' 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov'
 #' @param overwrite overwrite existing tracks
+#' @param cov_filt_cmd if numeric - maximal coverage for CpG. Else - command for filtering highly (or lowly) covered CpGs. string with the maximal coverage, where 'covs' can represent the command, e.g. 'max(500, quantile(covs, 0.95))'. 
 #' @param dsn downsampling n. Leave NULL for no downsampling
 #' @param pat_cov_lens lengthes of patterns to calculate pattern coverage track for
 #' @param max_span maximal span to look for patterns (usually the maximal insert length)
@@ -151,6 +165,7 @@ gpatterns.import_from_tidy_cpgs <- function(tidy_cpgs,
                                             description,
                                             steps = 'all',
                                             overwrite = TRUE,
+                                            cov_filt_cmd = NULL,
                                             dsn = NULL,
                                             pat_cov_lens = c(3,5,7),
                                             max_span = 500,
@@ -200,7 +215,8 @@ gpatterns.import_from_tidy_cpgs <- function(tidy_cpgs,
         dsn = dsn,
         use_sge = use_sge,
         max_jobs = max_jobs,
-        parallel = parallel)
+        parallel = parallel, 
+        cov_filt_cmd = cov_filt_cmd)
 
     # pat_freq
     .step_invoke(
@@ -237,7 +253,7 @@ gpatterns.import_from_tidy_cpgs <- function(tidy_cpgs,
 #' Creates a track from bam files.
 #'
 #' @param bams character vector with path of bam files
-#' @param workdir directory in which the files would be saved
+#' @param workdir directory in which the files would be saved (please provide full path)
 #' @param steps steps of the pipeline to do. Possible options are:
 #' 'bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov'
 #' @param paired_end bam files are paired end, with R1 and R2 interleaved
@@ -307,6 +323,8 @@ gpatterns.import_from_bam <- function(bams,
     if (is.null(workdir) && !is.null(track)){
         stop('need to supply either workdir or track')
     }
+
+    workdir <- normalizePath(workdir)
 
     # get genomic bins
     genomic_bins <- gbin_intervals(intervals = gintervals.all(), nbins)
@@ -596,10 +614,16 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
 
 
 #' @export
-.gpatterns.pileup <- function(track, description, dsn = NULL, columns = c('meth', 'unmeth', 'cov', 'avg'), overwrite=TRUE, ...){
+.gpatterns.pileup <- function(track, description, dsn = NULL, columns = c('meth', 'unmeth', 'cov', 'avg'), overwrite=TRUE, cov_filt_cmd = NULL, ...){
     message('calculating pileup...')    
-    pileup <- gpatterns.apply_tidy_cpgs(track, function(x) gpatterns.tidy_cpgs_2_pileup(x, dsn=dsn), ...)
-    message('importing pileup to misha...')
+    pileup <- gpatterns.apply_tidy_cpgs(track, function(x) gpatterns.tidy_cpgs_2_pileup(x, dsn=dsn), ...) %>% ungroup
+    if (!is.null(cov_filt_cmd)){
+        message(qq('filtering using the following rule: cov <= @{cov_filt_cmd}'))        
+        covs <- pileup[['cov']]
+        max_cov <-  eval(parse(text=cov_filt_cmd) )
+        pileup <- pileup %>% filter(cov <= max_cov)
+    }
+    message('importing pileup to misha...')    
     .gpatterns.import_intervs_table(track, description, pileup, columns=columns, overwrite = overwrite)
 }
 

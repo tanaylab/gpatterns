@@ -4,7 +4,7 @@
 \alias{gpatterns.get_tidy_cpgs}
 \title{Get tidy cpgs from a track}
 \usage{
-gpatterns.get_tidy_cpgs(track, intervals = NULL, only_tcpgs = FALSE)
+gpatterns.get_tidy_cpgs(track, intervals = NULL, only_tcpgs = TRUE)
 }
 \arguments{
 \item{track}{name of track}

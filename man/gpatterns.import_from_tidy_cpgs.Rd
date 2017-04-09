@@ -5,8 +5,8 @@
 \title{Create a track from tidy_cpgs files}
 \usage{
 gpatterns.import_from_tidy_cpgs(tidy_cpgs, track, description, steps = "all",
-  overwrite = TRUE, dsn = NULL, pat_cov_lens = c(3, 5, 7),
-  max_span = 500, pat_freq_len = 2, nbins = nrow(gintervals.all()),
+  overwrite = TRUE, cov_filt_cmd = NULL, dsn = NULL, pat_cov_lens = c(3,
+  5, 7), max_span = 500, pat_freq_len = 2, nbins = nrow(gintervals.all()),
   groot = GROOT, use_sge = FALSE, max_jobs = 400,
   parallel = getOption("gpatterns.parallel"))
 }
@@ -21,6 +21,8 @@ gpatterns.import_from_tidy_cpgs(tidy_cpgs, track, description, steps = "all",
 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov'}
 
 \item{overwrite}{overwrite existing tracks}
+
+\item{cov_filt_cmd}{if numeric - maximal coverage for CpG. Else - command for filtering highly (or lowly) covered CpGs. string with the maximal coverage, where 'covs' can represent the command, e.g. 'max(500, quantile(covs, 0.95))'.}
 
 \item{dsn}{downsampling n. Leave NULL for no downsampling}
 
