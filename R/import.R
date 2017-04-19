@@ -316,8 +316,12 @@ gpatterns.import_from_bam <- function(bams,
 
     stopifnot(all(steps %in% c(all_steps)))
 
-    if (is.null(workdir) && !is.null(track)){        
-        workdir <- paste0(GROOT, '/tracks/', gsub('\\.', '/', track))        
+    if (is.null(workdir) && !is.null(track)){
+        if ('bind_tidy_cpgs' %in% steps){
+            workdir <- paste0(GROOT, '/tracks/', gsub('\\.', '/', track), '/workdir')        
+        } else {
+            workdir <- paste0(GROOT, '/tracks/', gsub('\\.', '/', track))            
+        }        
     }
 
     if (is.null(workdir) && !is.null(track)){
