@@ -53,12 +53,12 @@ gpatterns.get_tidy_cpgs <- function(track,
     }
 
 
-    if (!is.null(intervals)){
+    if (!is.null(intervals)){        
         tidy_intervals <- .gpatterns.get_tidy_cpgs_intervals(track)
         if (!is.character(intervals)){
             if (all(
-                unite(intervals, 'coord', (chrom:end))$coord %in%
-                unite(tidy_intervals, 'coord', (chrom:end))$coord)
+                unite(intervals, 'coord', chrom:end)$coord %in%
+                unite(tidy_intervals, 'coord', chrom:end)$coord)
             ){
                 return(.intervals2files(intervals, files) %>% .get_tcpgs)
             }
@@ -106,8 +106,8 @@ gpatterns.apply_tidy_cpgs <- function(track,
                                       verbose = FALSE,
                                       ...){
     # make sure that empty intervals would return NULL
-    f_null <- function(track, intervals=NULL){
-        tcpgs <- gpatterns.get_tidy_cpgs(track, intervals=intervals)
+    f_null <- function(track, intervals=NULL){        
+        tcpgs <- gpatterns.get_tidy_cpgs(track, intervals=intervals)        
         if (is.null(tcpgs)){
             return(NULL)
         }
