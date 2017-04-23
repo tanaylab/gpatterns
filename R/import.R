@@ -619,8 +619,9 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
 
 #' @export
 .gpatterns.pileup <- function(track, description, dsn = NULL, columns = c('meth', 'unmeth', 'cov', 'avg'), overwrite=TRUE, cov_filt_cmd = NULL, ...){
-    message('calculating pileup...')    
+    message('calculating pileup...')        
     pileup <- gpatterns.apply_tidy_cpgs(track, function(x) gpatterns.tidy_cpgs_2_pileup(x, dsn=dsn), ...) %>% ungroup
+
     if (!is.null(cov_filt_cmd)){
         message(qq('filtering using the following rule: cov <= @{cov_filt_cmd}'))        
         covs <- pileup[['cov']]
@@ -718,6 +719,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
 
 
 .gpatterns.run_commands <- function(commands, use_sge=FALSE, max_jobs=400, parallel = getOption('gpatterns.parallel'), jobs_title='', cmd_prefix = '', ...){
+
       if (use_sge){
         command_list <- 1:length(commands$cmd) %>% map(~ qq('@{cmd_prefix} system(commands$cmd[@{.x}])'))
         res <- gcluster.run2(command_list = command_list,

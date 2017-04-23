@@ -235,6 +235,14 @@ gpatterns.track_exists <- function(track){
 
 #' wrapper around pheatmap
 #' 
+#' @param pmat data frame to plot as matrix. can have an additional id column (if id_column == TRUE)
+#' @param annotation data frame with 'samp' field, and additional annotations
+#' @param annotation_colors tidy data frame with 3 fields: 'type' - name of the annotation, e.g. 'tissue', and pairs of 'variable' and 'color', e.g. variable='tumor', color='green'
+#' @param annotation_col character vector with column names from `annotation` to use to annotate columns
+#' @param annotation_row character vector with column names from `annotation` to use to annotate rows
+#' @param id_column TRUE if pmat's first column contains row ids
+#' @inheritParams pheatmap::pheatmap
+#' 
 #' @export
 pheatmap1 <- function(pmat, annotation=NULL, annotation_colors=NULL, annotation_col=NULL, annotation_row = NULL, id_column = TRUE, border_color=NA, clustering_callback = function(hc, ...){dendsort::dendsort(hc)}, ...){
     pmat <- as.data.frame(pmat)
