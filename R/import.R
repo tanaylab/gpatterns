@@ -318,9 +318,9 @@ gpatterns.import_from_bam <- function(bams,
 
     if (is.null(workdir) && !is.null(track)){
         if ('bind_tidy_cpgs' %in% steps){
-            workdir <- paste0(GROOT, '/tracks/', gsub('\\.', '/', track), '/workdir')        
+            workdir <- paste0(.gpatterns.base_dir(track), '/workdir')        
         } else {
-            workdir <- paste0(GROOT, '/tracks/', gsub('\\.', '/', track))            
+            workdir <- .gpatterns.base_dir            
         }        
     }
 
@@ -456,7 +456,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
                                      adjust_read_bin = .gpatterns.adjust_read_bin,
                                      bin = .gpatterns.bam2tidy_cpgs_bin,
                                      run_per_interv = TRUE,
-                                     add_chr_prefix = FALSE,
+                                     add_chr_prefix = FALSE,                                                    
                                      ...){
     walk(c(tidy_cpgs_dir, stats_dir), ~ system(qq('mkdir -p @{.x}')))
     bam_prefix <- if (1 == length(bams)) 'cat' else 'samtools cat'
@@ -466,12 +466,12 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
     umi1_idx_str <- if (is.null(umi1_idx)) '' else qq('--umi1-idx @{umi1_idx}')
     umi2_idx_str <- if (is.null(umi2_idx)) '' else qq('--umi2-idx @{umi2_idx}')
     sort_fields <- if (only_seq) '6,7' else '2,7'
-    rm_of_target_str <- if (rm_off_target) '--rm_off_target' else ''
+    rm_off_target_str <- if (rm_off_target) '--rm_off_target' else ''
     chr_prefix_str <- if(add_chr_prefix) '--add-chr-prefix' else ''
     bismark_str <- if(bismark) '--bismark' else ''
 
     if (!is.null(frag_intervs)){
-        post_process_str <- qq(' | @{adjust_read_bin} @{rm_of_target_str} -f @{frag_intervs} --maxdist @{maxdist} --groot @{GROOT}')
+        post_process_str <- qq(' | @{adjust_read_bin} @{rm_off_target_str} -f @{frag_intervs} --maxdist @{maxdist} --groot @{GROOT}')
     } else {
         post_process_str <- ''
     }
@@ -507,7 +507,6 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
     }
 
 }
-
 
 .gpatterns.filter_dups <- function(tidy_cpgs_dir,
                                    stats_dir,
@@ -694,7 +693,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
 .gpatterns.import_intervs_table <- function(track_pref, description, tab, columns = NULL, overwrite = FALSE, rescan = FALSE){
     tab <- tbl_df(tab)
     if (!dir.exists(gsub('\\.', '/', track_pref))){
-        gdir.create(gsub('\\.', '/', track_pref))    
+        gdir.create(gsub('\\.', '/', track_pref), showWarnings=FALSE)    
     }
     columns <- columns %||% colnames(tab)[!(colnames(tab) %in% c('chrom', 'start', 'end'))]
     walk(columns, function(col){
@@ -1032,7 +1031,7 @@ gpatterns.merge_tracks <- function(tracks, new_track, description, intervals=gin
         iterator <- gscreen(expr, intervals=intervals, iterator=.gpatterns.genome_cpgs_intervals)
     }
 
-    gdir.create(gsub('\\.', '/', new_track))
+    gdir.create(gsub('\\.', '/', new_track), showWarnings=FALSE)
 
     for (suffix in c('cov', 'meth', 'unmeth')){
         message(qq('doing @{suffix}'))
@@ -1052,12 +1051,16 @@ gpatterns.merge_tracks <- function(tracks, new_track, description, intervals=gin
         }
     }
     gdb.reload()
+
     message(qq('doing avg'))
-    gtrack.create(qq('@{new_track}.avg'), description, qq('@{new_track}.meth / @{new_track}.cov'), iterator=qq('@{new_track}.meth'))
+    if (!gtrack.exists(qq('@{new_track}.avg'))){
+        gtrack.create(qq('@{new_track}.avg'), description, qq('@{new_track}.meth / @{new_track}.cov'), iterator=qq('@{new_track}.meth'))    
+    }
+    
 
     if (merge_tidy_cpgs){
         tidy_dirs <- .gpatterns.tidy_cpgs_dir(tracks)
-        .do.call_ellipsis(gpatterns.import_from_tidy_cpgs, list(tidy_cpgs=tidy_dirs, track=new_track, description=description, steps=c('bind_tidy_cpgs', 'pat_freq', 'pat_cov')), ...)
+        do.call_ellipsis(gpatterns.import_from_tidy_cpgs, list(tidy_cpgs=tidy_dirs, track=new_track, description=description, steps=c('bind_tidy_cpgs', 'pat_freq', 'pat_cov')), ...)
     }
 
     if (all(.gpatterns.patterns_exist(tracks))){

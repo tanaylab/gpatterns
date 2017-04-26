@@ -57,8 +57,8 @@ gpatterns.get_tidy_cpgs <- function(track,
         tidy_intervals <- .gpatterns.get_tidy_cpgs_intervals(track)
         if (!is.character(intervals)){
             if (all(
-                unite(intervals, 'coord', chrom:end)$coord %in%
-                unite(tidy_intervals, 'coord', chrom:end)$coord)
+                paste(intervals$chrom, intervals$start, intervals$end) %in%
+                paste(tidy_intervals$chrom, tidy_intervals$start, tidy_intervals$end))
             ){
                 return(.intervals2files(intervals, files) %>% .get_tcpgs)
             }
