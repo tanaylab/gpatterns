@@ -381,11 +381,16 @@ def main(argv):
 
     columns = ['read_id', 'chrom', 'start', 'end', 'strand', 'umi1', 'umi2', 'insert_len', 'cg_pos', 'meth', 'qual']
     with pysam.AlignmentFile(args.input, "rb") as in_bam, \
-            open(args.output, 'w') if args.output is not '-' else sys.stdout as out_file:
-        stats_out = open(args.stats, 'w') if args.stats is not '-' else sys.stderr
+            open(args.output, 'w') if args.output is not '-' else sys.stdout as out_file, \
+            open(args.stats, 'w') if args.stats is not '-' else sys.stderr as stats_out:
+
+
+        reads_out = open(args.reads, 'w') if args.reads is not None else None  
 
         out_file.write(','.join(columns) + '\n')
-
+        if reads_out is not None:
+            reads_out.write(','.join(columns[0:8]) + '\n')   
+        
         for ids_df, patts, quals in bam_reader(in_bam,
                                                chunk_size=args.chunk_size,
                                                stats=stats,
@@ -412,6 +417,9 @@ def main(argv):
             if args.sort_chunk:
                 cpgs.sort_values(by=['chrom', 'start', 'end', 'strand', 'umi1', 'umi2'], inplace=True)
             cpgs.to_csv(out_file, header=False, index=False, float_format='%.0f', mode='a')
+
+            if reads_out is not None:
+                ids_df[columns[0:8]].drop_duplicates(['read_id']).to_csv(reads_out, header=False, index=False, float_format='%.0f', mode='a')
 
         stats_out.write(','.join(list(stats.keys())) + '\n')
         stats_out.write(','.join(str(x) for x in list(stats.viewvalues())))
@@ -449,6 +457,8 @@ def parse_args(argv):
                         help="Name of output file. a value of '-' indicates that the output would be written to STDOUT. (default: %(default)s)")
     parser.add_argument('-s', '--stats', type=str, default='-', metavar='<stats>',
                         help="Name of stats file. a value of '-' indicates that the output would be written to STDERR. (default: %(default)s)")
+    parser.add_argument('-r', '--reads', type=str, default=None, metavar='<reads>',
+                        help="Name of reads file. Outputs statistics for every read (read_id,chrom,start,end,strand,umi1,umi2,insert_len)")
     
     umi = parser.add_argument_group('umi')
     umi.add_argument('--umi1-idx', metavar='UMI1_INDEX_FIELD', type=int, default=None,
