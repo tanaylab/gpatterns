@@ -140,9 +140,11 @@ gpatterns.set_parallel <- function(thread_num) {
 .gpatterns.get_tidy_cpgs_from_dir <- function(dir,
                                               intervals = NULL,
                                               uniq = TRUE){
+    if (stringr::str_sub(dir, -1) != '/') {
+        dir <- paste0(dir, '/') 
+    }
 
     files <- list.files(gsub('/$', '', dir), full.names=TRUE, pattern='tcpgs.gz')
-
 
     .get_tcpgs <- function(files){
         res <- files %>%
@@ -164,15 +166,15 @@ gpatterns.set_parallel <- function(thread_num) {
 
     if (!is.null(intervals)){
         tidy_intervals <- .gpatterns.get_tidy_cpgs_intervals(path=dir)        
-        if (!is.character(intervals)){
+        if (!is.character(intervals)){            
             if (all(
-                unite(intervals, 'coord', (chrom:end))$coord %in%
-                unite(tidy_intervals, 'coord', (chrom:end))$coord)
+                unite(intervals, 'coord', chrom:end)$coord %in%
+                unite(tidy_intervals, 'coord', chrom:end)$coord)
             ){
                 return(.intervals2files(intervals, files) %>% .get_tcpgs)
             }
         }
-        
+
         tcpgs <- tidy_intervals %>%
             gintervals.filter(intervals) %>%
             .intervals2files(files) %>%
@@ -244,7 +246,7 @@ gpatterns.track_exists <- function(track){
 #' @inheritParams pheatmap::pheatmap
 #' 
 #' @export
-pheatmap1 <- function(pmat, annotation=NULL, annotation_colors=NULL, annotation_col=NULL, annotation_row = NULL, id_column = TRUE, border_color=NA, clustering_callback = function(hc, ...){dendsort::dendsort(hc)}, ...){
+pheatmap1 <- function(pmat, annotation=NULL, annotation_colors=NULL, annotation_col=NULL, annotation_row = NULL, id_column = TRUE, border_color=NA, clustering_callback = function(hc, ...){dendsort::dendsort(hc)}, clustering_distance_rows="euclidean", clustering_distance_cols="euclidean", min_vals_row=1, min_vals_col=1, ...){
     pmat <- as.data.frame(pmat)
     id_colname <- 'samp'
     if (id_column){
@@ -288,13 +290,23 @@ pheatmap1 <- function(pmat, annotation=NULL, annotation_colors=NULL, annotation_
     } else {
         annotation_row <- NA
     }
-    
+
+    if (min_vals_row > 1){
+        pmat <- pmat[apply(pmat, 1, function(x) sum(!is.na(x)) >= 100), ]
+    }
+
+    if (min_vals_col > 1){
+        pmat <- pmat[, apply(pmat, 2, function(x) sum(!is.na(x)) >= 100)]   
+    }
+
     pheatmap::pheatmap(pmat,
                             border_color=border_color,
                             annotation_col=annotation_col,                            
                             annotation_colors=annot_cols,
                             annotation_row=annotation_row,   
-                            clustering_callback=clustering_callback,                 
+                            clustering_callback=clustering_callback, 
+                            clustering_distance_rows=clustering_distance_rows,
+                            clustering_distance_cols=clustering_distance_cols,                
                              ...)    
 }
 
