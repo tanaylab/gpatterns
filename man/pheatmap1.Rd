@@ -9,6 +9,29 @@ pheatmap1(pmat, annotation = NULL, annotation_colors = NULL,
   border_color = NA, clustering_callback = function(hc, ...) {    
   dendsort::dendsort(hc) }, ...)
 }
+\arguments{
+\item{pmat}{data frame to plot as matrix. can have an additional id column (if id_column == TRUE)}
+
+\item{annotation}{data frame with 'samp' field, and additional annotations}
+
+\item{annotation_colors}{tidy data frame with 3 fields: 'type' - name of the annotation, e.g. 'tissue', and pairs of 'variable' and 'color', e.g. variable='tumor', color='green'}
+
+\item{annotation_col}{character vector with column names from `annotation` to use to annotate columns}
+
+\item{annotation_row}{character vector with column names from `annotation` to use to annotate rows}
+
+\item{id_column}{TRUE if pmat's first column contains row ids}
+
+\item{border_color}{color of cell borders on heatmap, use NA if no border should be
+drawn.}
+
+\item{clustering_callback}{callback function to modify the clustering. Is
+called with two parameters: original \code{hclust} object and the matrix
+used for clustering. Must return a \code{hclust} object.}
+
+\item{...}{graphical parameters for the text used in plot. Parameters passed to
+\code{\link{grid.text}}, see \code{\link{gpar}}.}
+}
 \description{
 wrapper around pheatmap
 }
