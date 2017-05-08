@@ -1067,13 +1067,17 @@ gpatterns.global_meth_trend <- function(tracks,
     if (length(tracks) == 1){
         p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, group=1)) + geom_line(size=1.1) + xlab(xlab) + ylab('Methylation') + ggtitle(title)
     } else {
-        p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, color=samp, group=samp)) + geom_line(size=1.1) + xlab(xlab) + ylab('Methylation') + scale_color_discrete(name='') + ggtitle(title)
+        p <- trend %>% ggplot(aes(x=breaks_numeric, y=meth, color=samp, group=samp)) + geom_line(size=1.1) + xlab(xlab) + ylab('Methylation') + ggtitle(title)
     }
 
     p <- p + coord_cartesian(ylim=ylim)
 
     if (!is.null(colors)){
         p <- p + scale_color_manual(values=colors)
+    } else {
+        if (length(tracks) > 1){
+            p <- p + scale_color_manual(name='')
+        }
     }
 
     if (!legend){
