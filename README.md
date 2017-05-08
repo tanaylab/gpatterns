@@ -14,13 +14,13 @@ Source code can be found at: https://bitbucket.org/tanaylab/gpatterns
 - _Python_ (>=2.7)
 - R packages:
     * _devtools_.
-    * _misha_(>=3.5.4).
+    * _misha_(>=3.5.6).
 
 
 #### Installing misha package:
 ```
 #!r
-install.packages("http://www.wisdom.weizmann.ac.il/~aviezerl/gpatterns/misha_3.5.4.tar.gz", repos=NULL) # Download and install misha package
+install.packages("http://www.wisdom.weizmann.ac.il/~aviezerl/gpatterns/misha_3.5.6.tar.gz", repos=NULL) # Download and install misha package
 ```
 
 #### Installing gpatterns package:
