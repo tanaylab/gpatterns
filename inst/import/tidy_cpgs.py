@@ -224,10 +224,23 @@ def bam_iter(bam,
                 yield Read(read1, read, umi1_idx, umi2_idx, infer_umi_field=infer_umi_field, min_mapq=min_mapq, max_no_conv=max_no_conv, template_conv_tag=template_conv_tag, meth_calls_tag=meth_calls_tag, bismark_flags=bismark_flags)
 
 ########################################################################
-def bam_reader(bam, chunk_size, stats, umi1_idx=None, umi2_idx=None, infer_umi_field=False, chrom=None,
-               genomic_range=None, single_end=False, show_progress=True, min_mapq=30, max_no_conv=3,
-               template_conv_tag='XT', meth_calls_tag='XP', add_chr_prefix=False,
-               bismark_flags=False):
+def bam_reader(bam, 
+                chunk_size,
+                stats,
+                conv_stats,
+                umi1_idx=None,
+                umi2_idx=None,
+                infer_umi_field=False,
+                chrom=None,
+                genomic_range=None,
+                single_end=False,
+                show_progress=True,
+                min_mapq=30,
+                max_no_conv=3,
+                template_conv_tag='XT',
+                meth_calls_tag='XP',
+                add_chr_prefix=False,
+                bismark_flags=False):
     while True:
         ids = []
         chroms = []
@@ -259,6 +272,13 @@ def bam_reader(bam, chunk_size, stats, umi1_idx=None, umi2_idx=None, infer_umi_f
                         or (genomic_range[0] <= read.start <= genomic_range[1]) \
                         or (genomic_range[0] <= read.end <= genomic_range[1]):
 
+                    conv_stats['h'] += read.h
+                    conv_stats['H'] += read.H
+                    conv_stats['x'] += read.x
+                    conv_stats['x'] += read.X
+                    conv_stats['z'] += read.z
+                    conv_stats['Z'] += read.Z
+                                
                     ids.append(read.id)
                     chroms.append(read.chrom)
                     starts.append(read.start)
@@ -378,6 +398,7 @@ def main(argv):
         cgs_mask = None
         
     stats = defaultdict(int)
+    conv_stats = defaultdict(int)
 
     columns = ['read_id', 'chrom', 'start', 'end', 'strand', 'umi1', 'umi2', 'insert_len', 'cg_pos', 'meth', 'qual']
     with pysam.AlignmentFile(args.input, "rb") as in_bam, \
@@ -394,6 +415,7 @@ def main(argv):
         for ids_df, patts, quals in bam_reader(in_bam,
                                                chunk_size=args.chunk_size,
                                                stats=stats,
+                                               conv_stats=conv_stats,
                                                umi1_idx=args.umi1_idx,
                                                umi2_idx=args.umi2_idx,
                                                infer_umi_field=args.infer_umi_field,
@@ -420,9 +442,13 @@ def main(argv):
 
             if reads_out is not None:
                 ids_df[columns[0:8]].drop_duplicates(['read_id']).to_csv(reads_out, header=False, index=False, float_format='%.0f', mode='a')
+        
+        stats['CHH'] = np.float64(conv_stats['H']) / np.float64(conv_stats['H'] + conv_stats['h'])
+        stats['CHG'] = np.float64(conv_stats['X']) / np.float64(conv_stats['X'] + conv_stats['x'])
+        stats['CpG'] = np.float64(conv_stats['Z']) / np.float64(conv_stats['Z'] + conv_stats['z'])
 
         stats_out.write(','.join(list(stats.keys())) + '\n')
-        stats_out.write(','.join(str(x) for x in list(stats.viewvalues())))
+        stats_out.write(','.join(str(x) for x in list(stats.viewvalues())))        
 
     return 0
 

@@ -4,8 +4,8 @@
 \alias{gpatterns.get_pipeline_stats}
 \title{Get QC statistics for track}
 \usage{
-gpatterns.get_pipeline_stats(track, tidy_cpgs_stats_dir,
-  uniq_tidy_cpgs_stats_dir, add_mapping_stats = FALSE)
+gpatterns.get_pipeline_stats(track, tidy_cpgs_stats_dir = NULL,
+  uniq_tidy_cpgs_stats_dir = NULL, add_mapping_stats = FALSE)
 }
 \arguments{
 \item{track}{track name}

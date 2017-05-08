@@ -7,7 +7,9 @@
 pheatmap1(pmat, annotation = NULL, annotation_colors = NULL,
   annotation_col = NULL, annotation_row = NULL, id_column = TRUE,
   border_color = NA, clustering_callback = function(hc, ...) {    
-  dendsort::dendsort(hc) }, ...)
+  dendsort::dendsort(hc) }, clustering_distance_rows = "euclidean",
+  clustering_distance_cols = "euclidean", min_vals_row = 1,
+  min_vals_col = 1, ...)
 }
 \arguments{
 \item{pmat}{data frame to plot as matrix. can have an additional id column (if id_column == TRUE)}
@@ -28,6 +30,14 @@ drawn.}
 \item{clustering_callback}{callback function to modify the clustering. Is
 called with two parameters: original \code{hclust} object and the matrix
 used for clustering. Must return a \code{hclust} object.}
+
+\item{clustering_distance_rows}{distance measure used in clustering rows. Possible
+values are \code{"correlation"} for Pearson correlation and all the distances
+supported by \code{\link{dist}}, such as \code{"euclidean"}, etc. If the value is none
+of the above it is assumed that a distance matrix is provided.}
+
+\item{clustering_distance_cols}{distance measure used in clustering columns. Possible
+values the same as for clustering_distance_rows.}
 
 \item{...}{graphical parameters for the text used in plot. Parameters passed to
 \code{\link{grid.text}}, see \code{\link{gpar}}.}

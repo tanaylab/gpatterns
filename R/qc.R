@@ -22,9 +22,18 @@ gpatterns.track_stats <- function(track){
 #'
 #' @examples
 gpatterns.get_pipeline_stats <- function(track,
-                                        tidy_cpgs_stats_dir,
-                                        uniq_tidy_cpgs_stats_dir,
+                                        tidy_cpgs_stats_dir = NULL,
+                                        uniq_tidy_cpgs_stats_dir = NULL,
                                         add_mapping_stats = FALSE){
+    if (is.null(tidy_cpgs_stats_dir)){
+        tidy_cpgs_stats_dir <- paste0(GROOT, '/tracks/', gsub('\\.', '/', track), '/workdir/tidy_cpgs/stats') 
+    }
+    if (is.null(uniq_tidy_cpgs_stats_dir)){
+        uniq_tidy_cpgs_stats_dir <- paste0(GROOT, '/tracks/', gsub('\\.', '/', track), '/workdir/tidy_cpgs_uniq/stats')
+    }
+    stopifnot(dir.exists(tidy_cpgs_stats_dir))
+    stopifnot(dir.exists(uniq_tidy_cpgs_stats_dir))
+    
     uniq_stats <- list.files(uniq_tidy_cpgs_stats_dir, full.names=T) %>%
         map_df(~ fread(.x)) %>%
         summarise(total_reads = sum(total_reads), uniq_reads = sum(uniq_reads)) %>%
@@ -57,6 +66,124 @@ gpatterns.get_pipeline_stats <- function(track,
     return(stats)
 }
 
+# total reads     mapped.reads    mapped.uniq    perc mapped % unique overall     on target  perc on target   uniq_1      uniq_2     perc unique on target   perc unique off target   estimated on target complexity      regions not present     total methylation calls     CpGs per read   num of CpGs     average CpG cov 
+
+gpatterns.capture_stats <- function(track, 
+                                    bam, 
+                                    regions, 
+                                    fastq=NULL, 
+                                    use_read2=TRUE, 
+                                    max_distance=200, 
+                                    tidy_cpgs_stats_dir = NULL,
+                                    uniq_tidy_cpgs_stats_dir = NULL,
+                                    add_mapping_stats = FALSE, 
+                                    dsn=NULL, 
+                                    sample_raw = FALSE,
+                                    sample_ontar = TRUE, 
+                                    reads = NULL){    
+    if (is.null(reads)){
+        message('extrating reads...')
+        reads <- .gpatterns.bam2reads(bams=bam)        
+    }
+
+    if (!is.null(dsn)){
+        if (sample_raw){
+            message(sprintf('sampling %d raw reads...', dsn))
+            bam_prefix <- if (1 == length(bam)) 'cat' else 'samtools cat'
+            cmd <- qq('@{bam_prefix} @{paste0(bam, collapse=" ")} | samtools view - | sed -n 1~2p | cut -f1 | head -n @{dsn}')
+            ids <- fread(cmd, 
+                sep='\t', header=F)[,1]
+            if (length(ids) != dsn){
+                message(sprintf('skipping  - not enough reads (%d) for downsampling %d raw reads', nrow(reads), dsn))
+                return(tibble(on_target=NA, frac_ontar=NA, frac_uniq_ontar=NA, frac_uniq_offtar=NA))
+            }
+            reads <- reads %>% filter(read_id %in% ids)
+
+        } else {
+            if (nrow(reads) < dsn){
+                message(sprintf('skipping  - not enough reads (%d) for downsampling %d reads', nrow(reads), dsn))
+                return(tibble(on_target=NA, frac_ontar=NA, frac_uniq_ontar=NA, frac_uniq_offtar=NA))
+            }
+            if (!sample_ontar){
+                message(sprintf('sampling %d mapped reads...', dsn))
+                reads <- reads %>% sample_n(dsn)    
+            } 
+        }        
+    }
+
+    message('identifying \'on target\' reads...')
+    on_tar_reads <- .gpatterns.filter_ontar_reads(reads, regions, max_distance=max_distance) %>% tbl_df 
+    if (!is.null(dsn) && !sample_raw && sample_ontar){    
+        if (nrow(on_tar_reads) >= dsn){
+            message(sprintf('sampling %d \'on target\' reads...', dsn))
+            on_tar_reads <- on_tar_reads %>% sample_n(dsn)  
+        } else {
+            message(sprintf('skipping  - not enough reads (%d) for downsampling %d on target reads', nrow(on_tar_reads), dsn))
+            return(tibble(on_target=NA, frac_ontar=NA, frac_uniq_ontar=NA, frac_uniq_offtar=NA))
+        }        
+    }
+
+    message('filtering duplicates for on traget...')    
+    f_reads_ontar <- .gpatterns.filter_read_dups(on_tar_reads, use_read2=use_read2)    
+    
+    message('filtering duplicates for off traget...')
+    offtar_reads <- reads %>% filter(!(read_id %in% on_tar_reads$read_id))
+    f_reads_offtar <- .gpatterns.filter_read_dups(offtar_reads, use_read2=use_read2)
+    
+    message('getting other stats...')
+    stats <- gpatterns.get_pipeline_stats(track, tidy_cpgs_stats_dir=tidy_cpgs_stats_dir, uniq_tidy_cpgs_stats_dir=uniq_tidy_cpgs_stats_dir, add_mapping_stats=add_mapping_stats)
+    stats[['on_target']] <- nrow(on_tar_reads)
+    stats[['frac_ontar']] <- nrow(on_tar_reads) / nrow(reads)
+    stats[['frac_uniq_ontar']] <- nrow(f_reads_ontar) / nrow(on_tar_reads)
+    stats[['frac_uniq_offtar']] <- nrow(f_reads_offtar) / nrow(offtar_reads)
+
+    return(stats)
+}
+
+.gpatterns.insert_length_reads_per_umi <- function(track, regions, dsn=NULL, reads_umi_breaks=c(0,1,4,10,500), break_levels = c('1' = '[0,1]', '2-4' = '(1,4]', '5-10' = '(4,10]', '>10' = '(10,500]')){
+    tcpgs <-  gpatterns.get_tidy_cpgs(track)    
+    tcpgs <- tcpgs %>% distinct(read_id, num, .keep_all=T) %>% filter(end != '-')
+
+    message('identifying \'on target\' reads...')
+    tcpgs_ontar <- .gpatterns.filter_ontar_reads(tcpgs, regions)
+    res <- tcpgs_ontar %>%
+        mutate(insert_len = abs(insert_len), 
+               num = cut(num, reads_umi_breaks, include.lowest=T), 
+               num = forcats::fct_recode(num, break_levels)) %>% 
+        select(insert_len, reads=num)
+    return(res)
+}
+
+.gpatterns.filter_ontar_reads <- function(reads, regions, max_distance=200, return_orig=TRUE){
+    poss <- reads %>% mutate(end = as.integer(ifelse(end == '-', start + 1, end)), new_start = pmin(start, end), new_end=pmax(start, end), new_end = ifelse(new_end == new_start, new_start + 1, new_end)) %>% select(chrom, start=new_start, end=new_end, read_id) %>% .gpatterns.force_chromosomes() %>% gintervals.filter(regions, max_distance=max_distance)
+    if (return_orig){
+        return(reads %>% filter(read_id %in% poss$read_id))
+    } else {
+        return(poss)
+    }    
+}
+
+.gpatterns.reads_per_region <- function(regions, bams=NULL, reads=NULL, max_distance=200){
+    stopifnot(!is.null(bams) || !is.null(reads))
+    if (is.null(reads)){
+        message('extrating reads...')
+        reads <- .gpatterns.bam2reads(bams=bams)        
+    }
+    reads <- .gpatterns.filter_read_dups(reads)
+    reads <- reads %>% .gpatterns.filter_ontar_reads(regions, max_distance, return_orig=FALSE)   
+    
+    covs <- reads %>% 
+        gintervals.neighbors1(regions) %>% 
+        group_by(chrom1, start1, end1) %>% 
+        summarise(n = n()) %>% 
+        select(chrom=chrom1, start=start1, end=end1, cov=n)
+
+    covs <- covs %>%
+        full_join(regions) %>% 
+        replace_na(replace=list(cov = 0))        
+
+    return(covs)
+}
 
 #' reads per umi
 #'
@@ -71,7 +198,7 @@ gpatterns.get_pipeline_stats <- function(track,
     if (!is.null(dsn)){
         tcpgs <- tcpgs %>% sample_n(dsn)
     }
-    tcpgs %>% group_by(reads=num) %>% summarise(n=n()) %>% return()
+    return(tcpgs %>% group_by(reads=num) %>% summarise(n=n()))
 }
 
 
@@ -102,8 +229,8 @@ gpatterns.get_pipeline_stats <- function(track,
     sort_rand_str <- if(sort_rand) ' sort -R | ' else ''
 
     for (dsn in dsns){
-        message(qq('doing @{dsn}'))
-        if (!is.null(tidy_cpgs_dir)){
+        message(qq('doing @{scales::comma(dsn)}'))
+        if (!is.null(tidy_cpgs_dir)){                  
             non_uniq_tcpgs <- .gpatterns.get_tidy_cpgs_from_dir(tidy_cpgs_dir, intervals=intervals, uniq=FALSE)
         }
         tcpgs <- gpatterns.get_tidy_cpgs(track, intervals=intervals, only_tcpgs=TRUE)
@@ -125,7 +252,7 @@ gpatterns.get_pipeline_stats <- function(track,
                 sep='\t', header=F)[,1]
         } else if (!is.null(tidy_cpgs_dir)){
             message('sampling from non unique tidy cpgs')            
-            if (length(unique(tcpgs$read_id)) >= dsn){
+            if (length(unique(non_uniq_tcpgs$read_id)) >= dsn){
                 ids <- non_uniq_tcpgs %>% distinct(read_id) %>% sample_n(dsn) %>% .$read_id
             }                        
         } else {
@@ -138,10 +265,11 @@ gpatterns.get_pipeline_stats <- function(track,
         if (length(ids) == dsn){            
             tcpgs <- tcpgs %>% filter(read_id %in% ids)
             all_tcpgs <- all_tcpgs %>% filter(read_id %in% ids)
+
             stats[['cg_num']] <- stats[['cg_num']] %>% bind_rows(tibble(dsn=dsn, cg_num = tcpgs %>% distinct(chrom, cg_pos) %>% nrow))
             stats[['meth_calls']] <- stats[['meth_calls']] %>% bind_rows(tibble(dsn=dsn, meth_calls = nrow(tcpgs)))
             stats[['global_avg_meth']] <- stats[['global_avg_meth']] %>% bind_rows(tibble(dsn=dsn, avg_meth = mean(tcpgs$meth)))
-            stats[['reads_per_umi']] <-  stats[['reads_per_umi']] %>% bind_rows(tcpgs %>% group_by(reads=num) %>% summarise(n=n()) %>% mutate(dsn = dsn))
+            stats[['reads_per_umi']] <- stats[['reads_per_umi']] %>% bind_rows(tcpgs %>% group_by(reads=num) %>% summarise(n=n()) %>% mutate(dsn = dsn))
             stats[['umis']] <- stats[['umis']] %>% bind_rows(tibble(dsn=dsn, umis = length(unique(tcpgs$read_id))))
             stats[['on_tar']] <- stats[['on_tar']] %>% bind_rows(tibble(dsn=dsn, on_tar = length(unique(tcpgs$read_id)) / length(unique(all_tcpgs$read_id))))
         } else {
@@ -151,5 +279,72 @@ gpatterns.get_pipeline_stats <- function(track,
 
     stats <- stats %>% map(~ .x %>% mutate(track = track))
 
+    return(stats)
+}
+
+
+
+.gpatterns.bam2reads <- function(bams, paired_end=TRUE, umi1_idx=NULL, umi2_idx=NULL, add_chr_prefix=FALSE, reads_fn=NULL, bismark = FALSE, bin = .gpatterns.bam2tidy_cpgs_bin){
+    if (is.null(reads_fn)){
+        reads_fn <- tempfile()
+    }
+    bam_prefix <- if (1 == length(bams)) 'cat' else 'samtools cat'
+    single_end <- if (!paired_end) '--single-end' else ''        
+    umi1_idx_str <- if (is.null(umi1_idx)) '' else qq('--umi1-idx @{umi1_idx}')
+    umi2_idx_str <- if (is.null(umi2_idx)) '' else qq('--umi2-idx @{umi2_idx}')    
+    
+    chr_prefix_str <- if(add_chr_prefix) '--add-chr-prefix' else ''
+    bismark_str <- if(bismark) '--bismark' else ''
+
+    cmd <- qq('@{bam_prefix} @{paste(bams, collapse=\' \')} |
+         @{bin} -i - -o /dev/null -s /dev/null -r @{reads_fn} @{bismark_str} @{umi1_idx_str} @{umi2_idx_str}
+         @{chr_prefix_str} @{single_end}') %>%
+            gsub('\n', '', .) %>% gsub('  ', ' ', .)
+    system(cmd)
+    reads <- fread(reads_fn)
+    return(reads)
+}
+
+.gpatterns.filter_read_dups <- function(reads, use_read2=TRUE){
+    if (use_read2){
+        f_reads <- reads %>% 
+            arrange(chrom, start, strand, desc(end)) %>% 
+            distinct(chrom, start, end, strand, .keep_all=T) %>% 
+            group_by(chrom, start, strand) %>% 
+            mutate(n_double = sum(end != '-')) %>% 
+            ungroup %>% 
+            filter(n_double == 0 | end != '-') %>% 
+            select(-n_double)    
+            
+    } else {
+        f_reads <- reads %>% 
+            distinct(chrom, start, strand, .keep_all=TRUE)   
+            
+    }        
+    return(f_reads)
+}
+
+
+# #' @export
+# gpatterns.conv_stats <- function(bams, min_qual=30, bin = .gpatterns.conv_stats_bin){ 
+#     bam_prefix <- if (1 == length(bams)) 'cat' else 'samtools cat'
+#     cmd <- qq('@{bam_prefix} @{paste(bams, collapse=" ")} | @{bin} -i - --min-qual @{min_qual}')    
+#     stats <- fread(cmd)
+#     return(stats)    
+# }
+
+gpatterns.conv_stats <- function(bams, paired_end=TRUE, bismark = FALSE, min_mapq=30, bin = .gpatterns.bam2tidy_cpgs_bin){
+    bam_prefix <- if (1 == length(bams)) 'cat' else 'samtools cat'
+    single_end <- if (!paired_end) '--single-end' else ''         
+
+    bismark_str <- if(bismark) '--bismark' else ''
+
+    stats_fn <- tempfile()
+
+    cmd <- qq('@{bam_prefix} @{paste(bams, collapse=\' \')} |
+         @{bin} -i - -o /dev/null -s @{stats_fn} @{bismark_str} @{single_end} --min_map @{min_mapq}') %>%
+            gsub('\n', '', .) %>% gsub('  ', ' ', .)
+    system(cmd)
+    stats <- fread(stats_fn)
     return(stats)
 }

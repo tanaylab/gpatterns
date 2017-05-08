@@ -108,7 +108,7 @@ gpatterns.apply_tidy_cpgs <- function(track,
     # make sure that empty intervals would return NULL
     f_null <- function(track, intervals=NULL){        
         tcpgs <- gpatterns.get_tidy_cpgs(track, intervals=intervals)        
-        if (is.null(tcpgs)){
+        if (is.null(tcpgs) || nrow(tcpgs) == 0){            
             return(NULL)
         }
         return(f(tcpgs))
@@ -700,6 +700,7 @@ gpatterns.tidy_cpgs_2_pileup <- function(calls, dsn = NULL){
     }
 
     pileup <- pileup %>%
+        ungroup() %>% 
         mutate(cov = meth + unmeth, avg = meth / cov) %>%
         select(chrom, start, end, meth, unmeth, cov, avg)
 

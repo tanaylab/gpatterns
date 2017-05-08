@@ -308,7 +308,7 @@ gpatterns.import_from_bam <- function(bams,
                                       run_per_interv = TRUE,
                                       ...){
     gsetroot(groot)
-    all_steps <- c('bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov', 'stats')
+    all_steps <- c('bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov', 'stats')    
 
     if (length(steps) == 1 && steps == 'all'){
         steps <- all_steps
@@ -690,10 +690,11 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
 }
 
 #' @export
-.gpatterns.import_intervs_table <- function(track_pref, description, tab, columns = NULL, overwrite = FALSE, rescan = FALSE){
+.gpatterns.import_intervs_table <- function(track_pref, description, tab, columns = NULL, overwrite = FALSE){
     tab <- tbl_df(tab)
-    if (!dir.exists(gsub('\\.', '/', track_pref))){
-        gdir.create(gsub('\\.', '/', track_pref), showWarnings=FALSE)    
+    tracks_dir <- .gpatterns.base_dir(track_pref)
+    if (!dir.exists(tracks_dir)){
+        system(qq('mkdir -p @{tracks_dir}'))
     }
     columns <- columns %||% colnames(tab)[!(colnames(tab) %in% c('chrom', 'start', 'end'))]
     walk(columns, function(col){
@@ -711,8 +712,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
         gtrack.create_sparse(track = track_name,
                              description = qq('@{description}: @{col} track'),
                              intervals = tab %>% select(chrom, start, end),
-                             value = tab[[col]],
-                             rescan = rescan)
+                             value = tab[[col]])
     })
 }
 
@@ -1040,14 +1040,14 @@ gpatterns.merge_tracks <- function(tracks, new_track, description, intervals=gin
         }
         expr <- sprintf("sum(%s, na.rm=T)", paste(qqv('@{tracks}.@{suffix}'), collapse=', '))
         if (!gtrack.exists(qq('@{new_track}.@{suffix}'))){
-            gtrack.create(qq('@{new_track}.@{suffix}'), description, expr, iterator=iterator, rescan=FALSE)
+            gtrack.create(qq('@{new_track}.@{suffix}'), description, expr, iterator=iterator)
         }
     }
 
     if (add_var){
         expr <-  sprintf("var(%s, na.rm=T)", paste(qqv('@{tracks}.avg'), collapse=', '))
         if (!gtrack.exists(qq('@{new_track}.var'))){
-            gtrack.create(qq('@{new_track}.var'), description, expr, iterator=iterator, rescan=FALSE)
+            gtrack.create(qq('@{new_track}.var'), description, expr, iterator=iterator)
         }
     }
     gdb.reload()

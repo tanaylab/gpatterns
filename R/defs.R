@@ -115,6 +115,9 @@ NULL
 .gpatterns.sg_script <- sprintf("%s/%s",
                                         system.file("exec", package="gpatterns"),
 	                                'sgjob.sh')
+.gpatterns.conv_stats_bin <- sprintf("%s/%s",
+                                        system.file("bin", package="gpatterns"),
+                                  'conv_stats.py')
 
 # Color palettes ------------------------------------------------
 .blue_red_pal <- colorRampPalette(c("#87FFFF", "black", "#FF413D"))(1000)
