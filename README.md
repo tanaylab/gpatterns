@@ -12,6 +12,7 @@ Source code can be found at: https://bitbucket.org/tanaylab/gpatterns
 #### Requirements 
 - _Perl_
 - _Python_ (>=2.7)
+- _SAMtools_ 
 - R packages:
     * _devtools_.
     * _misha_(>=3.5.6).
