@@ -320,7 +320,7 @@ gpatterns.import_from_bam <- function(bams,
         if ('bind_tidy_cpgs' %in% steps){
             workdir <- paste0(.gpatterns.base_dir(track), '/workdir')        
         } else {
-            workdir <- .gpatterns.base_dir            
+            workdir <- .gpatterns.base_dir(track)         
         }        
     }
 

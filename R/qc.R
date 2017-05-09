@@ -324,15 +324,7 @@ gpatterns.capture_stats <- function(track,
     return(f_reads)
 }
 
-
-# #' @export
-# gpatterns.conv_stats <- function(bams, min_qual=30, bin = .gpatterns.conv_stats_bin){ 
-#     bam_prefix <- if (1 == length(bams)) 'cat' else 'samtools cat'
-#     cmd <- qq('@{bam_prefix} @{paste(bams, collapse=" ")} | @{bin} -i - --min-qual @{min_qual}')    
-#     stats <- fread(cmd)
-#     return(stats)    
-# }
-
+#' @export
 gpatterns.conv_stats <- function(bams, paired_end=TRUE, bismark = FALSE, min_mapq=30, bin = .gpatterns.bam2tidy_cpgs_bin){
     bam_prefix <- if (1 == length(bams)) 'cat' else 'samtools cat'
     single_end <- if (!paired_end) '--single-end' else ''         
