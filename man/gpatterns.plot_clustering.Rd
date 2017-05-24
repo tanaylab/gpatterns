@@ -4,17 +4,39 @@
 \alias{gpatterns.plot_clustering}
 \title{Plot a heatmap of average methylation clustering}
 \usage{
-gpatterns.plot_clustering(avgs, fig_ofn = NULL, width = 500, height = 800,
-  device = "png", cluster_gaps = FALSE, annotation = NULL,
-  annotation_colors = NULL, annotate_clust = FALSE, color = .blue_red_pal,
-  breaks = seq(0, 1, 0.001), main = paste0(comify(n_loci), " loci"),
-  border_color = NA, show_rownames = FALSE, cluster_rows = FALSE,
-  cluster_cols = TRUE, method = "ward.D2",
-  clustering_callback = function(hc, ...) {     dendsort::dendsort(hc) },
-  tidy = TRUE, ...)
+gpatterns.plot_clustering(avgs, rows_clust_method = "kmeans", K = NULL,
+  cluster_cols = TRUE, show_row_clust = TRUE, annotation = NULL,
+  annotation_colors = NULL, annotation_col = NULL, show_rownames = FALSE,
+  show_colnames = FALSE, color_pal = .blue_red_pal, fontsize = 10,
+  fontsize_row = fontsize, fontsize_col = fontsize, main = NULL,
+  fig_ofn = NULL, width = 1000, height = 1600, plot = TRUE,
+  motif_enrich = NULL, cluster_motifs = TRUE, qval_thresh = 0.05,
+  show_sig = TRUE, ...)
 }
 \arguments{
 \item{avgs}{output of gpatterns.cluster_avg_meth}
+
+\item{cluster_cols}{boolean values determining if columns should be clustered or \code{hclust} object.}
+
+\item{annotation}{deprecated parameter that currently sets the annotation_col if it is missing}
+
+\item{annotation_colors}{list for specifying annotation_row and
+annotation_col track colors manually. It is  possible to define the colors
+for only some of the features. Check examples for  details.}
+
+\item{annotation_col}{similar to annotation_row, but for columns.}
+
+\item{show_rownames}{boolean specifying if column names are be shown.}
+
+\item{show_colnames}{boolean specifying if column names are be shown.}
+
+\item{fontsize}{base fontsize for the plot}
+
+\item{fontsize_row}{fontsize for rownames (Default: fontsize)}
+
+\item{fontsize_col}{fontsize for colnames (Default: fontsize)}
+
+\item{main}{the title of the plot}
 
 \item{fig_ofn}{output filename of the figure. if NULL would plot to current device}
 
@@ -22,47 +44,9 @@ gpatterns.plot_clustering(avgs, fig_ofn = NULL, width = 500, height = 800,
 
 \item{height}{height ('png' parameter)}
 
-\item{device}{plotting device}
+\item{plot}{if FALSE, would only return the clustering}
 
-\item{cluster_gaps}{add gaps between the row clusters}
-
-\item{annotation}{deprecated parameter that currently sets the annotation_col if it is missing}
-
-\item{annotation_colors}{data frame with column 'catergory' with the annotation
-field (corresponds to a column in 'annotation', e.g. 'tumor'), 'variable' with the
-variable (e.g. 'P1') and 'color' with the color of the variable.}
-
-\item{annotate_clust}{annotate the clusters (rows)}
-
-\item{color}{vector of colors used in heatmap.}
-
-\item{breaks}{a sequence of numbers that covers the range of values in mat and is one
-element longer than color vector. Used for mapping values to colors. Useful, if needed
-to map certain values to certain colors, to certain values. If value is NA then the
-breaks are calculated automatically.}
-
-\item{main}{the title of the plot}
-
-\item{border_color}{color of cell borders on heatmap, use NA if no border should be
-drawn.}
-
-\item{show_rownames}{boolean specifying if column names are be shown.}
-
-\item{cluster_rows}{boolean values determining if rows should be clustered or \code{hclust} object,}
-
-\item{cluster_cols}{boolean values determining if columns should be clustered or \code{hclust} object.}
-
-\item{clustering_callback}{callback function to modify the clustering. Is
-called with two parameters: original \code{hclust} object and the matrix
-used for clustering. Must return a \code{hclust} object.}
-
-\item{...}{other pheatmap parameters}
-
-\item{annotations}{data frame with column 'samp' with the sample names and
-additional columns of annotation}
-}
-\value{
-intervals set with clust column binded to a matrix with loci in rows and samples in columns (ordered by clustering)
+\item{...}{other pheatmap1 parameters}
 }
 \description{
 Plot a heatmap of average methylation clustering

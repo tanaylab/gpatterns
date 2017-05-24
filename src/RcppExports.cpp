@@ -27,3 +27,14 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+
+static const R_CallMethodDef CallEntries[] = {
+    {"gpatterns_timesTwo", (DL_FUNC) &gpatterns_timesTwo, 1},
+    {"gpatterns_mpms", (DL_FUNC) &gpatterns_mpms, 1},
+    {NULL, NULL, 0}
+};
+
+RcppExport void R_init_gpatterns(DllInfo *dll) {
+    R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
+    R_useDynamicSymbols(dll, FALSE);
+}

@@ -458,17 +458,17 @@ gpatterns.calc_bipolarity <- function(track,
 
 # other Functions ------------------------------------------------
 
-
+#' @export
 gpatterns.theta_distance <- function(track1, track2, meth_range=NULL, min_cov=NULL, similarity=FALSE){
 
-    pats1 <- gpatterns.extract_patterns(track1, tabular=T) %>%
+    pats1 <- gpatterns.extract_patterns(track1, tidy=T) %>%
         group_by(fid, pattern) %>%
         summarise(n1=n()) %>%
         group_by(fid) %>%
         mutate(p1 = n1 / sum(n1)) %>%
         ungroup()
 
-    pats2 <- gpatterns.extract_patterns(track2, tabular=T) %>%
+    pats2 <- gpatterns.extract_patterns(track2, tidy=T) %>%
         group_by(fid, pattern) %>%
         summarise(n2=n()) %>%
         group_by(fid) %>%
@@ -522,13 +522,17 @@ gpatterns.theta_distance <- function(track1, track2, meth_range=NULL, min_cov=NU
     return(res)
 }
 
-
-gpatterns.theta_distance_sampling <- function(track1, track2, sampling_n, meth_range=NULL, rm_n0=FALSE, rm_n1=FALSE, rm_borders=FALSE, similarity=FALSE, replace=FALSE, min_cov=NULL, add_frag_stats=FALSE, add_intra=FALSE){
+#' @export
+gpatterns.theta_distance_sampling <- function(track1, track2, sampling_n, meth_range=NULL, rm_n0=FALSE, rm_n1=FALSE, rm_borders=FALSE, similarity=FALSE, replace=FALSE, min_cov=NULL, add_frag_stats=FALSE, add_intra=FALSE, intervals=NULL, fids=NULL){
     if (!replace && is.null(min_cov)){
         min_cov <- sampling_n
     }
 
-    pats1 <- gpatterns.extract_patterns(track1, tabular=T)
+    if (!is.null(intervals)){
+      fids <- gintervals.filter(.gpatterns.pat_space_intervs_name(track1), intervals) %>% .$fid %>% unique
+    }
+
+    pats1 <- gpatterns.extract_patterns(track1, tidy=T, fids=fids)
     pats1 <- .gpatterns_filter_pats(pats1, min_cov=min_cov, meth_range=meth_range, rm_n0=rm_n0, rm_n1=rm_n1, rm_borders=rm_borders, track=track1)
     if (add_frag_stats){
        frag_stats1 <- .gpatterns.frag_stats(pats1) %>%
@@ -543,7 +547,7 @@ gpatterns.theta_distance_sampling <- function(track1, track2, sampling_n, meth_r
         return(res)
     }
 
-    pats2 <- gpatterns.extract_patterns(track2, tabular=T)
+    pats2 <- gpatterns.extract_patterns(track2, tidy=T, fids=fids)
     pats2 <- .gpatterns_filter_pats(pats2, min_cov=min_cov, meth_range=meth_range, rm_n0=rm_n0, rm_n1=rm_n1, rm_borders=rm_borders, track=track2)
 
     fids <- pats1$fid[pats1$fid %in% pats2$fid]
@@ -588,7 +592,7 @@ gpatterns.theta_distance_sampling <- function(track1, track2, sampling_n, meth_r
         pats <- pats %>% filter(ones != cpgs)
     }
     if (rm_borders){
-        pats <- pats %>% filter(!.gpatterns.border_pattern(pattern))
+        pats <- pats %>% filter(!gpatterns.border_pattern(pattern))
     }
     if (!is.null(meth_range)){
         if (is.null(track)){
@@ -643,10 +647,11 @@ gpatterns.theta_distance_sampling <- function(track1, track2, sampling_n, meth_r
             group_by(fid) %>%
             summarise(epipoly = sum(dif, na.rm=T) / n()) %>%
             ungroup
+
     res <- count(pats, fid) %>%
         left_join(res, by='fid') %>%
         select(-n) %>%
-        arrange_old(fid)
+        arrange(fid)
 
     if (similarity){
         res <- res %>%
@@ -655,7 +660,7 @@ gpatterns.theta_distance_sampling <- function(track1, track2, sampling_n, meth_r
     return(res)
 }
 
-
+#' @export
 gpatterns.theta_matrix_sampling <- function(tracks, samples=NULL, parallel=FALSE, symetric=TRUE, ...){
     if (parallel){
         .progress='none'
@@ -698,5 +703,50 @@ gpatterns.theta_matrix_sampling <- function(tracks, samples=NULL, parallel=FALSE
             select(samp1, samp2, theta, loci)
     }
 
-    return(theta)
+    return(tbl_df(theta))
+}
+
+#' @export
+gpatterns.theta_distance_plot <- function(theta, fig_ofn=NULL,  width=800, height=600, zlim=NULL, color_pal=c(rep('white', 4), '#ffffd4','#fed98e','#fe9929','#d95f0e','#993404', 'black'), log_transform=FALSE, border_color = "grey60", fontsize=14, ...){   
+
+    if (log_transform){
+        theta <- theta %>% mutate(theta = log10(theta))
+    }
+    
+    if(!is.null(fig_ofn)){
+        png(fig_ofn, width=width, height=height)
+    }
+    
+    if (sum(is.na(theta$theta)) > 0){
+        theta[is.na(theta$theta), ]$theta <- max(theta$theta, na.rm=T)
+    }
+    
+    if (!is.null(zlim)){
+        theta <- theta %>% 
+            mutate(theta = ifelse(theta < zlim[1], zlim[1], theta)) %>% 
+            mutate(theta = ifelse(theta > zlim[2], zlim[2], theta))             
+         breaks <-  quantile(theta$theta, seq(0,1,1/(length(color_pal) - 1)), na.rm=T)
+         color_pal <- build_pallette(data.frame(point =breaks, color =color_pal), 1000)  
+         breaks <- seq(zlim[1], zlim[2], length.out=1001)         
+    } else {                
+        init_breaks <-  quantile(theta$theta, seq(0,1,1/(length(color_pal) - 1)), na.rm=T)
+        color_pal <- build_pallette(data.frame(point =init_breaks, color =color_pal), 1000)   
+        zlim <- c(min(init_breaks), max(init_breaks))
+        breaks <- seq(zlim[1], zlim[2], length.out=1001)        
+    }
+    
+    mat <- theta %>% reshape2::dcast(samp1 ~ samp2, value.var='theta')  %>% rename(samp = samp1)        
+          
+    mat %>%  
+        pheatmap1( 
+            color=color_pal,
+            breaks=breaks,
+            border_color=border_color,                         
+            fontsize=fontsize,
+            ...)
+    
+    if(!is.null(fig_ofn)){
+        dev.off()
+    }
+    invisible(theta)    
 }

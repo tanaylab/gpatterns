@@ -480,7 +480,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
     }
 
     if (run_per_interv){
-        commands <- genomic_bins %>% by_row( function(gbins){
+        commands <- genomic_bins %>% purrrlyr::by_row( function(gbins){
             stats_fn <- qq('@{stats_dir}/@{gbins$chrom}_@{gbins$start}_@{gbins$end}.stats')
             output_fn <- qq('@{tidy_cpgs_dir}/@{gbins$chrom}_@{gbins$start}_@{gbins$end}.tcpgs.gz')
             qq('@{bam_prefix} @{paste(bams, collapse=\' \')} |
@@ -532,7 +532,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
     only_seq <- if (only_seq) '--only-seq' else ''
     sorted_str <- if (sorted) '--sorted' else ''
 
-    commands <- genomic_bins %>% by_row(function(gbins){
+    commands <- genomic_bins %>% purrrlyr::by_row(function(gbins){
         stats_fn <- qq('@{stats_dir}/@{gbins$chrom}_@{gbins$start}_@{gbins$end}.stats')
         input_fn <- qq('@{tidy_cpgs_dir}/@{gbins$chrom}_@{gbins$start}_@{gbins$end}.tcpgs.gz')
         output_fn <- qq('@{uniq_tidy_cpgs_dir}/@{gbins$chrom}_@{gbins$start}_@{gbins$end}.tcpgs.gz')

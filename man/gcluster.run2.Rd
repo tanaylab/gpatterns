@@ -7,8 +7,9 @@
 gcluster.run2(..., command_list = NULL, opt.flags = "", max.jobs = 400,
   debug = FALSE, R = paste0(R.home(component = "bin"), "/R"),
   packages = NULL, jobs_title = NULL, job_names = NULL,
-  collapse_results = FALSE, memory = NULL, threads = NULL,
-  io_saturation = NULL, memory_flag = "-l mem_free=@{memory}G",
+  collapse_results = FALSE, queue = NULL, memory = NULL, threads = NULL,
+  io_saturation = NULL, queue_flag = "-q @{queue}",
+  memory_flag = "-l mem_free=@{memory}G",
   threads_flag = "-pe threads @{threads}",
   io_saturation_flag = "-l io_saturation=@{io_saturation}",
   script = paste(Sys.getenv("ANALYSIS_HOME"), "common", "sgjob.sh", sep =
