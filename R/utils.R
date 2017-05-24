@@ -137,6 +137,7 @@ gpatterns.set_parallel <- function(thread_num) {
     return(colClasses)
 }
 
+#' @export
 .gpatterns.get_tidy_cpgs_from_dir <- function(dir,
                                               intervals = NULL,
                                               uniq = TRUE){
@@ -197,7 +198,7 @@ gpatterns.set_parallel <- function(thread_num) {
 #' @export
 gcluster.run3 <- partial(gcluster.run2, script = .gpatterns.sg_script)
 
-#
+#' @export
 .gpatterns.base_dir <- function(track)
 {
     map(track, ~  c(gdir.cwd(), strsplit(.x, '.', fixed=TRUE)[[1]])) %>%
@@ -261,16 +262,18 @@ pheatmap1 <- function(pmat, annotation=NULL, annotation_colors=NULL, annotation_
             filter(samp %in% colnames(pmat) | samp %in% rownames(pmat)) %>%
             mutate_if(is.character, factor) %>%
             as.data.frame
-        rownames(annots) <- annots$samp
-        annots <- annots %>% select(-samp)
 
         if (!is.null(annotation_colors)){
             annot_cols <- plyr::dlply(annotation_colors,
                                       .(type),
-                                      function(x) x %>%
-                                        select(-type) %>%
-                                        spread(variable, color) %>%
-                                         unlist)  
+                                      function(x){
+                                        var_ord <- x$variable
+                                        x %>%
+                                            select(-type) %>%
+                                            spread(variable, color) %>%
+                                            select(one_of(var_ord)) %>% 
+                                            unlist
+                                      }) 
             annot_cols <- annot_cols[colnames(annots)]         
         } else {
             annot_cols <- NA
@@ -278,19 +281,7 @@ pheatmap1 <- function(pmat, annotation=NULL, annotation_colors=NULL, annotation_
     } else {
         annots <- NA
     }
-
-    if (!is.null(annotation_col)){
-        annotation_col <- annots[, annotation_col]
-    } else {
-        annotation_col <- NA
-    }
-
-    if (!is.null(annotation_row)){
-        annotation_row <- annots[, annotation_row]
-    } else {
-        annotation_row <- NA
-    }
-
+    
     if (min_vals_row > 1){
         pmat <- pmat[apply(pmat, 1, function(x) sum(!is.na(x)) >= 100), ]
     }
@@ -299,6 +290,22 @@ pheatmap1 <- function(pmat, annotation=NULL, annotation_colors=NULL, annotation_
         pmat <- pmat[, apply(pmat, 2, function(x) sum(!is.na(x)) >= 100)]   
     }
 
+    if (!is.null(annotation_col)){
+        annotation_col <- annots %>% filter(samp %in% colnames(pmat)) %>% select(one_of(c(annotation_col, 'samp')))
+        rownames(annotation_col) <- annotation_col$samp
+        annotation_col <- annotation_col %>% select(-samp)        
+    } else {
+        annotation_col <- NA
+    }
+
+    if (!is.null(annotation_row)){
+        annotation_row <- annots %>% filter(samp %in% rownames(pmat)) %>% select(one_of(c(annotation_row, 'samp')))
+        rownames(annotation_row) <- annotation_row$samp
+        annotation_row <- annotation_row %>% select(-samp)        
+    } else {
+        annotation_row <- NA
+    }
+    
     pheatmap::pheatmap(pmat,
                             border_color=border_color,
                             annotation_col=annotation_col,                            

@@ -9,6 +9,7 @@ NULL
 #' @import ggplot2
 #' @importFrom data.table fwrite
 #' @importFrom GetoptLong qq
+#' @import ggplot2
 
 # Tracks and table names ------------------------------------------------
 .gpatterns.downsampled_track_name <- function(track, dsn) {qqv('@{track}.ds@{dsn}') }
@@ -120,7 +121,8 @@ NULL
                                   'conv_stats.py')
 
 # Color palettes ------------------------------------------------
-.blue_red_pal <- colorRampPalette(c("#87FFFF", "black", "#FF413D"))(1000)
+# .blue_red_pal <- colorRampPalette(c("#87FFFF", "black", "#FF413D"))(1000)
+.blue_red_pal <- colorRampPalette(c("#00688B", "white", "#FF413D"))(1000)
 .blue_black_red_yellow_pal <- colorRampPalette(c("white", "blue",  "black", "red", "yellow"))(1000)
 .red_blue_pal <- rev(colorRampPalette(c("#87FFFF", "black", "#FF413D"))(1000))
 .blue_red_yellow_pal <- colorRampPalette(c("white", "blue", "red", "yellow"))(1000)

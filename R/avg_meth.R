@@ -657,141 +657,151 @@ gpatterns.cluster_columns <- function(avgs, column_k = NULL, ret_hclust=FALSE, t
 #'
 #' @inheritParams pheatmap::pheatmap
 #' @param avgs output of gpatterns.cluster_avg_meth
+#' @param row_clust_method
+#' @param K
+#' @param cluster_cols
+#' @param show_row_clust
+#' @param annotation
+#' @param annotation_colors
+#' @param annotation_col
+#' @param show_rownames
+#' @param show_colnames
+#' @param color_pal
+#' @param main
 #' @param fig_ofn output filename of the figure. if NULL would plot to current device
 #' @param width width ('png' parameter)
 #' @param height height ('png' parameter)
-#' @param device plotting device
-#' @param cluster_gaps add gaps between the row clusters
-#' @param annotations data frame with column 'samp' with the sample names and
-#' additional columns of annotation
-#' @param annotation_colors data frame with column 'catergory' with the annotation
-#' field (corresponds to a column in 'annotation', e.g. 'tumor'), 'variable' with the
-#' variable (e.g. 'P1') and 'color' with the color of the variable.
-#' @param annotate_clust annotate the clusters (rows)
-#' @param ... other pheatmap parameters
+#' @param plot if FALSE, would only return the clustering
+#' @param ... other pheatmap1 parameters
 #'
-#' @return intervals set with clust column binded to a matrix with loci in rows and samples in columns (ordered by clustering)
+#' @return 
 #' @export
 #'
 #' @examples
-gpatterns.plot_clustering <- function(avgs,
-                                      fig_ofn=NULL,
-                                      width=500,
-                                      height=800,
-                                      device='png',
-                                      cluster_gaps=FALSE,
-                                      annotation=NULL,
-                                      annotation_colors=NULL,
-                                      annotate_clust=FALSE,
-                                      color=.blue_red_pal,
-                                      breaks=seq(0,1,0.001),
-                                      main=paste0(comify(n_loci), ' loci'),
-                                      border_color=NA,
-                                      show_rownames=FALSE,
-                                      cluster_rows=FALSE,
-                                      cluster_cols=TRUE,
-                                      method="ward.D2",
-                                      clustering_callback = function(hc, ...){dendsort::dendsort(hc)},
-                                      tidy = TRUE,
-                                      ...){
-    if (tidy){
-        mat <- avgs %>% arrange(clust, ord, samp) %>% select(chrom, start, end, ord, clust, samp, avg) %>% spread(samp, avg)    
+gpatterns.plot_clustering <- function(avgs, rows_clust_method='kmeans', K=NULL, cluster_cols = TRUE, show_row_clust = TRUE, annotation=NULL, annotation_colors=NULL, annotation_col=NULL, show_rownames=FALSE, show_colnames=FALSE, color_pal = .blue_red_pal, fontsize = 10, fontsize_row = fontsize, fontsize_col = fontsize, main=NULL, fig_ofn=NULL, width=1000, height=1600, plot=TRUE, motif_enrich=NULL, cluster_motifs=TRUE, qval_thresh=0.05, show_sig=TRUE, ...){
+
+    if (rows_clust_method == 'kmeans'){
+        clust <- gpatterns.cluster_avg_meth(avgs, K=K, tidy=F)  
     } else {
-        mat <- avgs
-    }
-    
-    pmat <- mat %>% select(-(chrom:clust)) %>% as.data.frame
-    rownames(pmat) <- paste0(mat$chrom, '_', mat$start, '_', mat$end)    
-
-    if (!is.null(annotation)){
-        annots <- annotation %>%
-            filter(samp %in% colnames(pmat)) %>%
-            mutate_if(is.character, factor) %>%
-            as.data.frame
-        rownames(annots) <- annots$samp
-        annots <- annots %>% select(-samp)
-
-        if (!is.null(annotation_colors)){
-
-            annot_cols <- plyr::dlply(annotation_colors,
-                                      .(type),
-                                      function(x) x %>%
-                                        select(-type) %>%
-                                        spread(variable, color) %>%
-                                         unlist)
-            annot_cols <- annot_cols[colnames(annots)]
+        if ('clust' %in% colnames(avgs)){
+            clust <- avgs %>% mutate(ord=1:n()) %>% select(chrom, start, end, ord, clust, everything())
         } else {
-            annot_cols <- NA
+            clust <- avgs %>% mutate(clust = NA, ord=1:n()) %>% select(chrom, start, end, ord, clust, everything())
+            if (show_row_clust){
+                show_row_clust <- FALSE
+            }    
+        }        
+    }
+
+    if (rows_clust_method == 'hclust'){
+        cluster_rows <- TRUE
+    } else {
+        cluster_rows <- FALSE
+    }   
+
+    clust <- clust %>% unite('id', chrom:end, sep='_', remove=T)
+    if (show_row_clust){
+        annotation <- clust %>% mutate(clust = paste0('clust', clust)) %>% select(samp = id, clust) %>% bind_rows(annotation)
+        annotation_row <- 'clust'       
+        annotation_colors <- clust %>% distinct(clust) %>% mutate(variable = paste0('clust', clust), color = get_qual_colors(n())) %>% mutate(type = 'clust') %>% select(type, variable, color)  %>% bind_rows(annotation_colors)        
+    } else {
+        if (!is.null(annotation)){
+            annotation$clust <- NA    
+        }        
+        annotation_row <- NULL
+    }
+
+    if (is.null(main)){
+        main <- qq('@{nrow(clust)} loci')
+    } 
+
+    p_mat <- clust %>%        
+        select(-one_of('ord', 'clust')) %>% 
+        pheatmap1(cluster_rows=cluster_rows,
+                  color=color_pal,
+                  breaks=seq(0,1,0.001),
+                  show_rownames=show_rownames,
+                  cluster_cols=cluster_cols,                  
+                  annotation=annotation,
+                  annotation_colors=annotation_colors,
+                  annotation_col = annotation_col,
+                  annotation_row = annotation_row,
+                  show_colnames=show_colnames,                
+                  clustering_method = 'ward.D2',
+                  fontsize = fontsize, 
+                  fontsize_row = fontsize_row, 
+                  fontsize_col = fontsize_col,
+                  main=main, silent=TRUE)
+    gmat <- p_mat$gtable
+
+    if (!is.null(motif_enrich)){
+        motifs <- motif_enrich %>% filter(qval <= qval_thresh) %>% .$track %>% unique
+        motif_enrich <- motif_enrich %>% filter(track %in% motifs)
+        
+        motif_mat <- motif_enrich %>% left_join(clust %>% select(id, ord, clust), by='clust') %>% reshape2::dcast(id + ord + clust~track, value.var='rel_enrich') %>% arrange(clust, ord) %>% select(-ord, -clust)
+        
+        sig_mat <- motif_enrich %>% left_join(clust %>% select(id, ord, clust), by='clust') %>% mutate(sig = if_else(qval <= qval_thresh, paste0(rep('| ', 5), collapse=''), '')) %>% reshape2::dcast(id + ord + clust~track, value.var='sig') %>% arrange(clust, ord) %>% select(-ord, -clust)
+        if (cluster_motifs){
+            motif_cols <- c(1, hclust(dist(t(motif_mat[,-1]))) $order + 1)
+            motif_mat <- motif_mat[, motif_cols]
+            sig_mat <- sig_mat[, motif_cols] %>% select(-id) %>% as.matrix
         }
+
+        if (show_sig){
+            display_numbers <- sig_mat 
+        } else {
+            display_numbers <- FALSE
+        }
+
+        breaks <- seq(min(motif_enrich$rel_enrich), max(motif_enrich$rel_enrich), length.out=1000)
+
+        gmot <- motif_mat %>% pheatmap1(show_rownames=FALSE, cluster_rows=FALSE, cluster_cols=FALSE, show_colnames=TRUE, fontsize = fontsize, fontsize_row = fontsize_row, fontsize_col = 15, legend=F, silent=TRUE,  display_numbers = display_numbers, fontsize_number=4, border_color='black')  %>% .$gtable #, color=.smooth_scatter_pal3(1000), breaks=breaks)
+        gmot1 <- motif_mat %>% pheatmap1(show_rownames=FALSE, cluster_rows=FALSE, cluster_cols=FALSE, fontsize = fontsize, fontsize_row = fontsize_row, fontsize_col = 9, legend=T, silent=TRUE,  display_numbers = display_numbers, fontsize_number=4, border_color='black') %>% .$gtable       
+      
+        gmot <- gtable::gtable_add_cols(gmot, gmot1$widths[5], 0)
+        
+        gmot <- gtable::gtable_add_grob(gmot, grobs=gmot1$grobs[[3]], t=4, b=5, l=1, r=2, name='legend')
+        gmot <- gtable::gtable_add_grob(gmot, grobs=gmot1$grobs[[2]], t=3, b=3, l=4, r=4, name='col_names_top', clip='off')
+        
+        # gmat$widths <- grid::convertX(gmat$widths, 'bigpts')
+        # gmot$widths <- grid::convertX(gmot$widths, 'bigpts') 
+        # gmat$heights <- grid::convertX(gmat$heights, 'bigpts')
+        # gmot$heights <- grid::convertX(gmot$heights, 'bigpts') 
+        gmat$heights[3] <- gmat$heights[3] - unit(4, 'bigpts')
+        rownames(gmot) <- gmot$name
+        rownames(gmat) <- gmat$name
+        
+        gt <- gridExtra:::combine(gmot, gmat, join='outer')
+        gt$widths <- as.numeric(grid::convertX(gt$widths, 'bigpts'))
+        gt$heights <- as.numeric(grid::convertX(gt$heights, 'bigpts'))
+        # gt$widths <- grid::convertX(gt$widths, 'bigpts')
+        # h <- as.numeric(grid::convertX(gt$heights, 'bigpts'))     
+        
+        mot_mat_ind <- gt$layout %>% filter(name == 'matrix') %>% slice(1) %>% .$r
+        meth_mat_ind <- gt$layout %>% filter(name == 'matrix') %>% slice(2) %>% .$r
+        gt$widths[mot_mat_ind] <- gt$widths[meth_mat_ind] * 0.5
+        # gt$widths[mot_mat_ind] <- unit(as.numeric(grid::convertX(gt$widths[meth_mat_ind], 'bigpts')) * 0.6, 'bigpts' )
+
+        gt <- gtable::gtable_trim(gt)
+        
+        
+           
     } else {
-        annots <- NA
+        gt <- gmat
     }
 
-    if (annotate_clust){
-        annots_clust <- avgs %>%
-            distinct(chrom, start, end, clust) %>%
-            unite('id', chrom, start, end, sep='_') %>%
-            mutate(cluster = factor(clust)) %>%
-            select(-clust) %>% 
-            as.data.frame
-        rownames(annots_clust) <- annots_clust$id
-        annots_clust <- annots_clust %>% select(-id)
-    } else {
-        annots_clust <- NA
-    }
-
-    n_loci <- nrow(pmat)
-    if (cluster_gaps){
-        gaps <- annots_clust %>%
-            mutate(i = 1:n()) %>%
-            distinct(cluster, .keep_all=T) %>%
-            .$i %>%
-            .[-1]
-    } else {
-        gaps <- NULL
-    }
 
     if (!is.null(fig_ofn)){
-        do.call(device, list(fig_ofn, width = width, height = height))
+        png(fig_ofn, width=width, height=height)    
     }
 
-    p <- pheatmap::pheatmap(pmat,
-                            cluster_rows=cluster_rows,
-                            cluster_cols=cluster_cols,
-                            clustering_callback=clustering_callback,
-                            method=method,
-                            color=color,
-                            breaks=breaks,
-                            border_color=border_color,
-                            annotation_col=annots,
-                            show_rownames=show_rownames,
-                            annotation_colors=annot_cols,
-                            annotation_row=annots_clust,
-                            main=main,
-                            gaps_row=gaps,
-                             ...)
+    grid.newpage()
+    grid.draw(gt)    
 
     if (!is.null(fig_ofn)){
         dev.off()
     }
-
-    # arrange matrix to return
-    if (cluster_cols){
-        pmat <- pmat[, p$tree_col$order]
-    }
-    if (cluster_rows){
-        pmat <- pmat[p$tree_row$order, ]
-    }
-
-    pmat <- pmat %>%
-        mutate(id = rownames(pmat)) %>%
-        separate(id, c('chrom', 'start', 'end')) %>%
-        mutate_at(c('start', 'end'), as.numeric) %>%
-        left_join(mat %>% distinct(chrom, start, end, clust)) %>%
-        select(chrom, start, end, clust, everything()) %>%
-        tbl_df
-
-    return(pmat)
+    invisible(clust %>% separate(id, c('chrom', 'start', 'end')) %>% mutate(start = as.numeric(start), end=as.numeric(end)))
 }
 
 

@@ -233,7 +233,7 @@ gpatterns.tidy_cpgs_to_pats <- function(track,
     if (!is.null(pattern_space_file)){
         pattern_space <- fread(pattern_space_file)
     } else if (is.null(pattern_space)){
-        stop('Please to provide either pattern_space or pattern_space_file')
+        stop('Please provide either pattern_space or pattern_space_file')
     }
 
     pat_space <- pattern_space %>%
@@ -288,6 +288,22 @@ gpatterns.tidy_cpgs_to_pats <- function(track,
     return(pats)
 }
 
+
+#' Get pattern space of a track
+#' 
+#' @param track track name
+#' 
+#' @return pattern space of a track
+#' 
+#' @export
+gpatterns.track_pat_space    <- function(track) { 
+    intervs <- .gpatterns.pat_space_intervs_name(track)
+    if (gintervals.exists(intervs)){
+        return(gintervals.load(intervs))
+    } else {
+        stop("pattern space doesn't exist. Please use gpatterns.tracks_to_pat_space or gpatterns.intervs_to_pat_space to create it")
+    }    
+}
 
 #' Generate pattern space
 #'
@@ -366,7 +382,7 @@ gpatterns.tracks_to_pat_space <- function(tracks,
             filter(n() >= pat_len)
         if (adjacent){
             if ('start.orig' %in% colnames(covs)){
-                #ad make sure that we are covering the original interval
+                # make sure that we are covering the original interval
                 covs <- covs %>%
                     arrange(chrom1, start1, end1, chrom, start, end) %>%
                     mutate(cg_num=1:n()) %>%
@@ -387,9 +403,9 @@ gpatterns.tracks_to_pat_space <- function(tracks,
                 space <- space %>%
                     mutate(m = cov)
             }
-
+            
             space <- space %>%
-                filter(max(m) >= min_cov) %>%
+                filter(max(m, na.rm=T) >= min_cov) %>%
                 mutate(cg_num=1:n(), chosen_start=which.max(m)) %>%
                 filter(cg_num %in% seq(chosen_start[1], chosen_start[1] + pat_len - 1)) %>%
                 select(chrom, start, end, chrom1, start1, end1)
@@ -456,9 +472,9 @@ gpatterns.intervs_to_pat_space <- function(tracks,
     if (adjacent){
         cov_tracks <- .gpatterns.pat_cov_track_name(tracks, pat_len)
         cov_tracks_exist <- gtrack.exists(cov_tracks)
-        if (any(!cov_tracks_exist)){
-            warning(sprintf('pat_cov track do not exist for %s.', cov_tracks[!cov_tracks_exist]))
-        }
+        # if (any(!cov_tracks_exist)){
+        #     warning(sprintf('pat_cov track do not exist for %s.\n using ', cov_tracks[!cov_tracks_exist]))
+        # }
         if (all(cov_tracks_exist)){
             mode <- 'pat_cov'
         } else {

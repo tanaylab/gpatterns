@@ -127,6 +127,18 @@ gintervals.distance <- function(start1,end1,start2,end2) {
 }
 
 
+#' @export
+gintervals.center <- function(intervals1, intervals2, max_dist=0, size=NULL){
+    res <- intervals1 %>% 
+        gintervals.neighbors1(intervals2, na.if.notfound=T) %>% 
+        filter(abs(dist) <= max_dist) %>% 
+        select(chrom=chrom1, start=start1, end=end1, chrom_orig=chrom, start_orig=start, end_orig=end)
+    if (!is.null(size)){
+        res <- res %>% gintervals.normalize(size) %>% tbl_df
+    }
+    return(res)    
+}
+
 #' Creates a virtual track and runs gextract
 #'
 #' @param tracks tracks
@@ -393,9 +405,11 @@ gcluster.run2 <- function (...,
                            jobs_title = NULL,
                            job_names = NULL,
                            collapse_results = FALSE,
+                           queue = NULL,
                            memory = NULL,
                            threads = NULL,
                            io_saturation = NULL,
+                           queue_flag = '-q @{queue}',
                            memory_flag = '-l mem_free=@{memory}G',
                            threads_flag = '-pe threads @{threads}',
                            io_saturation_flag = '-l io_saturation=@{io_saturation}',
@@ -405,6 +419,10 @@ gcluster.run2 <- function (...,
         commands <- purrr::map(command_list, function(x) parse(text=x))
     } else {
         commands <- as.list(substitute(list(...))[-1L])
+    }
+
+    if (!is.null(queue)){
+        opt.flags <- paste(opt.flags, qq(queue_flag))
     }
 
     if (!is.null(memory)){
