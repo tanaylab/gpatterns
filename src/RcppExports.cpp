@@ -5,17 +5,6 @@
 
 using namespace Rcpp;
 
-// timesTwo
-NumericVector timesTwo(NumericVector x);
-RcppExport SEXP gpatterns_timesTwo(SEXP xSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
-    rcpp_result_gen = Rcpp::wrap(timesTwo(x));
-    return rcpp_result_gen;
-END_RCPP
-}
 // mpms
 DataFrame mpms(const DataFrame& df);
 RcppExport SEXP gpatterns_mpms(SEXP dfSEXP) {
@@ -29,7 +18,6 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"gpatterns_timesTwo", (DL_FUNC) &gpatterns_timesTwo, 1},
     {"gpatterns_mpms", (DL_FUNC) &gpatterns_mpms, 1},
     {NULL, NULL, 0}
 };

@@ -661,7 +661,7 @@ gpatterns.theta_distance_sampling <- function(track1, track2, sampling_n, meth_r
 }
 
 #' @export
-gpatterns.theta_matrix_sampling <- function(tracks, samples=NULL, parallel=FALSE, symetric=TRUE, ...){
+gpatterns.theta_matrix_sampling <- function(tracks, samples=NULL, parallel=FALSE, symetric=TRUE, add_cor=TRUE, use='pairwise.complete.obs', method='spearman', rm_diagonal=TRUE, fids=NULL, ...){
     if (parallel){
         .progress='none'
     } else {
@@ -683,6 +683,7 @@ gpatterns.theta_matrix_sampling <- function(tracks, samples=NULL, parallel=FALSE
                 track1=as.character(x$track1),
                 track2=as.character(x$track2),
                 add_intra=FALSE,
+                fids=fids,
                 ...)
             data.frame(theta=mean(a$epipoly), loci=nrow(a))
         }, .progress=.progress, .parallel=parallel )
@@ -703,14 +704,36 @@ gpatterns.theta_matrix_sampling <- function(tracks, samples=NULL, parallel=FALSE
             select(samp1, samp2, theta, loci)
     }
 
+    if (add_cor) {
+        theta_cor <- theta %>% 
+          select(samp1, samp2, theta) %>% 
+          spread(samp2, theta) %>% 
+          .[,-1] %>% 
+          as.matrix() %>% 
+          cor(use=use, method=method) %>% reshape2::melt() %>% rename(samp1=Var1, samp2=Var2, corr=value) %>%
+          tbl_df
+        theta <- theta %>% left_join(theta_cor)
+    }
+
+    if (rm_diagonal){
+        theta <- theta %>% filter(samp1 != samp2)
+    }
+
     return(tbl_df(theta))
 }
 
+# c(rep('white', 5), '#ffffd4','#fed98e','#fe9929','#d95f0e','#993404', 'black')
+# =c("#00688B", "white", "#FF413D")
 #' @export
-gpatterns.theta_distance_plot <- function(theta, fig_ofn=NULL,  width=800, height=600, zlim=NULL, color_pal=c(rep('white', 4), '#ffffd4','#fed98e','#fe9929','#d95f0e','#993404', 'black'), log_transform=FALSE, border_color = "grey60", fontsize=14, ...){   
-
+gpatterns.theta_distance_plot <- function(theta, fig_ofn=NULL,  width=800, height=600, zlim=NULL, color_pal=c(rep('white', 8), '#ffffd4','#fed98e','#fe9929','#d95f0e','#993404', 'black'), color_breaks=NULL, log_transform=FALSE, border_color = 'gray77', fontsize=14, method='ward.D2', plot_cor=FALSE, cluster_by_cor=FALSE, ...){   
+    if (plot_cor){
+        theta <- theta %>% mutate(theta = corr)
+        if (is.null(zlim)){
+            zlim <- c(-1, 1)
+        }
+    }
     if (log_transform){
-        theta <- theta %>% mutate(theta = log10(theta))
+        theta <- theta %>% mutate(theta = log10(1 + theta))
     }
     
     if(!is.null(fig_ofn)){
@@ -724,16 +747,20 @@ gpatterns.theta_distance_plot <- function(theta, fig_ofn=NULL,  width=800, heigh
     if (!is.null(zlim)){
         theta <- theta %>% 
             mutate(theta = ifelse(theta < zlim[1], zlim[1], theta)) %>% 
-            mutate(theta = ifelse(theta > zlim[2], zlim[2], theta))             
-         breaks <-  quantile(theta$theta, seq(0,1,1/(length(color_pal) - 1)), na.rm=T)
-         color_pal <- build_pallette(data.frame(point =breaks, color =color_pal), 1000)  
-         breaks <- seq(zlim[1], zlim[2], length.out=1001)         
-    } else {                
-        init_breaks <-  quantile(theta$theta, seq(0,1,1/(length(color_pal) - 1)), na.rm=T)
-        color_pal <- build_pallette(data.frame(point =init_breaks, color =color_pal), 1000)   
-        zlim <- c(min(init_breaks), max(init_breaks))
-        breaks <- seq(zlim[1], zlim[2], length.out=1001)        
+            mutate(theta = ifelse(theta > zlim[2], zlim[2], theta))    
     }
+
+    if (is.null(color_breaks)){
+        color_breaks <-  quantile(theta$theta, seq(0,1,1/(length(color_pal) - 1)), na.rm=T)    
+    }                 
+    
+    color_pal <- build_pallette(data.frame(point =color_breaks, color =color_pal), 1000)  
+
+    if (is.null(zlim)){
+        zlim <- c(min(color_breaks), max(color_breaks))
+    }
+
+    breaks <- seq(zlim[1], zlim[2], length.out=1001)        
     
     mat <- theta %>% reshape2::dcast(samp1 ~ samp2, value.var='theta')  %>% rename(samp = samp1)        
           
@@ -743,6 +770,7 @@ gpatterns.theta_distance_plot <- function(theta, fig_ofn=NULL,  width=800, heigh
             breaks=breaks,
             border_color=border_color,                         
             fontsize=fontsize,
+            method=method,
             ...)
     
     if(!is.null(fig_ofn)){

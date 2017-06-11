@@ -7,11 +7,12 @@
 gpatterns.plot_clustering(avgs, rows_clust_method = "kmeans", K = NULL,
   cluster_cols = TRUE, show_row_clust = TRUE, annotation = NULL,
   annotation_colors = NULL, annotation_col = NULL, show_rownames = FALSE,
-  show_colnames = FALSE, color_pal = .blue_red_pal, fontsize = 10,
+  show_colnames = FALSE, color_pal = .blue_red_pal, fontsize = 8,
   fontsize_row = fontsize, fontsize_col = fontsize, main = NULL,
-  fig_ofn = NULL, width = 1000, height = 1600, plot = TRUE,
+  fig_ofn = NULL, width = 2100, height = 2000, res = 300, plot = TRUE,
   motif_enrich = NULL, cluster_motifs = TRUE, qval_thresh = 0.05,
-  show_sig = TRUE, ...)
+  show_sig = TRUE, motif_fontsize_col = fontsize * 0.8,
+  motif_fontsize_sig = fontsize * 1.3, ...)
 }
 \arguments{
 \item{avgs}{output of gpatterns.cluster_avg_meth}
