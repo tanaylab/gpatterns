@@ -108,6 +108,8 @@ gpatterns.get_avg_meth <- function(
 
     names <- names %||% tracks
 
+    f_intervs <- NULL
+
     if ((pre_screen || !tidy || sum_tracks) & (!is.null(min_samples) || !is.null(min_cov))){
         min_cov <- min_cov %||% 1
         if (length(tracks) == 1){
@@ -118,9 +120,7 @@ gpatterns.get_avg_meth <- function(
 
         if (use_disk){
             f_intervs <- .random_track_name()
-        } else {
-            f_intervs <- NULL
-        }
+        }    
 
         intervals <- gpatterns.screen_by_coverage(tracks = tracks,
                                                   intervals = intervals,
@@ -678,7 +678,7 @@ gpatterns.cluster_columns <- function(avgs, column_k = NULL, ret_hclust=FALSE, t
 #' @export
 #'
 #' @examples
-gpatterns.plot_clustering <- function(avgs, rows_clust_method='kmeans', K=NULL, cluster_cols = TRUE, show_row_clust = TRUE, annotation=NULL, annotation_colors=NULL, annotation_col=NULL, show_rownames=FALSE, show_colnames=FALSE, color_pal = .blue_red_pal, fontsize = 10, fontsize_row = fontsize, fontsize_col = fontsize, main=NULL, fig_ofn=NULL, width=1000, height=1600, plot=TRUE, motif_enrich=NULL, cluster_motifs=TRUE, qval_thresh=0.05, show_sig=TRUE, ...){
+gpatterns.plot_clustering <- function(avgs, rows_clust_method='kmeans', K=NULL, cluster_cols = TRUE, show_row_clust = TRUE, annotation=NULL, annotation_colors=NULL, annotation_col=NULL, show_rownames=FALSE, show_colnames=FALSE, color_pal = .blue_red_pal, fontsize = 8, fontsize_row = fontsize, fontsize_col = fontsize, main=NULL, fig_ofn=NULL, width=2100, height=2000, res=300, plot=TRUE, motif_enrich=NULL, cluster_motifs=TRUE, qval_thresh=0.05, show_sig=TRUE, motif_fontsize_col=fontsize*0.8, motif_fontsize_sig=fontsize*1.3, ...){
 
     if (rows_clust_method == 'kmeans'){
         clust <- gpatterns.cluster_avg_meth(avgs, K=K, tidy=F)  
@@ -715,6 +715,7 @@ gpatterns.plot_clustering <- function(avgs, rows_clust_method='kmeans', K=NULL, 
         main <- qq('@{nrow(clust)} loci')
     } 
 
+
     p_mat <- clust %>%        
         select(-one_of('ord', 'clust')) %>% 
         pheatmap1(cluster_rows=cluster_rows,
@@ -738,9 +739,12 @@ gpatterns.plot_clustering <- function(avgs, rows_clust_method='kmeans', K=NULL, 
         motifs <- motif_enrich %>% filter(qval <= qval_thresh) %>% .$track %>% unique
         motif_enrich <- motif_enrich %>% filter(track %in% motifs)
         
-        motif_mat <- motif_enrich %>% left_join(clust %>% select(id, ord, clust), by='clust') %>% reshape2::dcast(id + ord + clust~track, value.var='rel_enrich') %>% arrange(clust, ord) %>% select(-ord, -clust)
-        
-        sig_mat <- motif_enrich %>% left_join(clust %>% select(id, ord, clust), by='clust') %>% mutate(sig = if_else(qval <= qval_thresh, paste0(rep('| ', 5), collapse=''), '')) %>% reshape2::dcast(id + ord + clust~track, value.var='sig') %>% arrange(clust, ord) %>% select(-ord, -clust)
+        motif_mat <- motif_enrich %>% mutate(rel_enrich = log2(1 + rel_enrich)) %>% left_join(clust %>% select(id, ord, clust), by='clust') %>% reshape2::dcast(id + ord + clust~track, value.var='rel_enrich') %>% arrange(clust, ord) %>% select(-ord, -clust)
+        motif_mat_ord <- c(1, order(apply(motif_mat[, -1], 2, which.max)) + 1)
+        motif_mat <- motif_mat[, motif_mat_ord]
+
+        sig_mat <- motif_enrich %>% left_join(clust %>% select(id, ord, clust), by='clust') %>% group_by(clust, track) %>% mutate(sig = if_else(qval <= qval_thresh & row_number() == round(n() / 2), '*', '')) %>% reshape2::dcast(id + ord + clust~track, value.var='sig') %>% arrange(clust, ord) %>% select(-ord, -clust)
+        sig_mat <- sig_mat[, motif_mat_ord]
         if (cluster_motifs){
             motif_cols <- c(1, hclust(dist(t(motif_mat[,-1]))) $order + 1)
             motif_mat <- motif_mat[, motif_cols]
@@ -753,50 +757,44 @@ gpatterns.plot_clustering <- function(avgs, rows_clust_method='kmeans', K=NULL, 
             display_numbers <- FALSE
         }
 
-        breaks <- seq(min(motif_enrich$rel_enrich), max(motif_enrich$rel_enrich), length.out=1000)
+        cpal <- colorRampPalette(c('white', 'white', 'white', 'orange', 'yellow'))(1000)
 
-        gmot <- motif_mat %>% pheatmap1(show_rownames=FALSE, cluster_rows=FALSE, cluster_cols=FALSE, show_colnames=TRUE, fontsize = fontsize, fontsize_row = fontsize_row, fontsize_col = 15, legend=F, silent=TRUE,  display_numbers = display_numbers, fontsize_number=4, border_color='black')  %>% .$gtable #, color=.smooth_scatter_pal3(1000), breaks=breaks)
-        gmot1 <- motif_mat %>% pheatmap1(show_rownames=FALSE, cluster_rows=FALSE, cluster_cols=FALSE, fontsize = fontsize, fontsize_row = fontsize_row, fontsize_col = 9, legend=T, silent=TRUE,  display_numbers = display_numbers, fontsize_number=4, border_color='black') %>% .$gtable       
-      
+        gmot <- motif_mat %>% pheatmap1(show_rownames=FALSE, cluster_rows=FALSE, cluster_cols=FALSE, show_colnames=TRUE, fontsize = fontsize, fontsize_row = fontsize_row, fontsize_col = motif_fontsize_col, legend=FALSE, silent=TRUE,  display_numbers = display_numbers, fontsize_number=motif_fontsize_sig, border_color='black', color = cpal)  %>% .$gtable 
+        gmot_breaks <- pheatmap:::generate_breaks(as.vector(motif_mat[, -1]), length(cpal))
+        legend_breaks <- grid::grid.pretty(range(as.vector(gmot_breaks)))
+        legend_labels <- prettyNum(2^legend_breaks - 1, digits=2)
+        gmot1 <- motif_mat %>% pheatmap1(show_rownames=FALSE, cluster_rows=FALSE, cluster_cols=FALSE, fontsize = fontsize, fontsize_row = fontsize_row, fontsize_col = motif_fontsize_col, legend=TRUE, silent=TRUE,  display_numbers = display_numbers, fontsize_number=motif_fontsize_sig, border_color='black', color = cpal, legend_breaks=legend_breaks, legend_labels =legend_labels) %>% .$gtable       
+        
+        gmot$heights <- gmat$heights
+
+        gmat <- gtable::gtable_add_cols(gmat, unit(20, 'bigpts'), 0)
+
         gmot <- gtable::gtable_add_cols(gmot, gmot1$widths[5], 0)
-        
-        gmot <- gtable::gtable_add_grob(gmot, grobs=gmot1$grobs[[3]], t=4, b=5, l=1, r=2, name='legend')
-        gmot <- gtable::gtable_add_grob(gmot, grobs=gmot1$grobs[[2]], t=3, b=3, l=4, r=4, name='col_names_top', clip='off')
-        
-        # gmat$widths <- grid::convertX(gmat$widths, 'bigpts')
-        # gmot$widths <- grid::convertX(gmot$widths, 'bigpts') 
-        # gmat$heights <- grid::convertX(gmat$heights, 'bigpts')
-        # gmot$heights <- grid::convertX(gmot$heights, 'bigpts') 
-        gmat$heights[3] <- gmat$heights[3] - unit(4, 'bigpts')
-        rownames(gmot) <- gmot$name
-        rownames(gmat) <- gmat$name
-        
-        gt <- gridExtra:::combine(gmot, gmat, join='outer')
-        gt$widths <- as.numeric(grid::convertX(gt$widths, 'bigpts'))
-        gt$heights <- as.numeric(grid::convertX(gt$heights, 'bigpts'))
-        # gt$widths <- grid::convertX(gt$widths, 'bigpts')
-        # h <- as.numeric(grid::convertX(gt$heights, 'bigpts'))     
-        
-        mot_mat_ind <- gt$layout %>% filter(name == 'matrix') %>% slice(1) %>% .$r
-        meth_mat_ind <- gt$layout %>% filter(name == 'matrix') %>% slice(2) %>% .$r
-        gt$widths[mot_mat_ind] <- gt$widths[meth_mat_ind] * 0.5
-        # gt$widths[mot_mat_ind] <- unit(as.numeric(grid::convertX(gt$widths[meth_mat_ind], 'bigpts')) * 0.6, 'bigpts' )
+        gmot <- gtable::gtable_add_cols(gmot, unit(20, 'bigpts'), 0)
+        gmot <- gtable::gtable_add_grob(gmot, grobs=gmot1$grobs[[3]], t=4, b=5, l=2, r=4, name='legend')
 
-        gt <- gtable::gtable_trim(gt)
+
+        gmat <- gtable::gtable_add_cols(gmat, unit(20, 'bigpts'), 0)   
+        gmat <- gtable::gtable_add_grob(gmat, grobs=grid::rectGrob(gp = gpar(fill=NA, col=NA)), t=4, b=5, l=1, r=2, name='space')
+
+        gt <- plot_grid(gmot, gmat, align='h', ncol=2, rel_widths=c(1,3))
+        print(gt)
         
-        
-           
+                 
     } else {
         gt <- gmat
+        gt <- plot_grid(gmat)
     }
 
 
     if (!is.null(fig_ofn)){
-        png(fig_ofn, width=width, height=height)    
+        png(fig_ofn, width=width, height=height, res=res)    
     }
 
-    grid.newpage()
-    grid.draw(gt)    
+    # grid.newpage()
+    # gtable::gtable_show_layout(gt)
+    # grid.draw(gt)    
+    print(gt)
 
     if (!is.null(fig_ofn)){
         dev.off()
