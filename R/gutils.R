@@ -456,7 +456,9 @@ gcluster.run2 <- function (...,
         envir <- parent.frame()
         while (!identical(envir, .GlobalEnv)) {
             envir <- parent.env(envir)
-            vars <- union(vars, ls(all.names = TRUE, envir = envir))
+            if (!isNamespace(envir)) {                
+                vars <- union(vars, ls(all.names = TRUE, envir = envir))
+            }
         }
 
         suppressWarnings(save(list = vars, file = paste(tmp.dirname, "envir",
