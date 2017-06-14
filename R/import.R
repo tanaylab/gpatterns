@@ -457,7 +457,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
                                      bin = .gpatterns.bam2tidy_cpgs_bin,
                                      run_per_interv = TRUE,
                                      add_chr_prefix = FALSE,                                                    
-                                     ...){
+                                     ...){            
     walk(c(tidy_cpgs_dir, stats_dir), ~ system(qq('mkdir -p @{.x}')))
     bam_prefix <- if (1 == length(bams)) 'cat' else 'samtools cat'
     single_end <- if (!paired_end) '--single-end' else ''
@@ -468,7 +468,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
     sort_fields <- if (only_seq) '6,7' else '2,7'
     rm_off_target_str <- if (rm_off_target) '--rm_off_target' else ''
     chr_prefix_str <- if(add_chr_prefix) '--add-chr-prefix' else ''
-    bismark_str <- if(bismark) '--bismark' else ''
+    bismark_str <- if(bismark) '--bismark' else ''    
 
     if (!is.null(frag_intervs)){
         post_process_str <- qq(' | @{adjust_read_bin} @{rm_off_target_str} -f @{frag_intervs} --maxdist @{maxdist} --groot @{GROOT}')
@@ -490,7 +490,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
            gzip -c > @{output_fn}') %>%
                 gsub('\n', '', .) %>% gsub('  ', ' ', .)
         }, .collate =  'cols', .to = 'cmd')
-
+                
         .gpatterns.run_commands(commands, jobs_title = 'bam2tidy_cpgs', ...)
     } else {
         stats_fn <- qq('@{stats_dir}/all.stats')
@@ -727,8 +727,8 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
                              jobs_title = jobs_title,
                              collapse_results = FALSE, ....)
         codes <-  res %>% map_int(~ .x$retv)
-    } else {
-        res <- commands %>% plyr::alply(1, function(x)
+    } else {            
+        res <- plyr::alply(commands, 1, function(x)
             system(paste(qq('@{cmd_prefix} '), x$cmd)), .parallel=parallel)
         codes <- res
     }

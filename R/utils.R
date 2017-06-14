@@ -410,6 +410,13 @@ do.call_ellipsis <- function(f, additional_params=list(), ...){
     return(d)
 }
 
+get_qual_colors <- function(n){
+    qual_col_pals = RColorBrewer::brewer.pal.info[RColorBrewer::brewer.pal.info$category == 'qual',]
+    col_vector = unlist(mapply(RColorBrewer::brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
+    return(col_vector[1:n])
+}
+
+
 
 # # Misha overrides ------------------------------------------------
 
