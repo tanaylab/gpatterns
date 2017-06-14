@@ -8,7 +8,7 @@ Authors@R: c(person("Aviezer", "Lifshitz", email = "aviezer.lifshitz@weizmann.ac
 Description: Package for import and analysis of DNA methylation (5mC) data.
     includes basic pipeline to import data from raw fastq, and functions to analyse
     both average methylation and epipolymorphism of multiple samples.
-URL: https://bitbucket.org/tanaylab/gpatterns
+URL: https://tanaylab.bitbucket.io/gpatterns/
 Depends:
     R (>= 3.2.2),
     misha (>= 3.5.6)
