@@ -91,8 +91,7 @@ gpatterns.get_avg_meth <- function(
     .check_tracks_exist(tracks, c('meth', 'unmeth'))
     if (!is.null(min_cov)){
         min_samples <- min_samples %||% 1    
-    }
-    
+    }    
 
     if (is.null(iterator) && length(tracks) == 1){
         iterator <- .gpatterns.meth_track_name(tracks)
@@ -150,7 +149,7 @@ gpatterns.get_avg_meth <- function(
                 sum_tracks = sum_tracks)
         )
     }
-
+    
     message('extracting...')
     avgs <- gvextract(
         c(qq('@{tracks}.meth', collapse=F), qq('@{tracks}.unmeth', collapse=F)),
@@ -246,6 +245,7 @@ gpatterns.get_avg_meth <- function(
 
     walk2(vtracks_meth, .gpatterns.meth_track_name(tracks), gvtrack.create, func='sum')
     walk2(vtracks_unmeth, .gpatterns.unmeth_track_name(tracks), gvtrack.create, func='sum')
+    on.exit( walk(c(vtracks_meth, vtracks_unmeth), gvtrack.rm))
 
     if (sum_tracks){
         meth_expr <- sprintf('sum(%s, na.rm=T)', paste(vtracks_meth, collapse=', '))
@@ -256,8 +256,7 @@ gpatterns.get_avg_meth <- function(
     }    
 
     avgs <- gextract(expr, intervals=intervals, iterator=iterator, colnames=names, file=file, intervals.set.out = intervals.set.out)
-
-    walk(c(vtracks_meth, vtracks_unmeth), gvtrack.rm)
+   
 
     if (!is.null(file) || !is.null(intervals.set.out)){
         return(NULL)
@@ -666,8 +665,10 @@ gpatterns.cluster_columns <- function(avgs, column_k = NULL, ret_hclust=FALSE, t
 #' @param annotation_col
 #' @param show_rownames
 #' @param show_colnames
+#' @param cluster_gaps
 #' @param color_pal
 #' @param main
+#' @param device
 #' @param fig_ofn output filename of the figure. if NULL would plot to current device
 #' @param width width ('png' parameter)
 #' @param height height ('png' parameter)
@@ -678,7 +679,7 @@ gpatterns.cluster_columns <- function(avgs, column_k = NULL, ret_hclust=FALSE, t
 #' @export
 #'
 #' @examples
-gpatterns.plot_clustering <- function(avgs, rows_clust_method='kmeans', K=NULL, cluster_cols = TRUE, show_row_clust = TRUE, annotation=NULL, annotation_colors=NULL, annotation_col=NULL, show_rownames=FALSE, show_colnames=FALSE, color_pal = .blue_red_pal, fontsize = 8, fontsize_row = fontsize, fontsize_col = fontsize, main=NULL, fig_ofn=NULL, width=2100, height=2000, res=300, plot=TRUE, motif_enrich=NULL, cluster_motifs=TRUE, qval_thresh=0.05, show_sig=TRUE, motif_fontsize_col=fontsize*0.8, motif_fontsize_sig=fontsize*1.3, ...){
+gpatterns.plot_clustering <- function(avgs, rows_clust_method='kmeans', K=NULL, cluster_cols = TRUE, show_row_clust = TRUE, annotation=NULL, annotation_colors=NULL, annotation_col=NULL, show_rownames=FALSE, show_colnames=FALSE, cluster_gaps=FALSE, color_pal = .blue_red_pal, fontsize = 8, fontsize_row = fontsize, fontsize_col = fontsize, main=NULL, device='png', fig_ofn=NULL, width=2100, height=2000, res=300, plot=TRUE, motif_enrich=NULL, cluster_motifs=TRUE, qval_thresh=0.05, show_sig=TRUE, motif_fontsize_col=fontsize*0.8, motif_fontsize_sig=fontsize*1.3, ...){
 
     if (rows_clust_method == 'kmeans'){
         clust <- gpatterns.cluster_avg_meth(avgs, K=K, tidy=F)  
@@ -692,7 +693,7 @@ gpatterns.plot_clustering <- function(avgs, rows_clust_method='kmeans', K=NULL, 
             }    
         }        
     }
-
+    
     if (rows_clust_method == 'hclust'){
         cluster_rows <- TRUE
     } else {
@@ -711,10 +712,15 @@ gpatterns.plot_clustering <- function(avgs, rows_clust_method='kmeans', K=NULL, 
         annotation_row <- NULL
     }
 
-    if (is.null(main)){
-        main <- qq('@{nrow(clust)} loci')
-    } 
+    if (cluster_gaps){
+        gaps <- clust %>% group_by(clust) %>% filter(row_number() == 1) %>% .$ord
+    } else {
+        gaps <- NULL
+    }
 
+    if (is.null(main)){
+        main <- qq('@{comify(nrow(clust))} loci')
+    } 
 
     p_mat <- clust %>%        
         select(-one_of('ord', 'clust')) %>% 
@@ -732,6 +738,7 @@ gpatterns.plot_clustering <- function(avgs, rows_clust_method='kmeans', K=NULL, 
                   fontsize = fontsize, 
                   fontsize_row = fontsize_row, 
                   fontsize_col = fontsize_col,
+                  gaps_row=gaps,
                   main=main, silent=TRUE)
     gmat <- p_mat$gtable
 
@@ -759,11 +766,11 @@ gpatterns.plot_clustering <- function(avgs, rows_clust_method='kmeans', K=NULL, 
 
         cpal <- colorRampPalette(c('white', 'white', 'white', 'orange', 'yellow'))(1000)
 
-        gmot <- motif_mat %>% pheatmap1(show_rownames=FALSE, cluster_rows=FALSE, cluster_cols=FALSE, show_colnames=TRUE, fontsize = fontsize, fontsize_row = fontsize_row, fontsize_col = motif_fontsize_col, legend=FALSE, silent=TRUE,  display_numbers = display_numbers, fontsize_number=motif_fontsize_sig, border_color='black', color = cpal)  %>% .$gtable 
+        gmot <- motif_mat %>% pheatmap1(show_rownames=FALSE, cluster_rows=FALSE, cluster_cols=FALSE, show_colnames=TRUE, fontsize = fontsize, fontsize_row = fontsize_row, fontsize_col = motif_fontsize_col, legend=FALSE, silent=TRUE,  display_numbers = display_numbers, fontsize_number=motif_fontsize_sig, border_color='black', color = cpal, gaps_row=gaps)  %>% .$gtable 
         gmot_breaks <- pheatmap:::generate_breaks(as.vector(motif_mat[, -1]), length(cpal))
         legend_breaks <- grid::grid.pretty(range(as.vector(gmot_breaks)))
         legend_labels <- prettyNum(2^legend_breaks - 1, digits=2)
-        gmot1 <- motif_mat %>% pheatmap1(show_rownames=FALSE, cluster_rows=FALSE, cluster_cols=FALSE, fontsize = fontsize, fontsize_row = fontsize_row, fontsize_col = motif_fontsize_col, legend=TRUE, silent=TRUE,  display_numbers = display_numbers, fontsize_number=motif_fontsize_sig, border_color='black', color = cpal, legend_breaks=legend_breaks, legend_labels =legend_labels) %>% .$gtable       
+        gmot1 <- motif_mat %>% pheatmap1(show_rownames=FALSE, cluster_rows=FALSE, cluster_cols=FALSE, fontsize = fontsize, fontsize_row = fontsize_row, fontsize_col = motif_fontsize_col, legend=TRUE, silent=TRUE,  display_numbers = display_numbers, fontsize_number=motif_fontsize_sig, border_color='black', color = cpal, legend_breaks=legend_breaks, legend_labels =legend_labels, gaps_row=gaps) %>% .$gtable       
         
         gmot$heights <- gmat$heights
 
@@ -788,7 +795,11 @@ gpatterns.plot_clustering <- function(avgs, rows_clust_method='kmeans', K=NULL, 
 
 
     if (!is.null(fig_ofn)){
-        png(fig_ofn, width=width, height=height, res=res)    
+        if (device == 'png'){
+            png(fig_ofn, width=width, height=height, res=res)        
+        } else {
+            do.call(device, list(width=width, height=height))
+        }        
     }
 
     # grid.newpage()
@@ -1084,7 +1095,7 @@ gpatterns.global_meth_trend <- function(tracks,
         p <- p + scale_color_manual(values=colors)
     } else {
         if (length(tracks) > 1){
-            p <- p + scale_color_manual(name='')
+            p <- p + scale_color_discrete(name='')
         }
     }
 
