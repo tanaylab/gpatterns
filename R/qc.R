@@ -33,19 +33,10 @@ gpatterns.get_pipeline_stats <- function(track,
     }
     stopifnot(dir.exists(tidy_cpgs_stats_dir))
     stopifnot(dir.exists(uniq_tidy_cpgs_stats_dir))
-    
-    uniq_stats <- list.files(uniq_tidy_cpgs_stats_dir, full.names=T) %>%
-        map_df(~ fread(.x)) %>%
-        summarise(total_reads = sum(total_reads), uniq_reads = sum(uniq_reads)) %>%
-        mutate(uniq_frac = uniq_reads / total_reads)
-    tidy_cpgs_stats <- list.files(tidy_cpgs_stats_dir, full.names=T) %>%
-        map_df(~ fread(.x)) %>%
-        slice(1)
-    stats <- tidy_cpgs_stats %>%
-        summarise(total_reads = sum(.),
-                  mapped_reads = good + single_R1 + single_R2,
-                  mapped_frac = mapped_reads / total_reads) %>%
-        bind_cols(uniq_stats %>% rename(good_reads = total_reads))
+
+    s <- gpatterns.get_tcpgs_stats(tidy_cpgs_stats_dir, uniq_tidy_cpgs_stats_dir)
+    stats <- s$stats
+        
     sm <- gsummary(qq('@{track}.cov'))
     stats[['cg_num']] <- sm[1]
     stats[['meth_calls']] <- sm[5]
@@ -59,11 +50,37 @@ gpatterns.get_pipeline_stats <- function(track,
                                                     n = n())) %>%
                 mutate(f = insert_len * n / sum(n)) %>% summarise(insert_len = sum(f)))
 
-    if (add_mapping_stats){
-        stats <- stats %>% bind_cols(tidy_cpgs_stats)
+    if (add_mapping_stats){        
+        stats <- stats %>% bind_cols(s$mapping_stats)
     }
 
     return(stats)
+}
+
+#' Get QC statistics from tcpgs dir
+#' 
+#' @inheritParams gpatterns.get_pipeline_stats
+#' 
+#' @export
+gpatterns.get_tcpgs_stats <- function(tidy_cpgs_stats_dir, uniq_tidy_cpgs_stats_dir){ 
+    stopifnot(dir.exists(tidy_cpgs_stats_dir))
+    stopifnot(dir.exists(uniq_tidy_cpgs_stats_dir))
+    
+    uniq_stats <- list.files(uniq_tidy_cpgs_stats_dir, full.names=T) %>%
+        map_df(~ fread(.x)) %>%
+        summarise(total_reads = sum(total_reads), uniq_reads = sum(uniq_reads)) %>%
+        mutate(uniq_frac = uniq_reads / total_reads)
+    tidy_cpgs_stats <- list.files(tidy_cpgs_stats_dir, full.names=T) %>%
+        map_df(~ fread(.x)) %>%
+        slice(1)
+    stats <- tidy_cpgs_stats %>%
+        mutate(total_reads = good + single_R1 + single_R2 + bad_cigar + no_conv + unmapped + discordant,
+                  mapped_reads = good + single_R1 + single_R2,
+                  mapped_frac = mapped_reads / total_reads)
+    
+    stats <- bind_cols(stats, uniq_stats %>% rename(good_reads = total_reads)) %>%
+        select(one_of('total_reads', 'mapped_reads', 'mapped_frac', 'uniq_reads', 'uniq_frac', 'CHH', 'CHG', 'CpG'))
+    return(list(stats=stats, mapping_stats=tidy_cpgs_stats))
 }
 
 # total reads     mapped.reads    mapped.uniq    perc mapped % unique overall     on target  perc on target   uniq_1      uniq_2     perc unique on target   perc unique off target   estimated on target complexity      regions not present     total methylation calls     CpGs per read   num of CpGs     average CpG cov 
