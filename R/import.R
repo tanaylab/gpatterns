@@ -391,13 +391,13 @@ gpatterns.import_from_bam <- function(bams,
                                         ...)
     }
 
-    # .step_invoke(
-    #     'stats',
-    #     steps,
-    #     gpatterns.get_pipeline_stats,
-    #     track = track,
-    #     tidy_cpgs_stats_dir = qq('@{workdir}/tidy_cpgs/stats'),
-    #     uniq_tidy_cpgs_stats_dir = qq('@{workdir}/tidy_cpgs_uniq/stats'))
+    .step_invoke(
+        'stats',
+        steps,
+        gpatterns.track_stats,
+        track = track,
+        tidy_cpgs_stats_dir = qq('@{workdir}/tidy_cpgs/stats'),
+        uniq_tidy_cpgs_stats_dir = qq('@{workdir}/tidy_cpgs_uniq/stats'))
 }
 
 #' Separate a track by strands (for QC purposes)
