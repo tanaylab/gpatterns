@@ -848,12 +848,12 @@ gpatterns.plot_clustering <- function(avgs, rows_clust_method='kmeans', K=NULL, 
         }        
 
         gm <- gbins.summary(..., .gpatterns.meth_track_name(track), iterator=iterator, intervals=intervs, include.lowest=include.lowest)
-        gm <- adply(gm, 1:length(dim(gm)))
+        gm <- plyr::adply(gm, 1:length(dim(gm)))
         colnames(gm) <- c(paste0('breaks', 1:nstrat_tracks), 'stat', 'val')
         gm <- gm %>% spread('stat', 'val', -1:nstrat_tracks) %>% mutate(meth = Sum, cg_num=`Total intervals` - `NaN intervals`) %>% select(one_of(c(paste0('breaks', 1:nstrat_tracks), 'meth', 'cg_num'))) %>% tbl_df
         
         gum <- gbins.summary(..., .gpatterns.unmeth_track_name(track), iterator=iterator, intervals=intervs, include.lowest=include.lowest) #%>% tbl_df
-        gum <- adply(gum, 1:length(dim(gum)))
+        gum <- plyr::adply(gum, 1:length(dim(gum)))
         colnames(gum) <- c(paste0('breaks', 1:nstrat_tracks), 'stat', 'val')
         gum <- gum %>% spread('stat', 'val', -1:nstrat_tracks) %>% mutate(unmeth = Sum, cg_num=`Total intervals` - `NaN intervals`) %>% select(one_of(c(paste0('breaks', 1:nstrat_tracks), 'unmeth', 'cg_num'))) %>% tbl_df
 
@@ -1223,7 +1223,7 @@ gpatterns.get_meth_quantile <- function(tracks,
                                         width=800,
                                         height=600){
     names <- names %||% tracks
-    res <- paste0(tracks, '.avg') %>% adply(1, function(x) gquantiles(x, intervals=intervals, iterator=iterator, percentiles=percentiles), .parallel=parallel) %>% tbl_df %>% mutate(sample = names) %>% select(-X1) %>% gather('quant', 'avg', 1:length(percentiles))
+    res <- paste0(tracks, '.avg') %>% plyr::adply(1, function(x) gquantiles(x, intervals=intervals, iterator=iterator, percentiles=percentiles), .parallel=parallel) %>% tbl_df %>% mutate(sample = names) %>% select(-X1) %>% gather('quant', 'avg', 1:length(percentiles))
     return(res)
 }
 
