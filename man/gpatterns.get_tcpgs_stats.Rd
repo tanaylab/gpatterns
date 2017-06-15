@@ -7,9 +7,9 @@
 gpatterns.get_tcpgs_stats(tidy_cpgs_stats_dir, uniq_tidy_cpgs_stats_dir)
 }
 \arguments{
-\item{tidy_cpgs_stats_dir}{directory with tidy_cpgs stats files}
+\item{tidy_cpgs_stats_dir}{directory with tidy_cpgs stats files (cannot be used with multiple tracks)}
 
-\item{uniq_tidy_cpgs_stats_dir}{directory with filter_dups stats files}
+\item{uniq_tidy_cpgs_stats_dir}{directory with filter_dups stats files (cannot be used with multiple tracks)}
 }
 \description{
 Get QC statistics from tcpgs dir

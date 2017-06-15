@@ -49,6 +49,7 @@ NULL
 .gpatterns.patterns_file_name <- function(track) { file.path(.gpatterns.base_dir(track), 'patterns.RData')}
 .gpatterns.fids_tab_name      <- function(track) { 'fids' }
 .gpatterns.fids_file_name     <- function(track) { file.path(.gpatterns.base_dir(track), 'fids.RData') }
+.gpatterns.stats_file_name    <- function(track) { qq('@{.gpatterns.base_dir(track)}/stats.tsv') }
 
 .gpatterns.tidy_cpgs_files <- function(track) {
     list.files(paste0(.gpatterns.base_dir(track), '/tidy_cpgs'), full.names=TRUE, pattern='tcpgs.gz')

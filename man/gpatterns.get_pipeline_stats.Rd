@@ -2,20 +2,26 @@
 % Please edit documentation in R/qc.R
 \name{gpatterns.get_pipeline_stats}
 \alias{gpatterns.get_pipeline_stats}
-\title{Get QC statistics for track}
+\title{Calculate QC statistics for track}
 \usage{
 gpatterns.get_pipeline_stats(track, tidy_cpgs_stats_dir = NULL,
-  uniq_tidy_cpgs_stats_dir = NULL, add_mapping_stats = FALSE)
+  uniq_tidy_cpgs_stats_dir = NULL, add_mapping_stats = FALSE,
+  add_insert_length_stats = TRUE)
 }
 \arguments{
-\item{track}{track name}
+\item{track}{track name (or mutiple track names)}
 
-\item{tidy_cpgs_stats_dir}{directory with tidy_cpgs stats files}
+\item{tidy_cpgs_stats_dir}{directory with tidy_cpgs stats files (cannot be used with multiple tracks)}
 
-\item{uniq_tidy_cpgs_stats_dir}{directory with filter_dups stats files}
+\item{uniq_tidy_cpgs_stats_dir}{directory with filter_dups stats files (cannot be used with multiple tracks)}
 
 \item{add_mapping_stats}{add full mapping statistics (singles, discordant etc.)}
+
+\item{add_insert_length_stats}{add average insert length}
+}
+\value{
+data frame with 'track' field with the track name pipeline statistics
 }
 \description{
-Get QC statistics for track
+Calculate QC statistics for track
 }

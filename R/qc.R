@@ -1,30 +1,37 @@
 
-gpatterns.track_stats <- function(track){
-    stats <- list()
-    sm <- gsummary(qq('@{track}.cov'))
-    stats[['cg_num']] <- sm[1]
-    stats[['meth_calls']] <- sm[5]
-    stats[['global_avg_meth']] <- gsummary(qq('@{track}.avg'))[6]
-    stats[['reads_per_umi']] <- .gpatterns.reads_per_umi(track)
-    return(stats)
-}
+# gpatterns.track_stats <- function(track){
+#     stats <- list()
+#     sm <- gsummary(qq('@{track}.cov'))
+#     stats[['cg_num']] <- sm[1]
+#     stats[['meth_calls']] <- sm[5]
+#     stats[['global_avg_meth']] <- gsummary(qq('@{track}.avg'))[6]
+#     stats[['reads_per_umi']] <- .gpatterns.reads_per_umi(track)
+#     return(stats)
+# }
 
-
-#' Get QC statistics for track
+#' Calculate QC statistics for track
 #'
-#' @param track track name
-#' @param tidy_cpgs_stats_dir directory with tidy_cpgs stats files
-#' @param uniq_tidy_cpgs_stats_dir directory with filter_dups stats files
+#' @param track track name (or mutiple track names)
+#' @param tidy_cpgs_stats_dir directory with tidy_cpgs stats files (cannot be used with multiple tracks)
+#' @param uniq_tidy_cpgs_stats_dir directory with filter_dups stats files (cannot be used with multiple tracks)
 #' @param add_mapping_stats add full mapping statistics (singles, discordant etc.)
+#' @param add_insert_length_stats add average insert length
 #'
-#' @return
+#' @return data frame with 'track' field with the track name pipeline statistics 
 #' @export
 #'
 #' @examples
 gpatterns.get_pipeline_stats <- function(track,
                                         tidy_cpgs_stats_dir = NULL,
                                         uniq_tidy_cpgs_stats_dir = NULL,
-                                        add_mapping_stats = FALSE){
+                                        add_mapping_stats = FALSE,
+                                        add_insert_length_stats = TRUE){
+    if (length(track) > 1){
+        if (!is.null(tidy_cpgs_stats_dir) || !is.null(uniq_tidy_cpgs_stats_dir)){
+            stop('cannot use explicit tidy_cpgs_stats_dir or uniq_tidy_cpgs_stats_dir with multiple tracks')
+        }
+        return(map_df(track, gpatterns.get_pipeline_stats))
+    }
     if (is.null(tidy_cpgs_stats_dir)){
         tidy_cpgs_stats_dir <- paste0(GROOT, '/tracks/', gsub('\\.', '/', track), '/workdir/tidy_cpgs/stats') 
     }
@@ -42,18 +49,40 @@ gpatterns.get_pipeline_stats <- function(track,
     stats[['meth_calls']] <- sm[5]
     stats[['global_avg_meth']] <- gsummary(qq('@{track}.avg'))[6]
 
-    stats <- stats %>%
-        bind_cols(
-            gpatterns.apply_tidy_cpgs(track,
-                                      function(x) x %>%
-                                          summarise(insert_len = mean(abs(insert_len), na.rm=T),
-                                                    n = n())) %>%
-                mutate(f = insert_len * n / sum(n)) %>% summarise(insert_len = sum(f)))
+    if (add_insert_length_stats){
+        stats <- stats %>%
+            bind_cols(gpatterns.apply_tidy_cpgs(track,
+                    function(x) x %>%
+                        summarise(insert_len = mean(abs(insert_len), na.rm=T), n = n())) %>%
+                        mutate(f = insert_len * n / sum(n)) %>% 
+                        summarise(insert_len = sum(f)))    
+    }
+    
 
     if (add_mapping_stats){        
         stats <- stats %>% bind_cols(s$mapping_stats)
     }
 
+    stats <- stats %>% mutate(track = track) %>% select(track, everything())
+
+    return(stats)
+}
+
+#' Get QC statistics for track
+#' @param track track name (or mutiple track names)
+#' @inheritDotParams gpatterns.get_pipeline_stats
+#' @export
+gpatterns.track_stats <- function(track, ...){
+    if (length(track) > 1){
+        return(map_df(track, gpatterns.track_stats))        
+    }
+    stats_fn <- .gpatterns.stats_file_name(track)
+    if (file.exists(stats_fn)){
+        return(fread(stats_fn) %>% tbl_df())
+    } else {
+        stats <- gpatterns.get_pipeline_stats(track, ...)
+        write_tsv(stats, stats_fn)
+    }
     return(stats)
 }
 
@@ -73,6 +102,12 @@ gpatterns.get_tcpgs_stats <- function(tidy_cpgs_stats_dir, uniq_tidy_cpgs_stats_
     tidy_cpgs_stats <- list.files(tidy_cpgs_stats_dir, full.names=T) %>%
         map_df(~ fread(.x)) %>%
         slice(1)
+    for (f in c('good', 'single_R1', 'single_R2', 'bad_cigar', 'no_conv', 'unmapped', 'discordant')){
+        if (!(f %in% colnames(tidy_cpgs_stats))){
+            tidy_cpgs_stats[[f]] <- 0
+        }
+    }
+    
     stats <- tidy_cpgs_stats %>%
         mutate(total_reads = good + single_R1 + single_R2 + bad_cigar + no_conv + unmapped + discordant,
                   mapped_reads = good + single_R1 + single_R2,
