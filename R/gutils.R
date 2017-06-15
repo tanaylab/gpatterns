@@ -620,13 +620,9 @@ gcluster.run2 <- function (...,
 #' @examples
 gtrack.array.import_from_df <- function(df, track, description) {
     fn <- tempfile()
-    data.table::fwrite(format(df, scientific = FALSE), fn, na = "nan", row.names = FALSE,
-                       quote = FALSE, sep = "\t")
-    # write.table(format(df, scientific = FALSE), fn, na = "nan", row.names = FALSE,
-                # quote = FALSE, sep = "\t")
+    data.table::fwrite(format(as.data.frame(df), scientific = FALSE), fn, na = "nan", row.names = FALSE, quote = FALSE, sep = "\t")    
     tryCatch(gtrack.array.import(track, description, fn),
              finally=system(qq('rm -f @{fn}')))
-
 }
 
 .gtrack.union_intervals <- function(tracks, intervals=ALLGENOME, iterator=NULL, parallel=TRUE, nchunks=5){
