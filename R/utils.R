@@ -247,7 +247,7 @@ gpatterns.track_exists <- function(track){
 #' @inheritParams pheatmap::pheatmap
 #' 
 #' @export
-pheatmap1 <- function(pmat, annotation=NULL, annotation_colors=NULL, annotation_col=NULL, annotation_row = NULL, id_column = TRUE, border_color=NA, clustering_callback = function(hc, ...){dendsort::dendsort(hc)}, clustering_distance_rows="euclidean", clustering_distance_cols="euclidean", min_vals_row=1, min_vals_col=1, ...){
+pheatmap1 <- function(pmat, annotation=NULL, annotation_colors=NULL, annotation_col=NULL, annotation_row = NULL, id_column = TRUE, border_color=NA, clustering_callback = function(hc, ...){dendsort::dendsort(hc)}, clustering_distance_rows="euclidean", clustering_distance_cols="euclidean", min_vals_row=1, min_vals_col=1, na_col='gray', ...){
     pmat <- as.data.frame(pmat)
     id_colname <- 'samp'
     if (id_column){
@@ -313,7 +313,8 @@ pheatmap1 <- function(pmat, annotation=NULL, annotation_colors=NULL, annotation_
                             annotation_row=annotation_row,   
                             clustering_callback=clustering_callback, 
                             clustering_distance_rows=clustering_distance_rows,
-                            clustering_distance_cols=clustering_distance_cols,                
+                            clustering_distance_cols=clustering_distance_cols, 
+                            na_col=na_col,               
                              ...)    
 }
 

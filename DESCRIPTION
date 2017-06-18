@@ -33,7 +33,9 @@ Imports:
     parallel,
     GetoptLong,
     Rcpp,
+    pheatmap (>= 1.0.9),
     BH
+Remotes: raivokolde/pheatmap
 BinaryFiles: inst/bin/mpms
     inst/bin/TGLKmeans_static
 SystemRequirements: C++11

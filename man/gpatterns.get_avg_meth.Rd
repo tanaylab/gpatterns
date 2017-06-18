@@ -21,8 +21,7 @@ would be set to CpGs}
 
 \item{min_cov}{minimal coverage for iterator interval}
 
-\item{mask_by_cov}{change loci with coverage < min_cov to NA. Not relevant in
-pre_screen or tidy mode}
+\item{mask_by_cov}{change loci with coverage < min_cov to NA. Not relevant when intervals.set.out or file is not NULL.}
 
 \item{use_cpgs}{use CpGs as iterator}
 

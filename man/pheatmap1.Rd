@@ -9,7 +9,7 @@ pheatmap1(pmat, annotation = NULL, annotation_colors = NULL,
   border_color = NA, clustering_callback = function(hc, ...) {    
   dendsort::dendsort(hc) }, clustering_distance_rows = "euclidean",
   clustering_distance_cols = "euclidean", min_vals_row = 1,
-  min_vals_col = 1, ...)
+  min_vals_col = 1, na_col = "gray", ...)
 }
 \arguments{
 \item{pmat}{data frame to plot as matrix. can have an additional id column (if id_column == TRUE)}
@@ -38,6 +38,8 @@ of the above it is assumed that a distance matrix is provided.}
 
 \item{clustering_distance_cols}{distance measure used in clustering columns. Possible
 values the same as for clustering_distance_rows.}
+
+\item{na_col}{specify the color of the NA cell in the matrix.}
 
 \item{...}{graphical parameters for the text used in plot. Parameters passed to
 \code{\link{grid.text}}, see \code{\link{gpar}}.}
