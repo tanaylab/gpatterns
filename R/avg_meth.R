@@ -36,8 +36,7 @@
 #' @param iterator see iterator in \link[misha]{gextract}. if NULL iterator
 #' would be set to CpGs
 #' @param min_cov minimal coverage for iterator interval
-#' @param mask_by_cov change loci with coverage < min_cov to NA. Not relevant in
-#' pre_screen or tidy mode
+#' @param mask_by_cov change loci with coverage < min_cov to NA. Not relevant when intervals.set.out or file is not NULL.
 #' @param use_cpgs use CpGs as iterator
 #' @param min_samples minimal number of samples with cov >= min_cov. if min_cov
 #' is NULL it would be set to 1.
@@ -146,7 +145,9 @@ gpatterns.get_avg_meth <- function(
                 file = file,
                 intervals.set.out = intervals.set.out,
                 rm_intervals = !is.null(f_intervs),
-                sum_tracks = sum_tracks)
+                sum_tracks = sum_tracks, 
+                mask_by_cov = mask_by_cov, 
+                min_cov = min_cov)
         )
     }
     
@@ -231,7 +232,9 @@ gpatterns.get_avg_meth <- function(
                                              file = NULL,
                                              intervals.set.out = NULL,
                                              rm_intervals = FALSE,
-                                             sum_tracks = FALSE) {
+                                             sum_tracks = FALSE,
+                                             mask_by_cov = FALSE, 
+                                             min_cov = 1) {
 
     names <- names %||% tracks
     if (length(names) > 1 && sum_tracks){
@@ -242,20 +245,31 @@ gpatterns.get_avg_meth <- function(
     vtracks_pref <- .random_track_name()
     vtracks_meth <- paste0(vtracks_pref, '_', 1:length(tracks), '_meth')
     vtracks_unmeth <- paste0(vtracks_pref, '_', 1:length(tracks), '_unmeth')
+    vtracks_cov <- paste0(vtracks_pref, '_', 1:length(tracks), '_cov')
 
     walk2(vtracks_meth, .gpatterns.meth_track_name(tracks), gvtrack.create, func='sum')
     walk2(vtracks_unmeth, .gpatterns.unmeth_track_name(tracks), gvtrack.create, func='sum')
-    on.exit( walk(c(vtracks_meth, vtracks_unmeth), gvtrack.rm))
+    walk2(vtracks_cov, .gpatterns.cov_track_name(tracks), gvtrack.create, func='sum')
+    on.exit( walk(c(vtracks_meth, vtracks_unmeth, vtracks_cov), gvtrack.rm))
 
     if (sum_tracks){
         meth_expr <- sprintf('sum(%s, na.rm=T)', paste(vtracks_meth, collapse=', '))
         unmeth_expr <- sprintf('sum(%s, na.rm=T)', paste(vtracks_unmeth, collapse=', '))
+        cov_expr <- sprintf('sum(%s, na.rm=T)', paste(vtracks_cov, collapse=', '))
         expr <- qq('@{meth_expr} / ( @{meth_expr} + @{unmeth_expr} )')
     } else {
         expr <- qqv('@{vtracks_meth} / ( @{vtracks_meth} + @{vtracks_unmeth} )')
+        cov_expr <- qqv('@{vtracks_cov}')
     }    
 
-    avgs <- gextract(expr, intervals=intervals, iterator=iterator, colnames=names, file=file, intervals.set.out = intervals.set.out)
+    avgs <- gextract(expr, intervals=intervals, iterator=iterator, colnames=names, file=file, intervals.set.out = intervals.set.out) %>% as.tibble()
+    
+    if (mask_by_cov){
+        covs <- gextract(cov_expr, intervals=intervals, iterator=iterator, colnames=names) %>% as.tibble()
+        for (x in names){
+            avgs[[x]] <- ifelse(covs[[x]] < min_cov | is.na(covs[[x]]), NA, avgs[[x]])
+        }        
+    }
    
 
     if (!is.null(file) || !is.null(intervals.set.out)){
@@ -565,6 +579,9 @@ gpatterns.cluster_avg_meth <- function(
     intra_clust_order = TRUE) {
 
     if (tidy){
+        if (!('samp' %in% names(avgs_mat))){
+            stop('no samp field. is avg tidy?')
+        }
         avgs_mat <- avgs %>%
         select(chrom, start, end, samp, avg) %>%
         spread(samp, avg)
