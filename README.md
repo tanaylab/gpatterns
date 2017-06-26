@@ -1,3 +1,4 @@
+
 The gpatterns Package - Analysis of Methylation Patterns
 ========================================================
 
@@ -33,13 +34,6 @@ Download and install *gpatterns*:
 devtools::install_bitbucket("tanaylab/gpatterns", ref='default')
 library(gpatterns)
 ```
-Important: 
-Until the package would be open for everyone, use: 
-``` r
-devtools::install_bitbucket("tanaylab/gpatterns", ref='default', auth_user='username', password='password')
-library(gpatterns)
-```
-Where 'username' is your bitbucket username and 'password' is your bitbucket password.
 
 #### Using the package
 

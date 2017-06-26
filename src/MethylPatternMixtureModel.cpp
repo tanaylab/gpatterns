@@ -125,7 +125,8 @@ int MethylPatternMixtureModel::learn(const ModelData& data) {
     //other variable declarations
     vector<MethylPatternMixtureModel*> res_models;
     res_models.reserve(0.5 * uniq_samples.size() * (uniq_samples.size() - 1));
-    int init_ind = 0, max_lhood_ind = 0, max_loglikelihood = -std::numeric_limits<double>::max();
+    int init_ind = 0, max_lhood_ind = 0;
+    double max_loglikelihood = -std::numeric_limits<double>::max();
 
     // first init - hamming distance heuristic
     init_models_hamming(data);
