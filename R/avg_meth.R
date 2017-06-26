@@ -333,6 +333,8 @@ gpatterns.screen_by_coverage <- function(tracks,
     vtracks <- paste0(vtracks_pref, '_', 1:length(tracks), '_cov')
 
     walk2(vtracks, cov_tracks, gvtrack.create, func='sum')
+    on.exit(walk(vtracks, gvtrack.rm))
+
     if (sum_tracks){
         cov_expr <- sprintf('sum(%s, na.rm=T)', paste(qqv('@{vtracks}.cov'), collapse=', '))
         expr <- qq('@{cov_expr} >= @{min_cov}')
@@ -346,7 +348,7 @@ gpatterns.screen_by_coverage <- function(tracks,
                        intervals = intervals,
                        iterator = iterator,
                        intervals.set.out = intervals.set.out)
-    walk(vtracks, gvtrack.rm)
+    
     return(intervs)
 }
 
@@ -860,10 +862,13 @@ gpatterns.plot_clustering <- function(avgs, rows_clust_method='kmeans', K=NULL, 
         if (!is.null(min_cov)){
             message(qq('Taking only intervals with coverage >= @{min_cov}'))
             intervs <- gpatterns.screen_by_coverage(track, intervals, iterator, min_cov=min_cov)
+            if (is.null(intervs)){
+                return(NULL)
+            }
         } else {
             intervs <- intervals
         }        
-
+        
         gm <- gbins.summary(..., .gpatterns.meth_track_name(track), iterator=iterator, intervals=intervs, include.lowest=include.lowest)
         gm <- plyr::adply(gm, 1:length(dim(gm)))
         colnames(gm) <- c(paste0('breaks', 1:nstrat_tracks), 'stat', 'val')
