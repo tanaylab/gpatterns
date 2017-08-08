@@ -582,7 +582,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
             map_df(~ tibble(lib=.x, fn=list.files(.x, pattern='.*\\.tcpgs\\.gz$'))) %>%
             mutate(fn1 = fn) %>%
             group_by(fn) %>%
-            by_slice(~ .collate_gzips(paste0(.x$lib, '/', .x$fn1[1]),
+            purrrlyr::by_slice(~ .collate_gzips(paste0(.x$lib, '/', .x$fn1[1]),
                                       qq('@{track_path}/tidy_cpgs/@{.x$fn1[1]}')) )
     }
 }
