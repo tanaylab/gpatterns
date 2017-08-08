@@ -6,6 +6,6 @@
 #' @param df data frame
 #' @export
 mpms <- function(df) {
-    .Call('gpatterns_mpms', PACKAGE = 'gpatterns', df)
+    .Call('_gpatterns_mpms', PACKAGE = 'gpatterns', df)
 }
 

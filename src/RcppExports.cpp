@@ -7,7 +7,7 @@ using namespace Rcpp;
 
 // mpms
 DataFrame mpms(const DataFrame& df);
-RcppExport SEXP gpatterns_mpms(SEXP dfSEXP) {
+RcppExport SEXP _gpatterns_mpms(SEXP dfSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -18,7 +18,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"gpatterns_mpms", (DL_FUNC) &gpatterns_mpms, 1},
+    {"_gpatterns_mpms", (DL_FUNC) &_gpatterns_mpms, 1},
     {NULL, NULL, 0}
 };
 
