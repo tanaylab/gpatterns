@@ -1,127 +1,3 @@
-# standard tracks generation ------------------------------------------------
-.gpatterns.gen_cg_track <- function(){
-
-}
-
-.get_nucs_df <- function(intervals, nucs=c('T', 'C', 'G', 'A')){   
-    dinucs <- expand.grid(nucs, nucs)  %>% unite(Var1, Var2, col='dinucs', sep='') %>% .$dinucs 
-    nuc_df <- tibble(start = seq(intervals$start, intervals$end - 1, 1), seq=(gseq.extract(intervals) %>% toupper %>% str_split('') %>% .[[1]])) %>% mutate(next_nuc = lead(seq)) %>% unite(seq, next_nuc, col='dinuc', sep='', remove=F) %>% mutate(chrom = intervals$chrom, end = start + 1) %>% select(chrom, start, end, seq, dinuc)
-    for (nuc in nucs){
-        nuc_df[nuc] <- as.numeric(nuc_df$seq == nuc)
-    }
-    for (nuc in dinucs){
-        nuc_df[nuc] <- as.numeric(nuc_df$dinuc == nuc)
-    }
-    nuc_df <- nuc_df %>% select(-seq, -dinuc)
-    return(nuc_df)        
-}
-
-.gpatterns.gen_next_CG_track <- function(){
-    df <- map_df(gintervals.all()$chrom, ~ gintervals.load(.gpatterns.genome_cpgs_intervals, chrom=.x) %>%  mutate(nextcg = lead(start))) %>% arrange(chrom, start, end)
-    gintervals.save(.gpatterns.genome_next_cpg_intervals, df)
-}
-
-.gpatterns.gen_re_fragments <- function(){
-
-}
-
-.gpatterns.gen_sticky_ends <- function(frags_intervals, intervals.set.out=NULL, file=NULL, frags_column='FID'){
-    sticky_ends <- gintervals.load(frags_intervals) %>%
-        group_by_(frags_column) %>%
-        slice(1) %>%
-        ungroup
-    if (!is.null(intervals.set.out)){
-        gintervals.save(intervals = sticky_ends, intervals.set.out = intervals.set.out)
-    }
-    if (!is.null(file)){
-        fwrite(sticky_ends, file, sep=',')
-    }
-}
-
-
-
-# Bissli Functions ------------------------------------------------
-
-#' Align bisulfite converted reads to a reference genome using bowtie2
-#'
-#' @param r1_fastq a vector of FASTQ files to align (read1)
-#' @param out_bam bam output file with aligned reads
-#' @param genome_seq A directory holding the reference genome, one FASTA file per
-#' chromosome
-#' @param bissli2_idx The basename of the index to be searched. The index is created using
-#' gpatterns.bissli2_build
-#' @param r2_fastq a vector of FASTQ files to align (read2)
-#' @param bissli2_bin path for bissli2-align
-#' @param bowtie2 path for bowtie2
-#' @param samtools path for samtools
-#' @param maxins maximum fragment length (bowtie2 maxins argument)
-#' @param threads number of threads to use
-#' @param genome_type ct/ga/ct_ga. if 'ct' - Assume that the reads to be aligned underwent C->T conversion. If
-#' paired-end reads are aligned, then assume read 1 underwent C->T
-#' conversion while read 2 underwent G->A conversion. The --ct and --ga
-#' options are mutually exclusive. if 'ga' - Assume that the reads to be aligned underwent G->A conversion. If
-#' paired-end reads are aligned, then assume read 1 underwent G->A
-#' conversion while read 2 underwent C->T conversion.
-#' if 'ct_ga' reads would be aligned to both C->T and G->A, and the best match would
-#' be chosen.
-#'
-#' @param tmp_dir Directory for storing temporary files
-#' @param bissli2_params additional parameters to bissli2/bowtie2
-#'
-#' @return
-#' @export
-#'
-#' @examples
-gpatterns.bissli2 <- function(r1_fastq,
-                              out_bam,
-                              genome_seq,
-                              bissli2_idx,
-                              r2_fastq=NULL,
-                              bissli2_bin=.gpatterns.bissli2_bin,
-                              bowtie2='bowtie2',
-                              samtools = 'samtools',
-                              maxins=1000,
-                              threads=10,
-                              genome_type='ct',
-                              tmp_dir = NULL,
-                              bissli2_params = ''){
-    tmp_dir <- tmp_dir %||% tempdir()
-    r1_fastq <- paste(r1_fastq, collapse=',')
-    if (genome_type == 'ct_ga'){
-        genome_type <- 'ct --ga'
-    }
-    if (is.null(r2_fastq)){
-        command <- qq('@{bissli2_bin} @{bissli2_params} --tmp-dir @{tmp_dir} --bowtie2 @{bowtie2} --@{genome_type} -g @{genome_seq} -x @{bissli2_idx} -U @{r1_fastq} --threads @{threads} | @{samtools} view -b -S -h -o @{out_bam} -')
-    } else {
-        r2_fastq <- paste(r2_fastq, collapse=',')
-        command <- qq('@{bissli2_bin} @{bissli2_params} --tmp-dir @{tmp_dir} --bowtie2 @{bowtie2} --maxins @{maxins} --@{genome_type} -g @{genome_seq} -x @{bissli2_idx} -1 @{r1_fastq} -2 @{r2_fastq} --threads @{threads} | @{samtools} view -b -S -h -o @{out_bam} -')
-    }
-    system(command)
-}
-
-#' Create an bowtie2 index for a bisulfite converted genome
-#'
-#' @param reference a vector of FASTA file names holding the reference genome.
-#' @param idx_base The basename of the index files that will be created.
-#' @param bowtie2_build_bin The path of the bowtie2-build executable. [bowtie2-build]
-#' @param bowtie2_options Any unknown options are passed transparently to bowtie2-build.
-#' Note that bissli2-build can only handle FASTA files as input. Therefore the '-f' option is always passed to bowtie2-build
-#' @param bissli2_build_bin binary of bissli2-build
-#'
-#' @return
-#' @export
-#'
-#' @examples
-gpatterns.bissli2_build <- function(reference,
-                                    idx_base,
-                                    bowtie2_options,
-                                    bowtie2_build_bin='bowtie2-build',
-                                    bissli2_build_bin=.gpatterns.bissli2_build_bin){
-    reference <- paste(reference, collapse=',')
-    command <- qq('@{bissli2_build_bin} --bowtie2-build @{bowtie2_build_bin} @{reference} @{idx_base} @{bowtie2_options}')
-    system(command)
-}
-
 # import Functions ------------------------------------------------
 
 .step_invoke <- function(step, steps, f, ...){
@@ -134,8 +10,6 @@ gpatterns.bissli2_build <- function(reference,
 }
 
 
-
-
 #' Create a track from tidy_cpgs files
 #'
 #'
@@ -143,7 +17,7 @@ gpatterns.bissli2_build <- function(reference,
 #' @param track name of the track to generate
 #' @param description description of the track to generate
 #' @param steps steps of the pipeline. Possible options are:
-#' 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov'
+#' 'bind_tidy_cpgs', 'pileup', 'pat_freq'
 #' @param overwrite overwrite existing tracks
 #' @param cov_filt_cmd if numeric - maximal coverage for CpG. Else - command for filtering highly (or lowly) covered CpGs. string with the maximal coverage, where 'covs' can represent the command, e.g. 'max(500, quantile(covs, 0.95))'. 
 #' @param dsn downsampling n. Leave NULL for no downsampling
@@ -175,8 +49,8 @@ gpatterns.import_from_tidy_cpgs <- function(tidy_cpgs,
                                             use_sge = FALSE,
                                             max_jobs = 400,
                                             parallel = getOption('gpatterns.parallel')){
-    gsetroot(groot)
-    all_steps <- c('bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov')
+    gsetroot(groot)    
+    all_steps <- c('bind_tidy_cpgs', 'pileup', 'pat_freq')
 
     if (length(steps) == 1 && steps[1] == 'all'){
         steps <- all_steps
@@ -232,20 +106,6 @@ gpatterns.import_from_tidy_cpgs <- function(tidy_cpgs,
         max_jobs = max_jobs,
         parallel = parallel)
 
-    # pat_cov
-    .step_invoke(
-        'pat_cov',
-        steps,
-        .gpatterns.pat_cov,
-        track = track,
-        description = description,
-        overwrite = overwrite,
-        pat_cov_lens = pat_cov_lens,
-        max_span = max_span,
-        use_sge = use_sge,
-        max_jobs = max_jobs,
-        parallel = parallel)
-
 }
 
 #' Create a track from bam files.
@@ -255,7 +115,7 @@ gpatterns.import_from_tidy_cpgs <- function(tidy_cpgs,
 #' @param bams character vector with path of bam files
 #' @param workdir directory in which the files would be saved (please provide full path)
 #' @param steps steps of the pipeline to do. Possible options are:
-#' 'bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov'
+#' 'bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'pat_freq'
 #' @param paired_end bam files are paired end, with R1 and R2 interleaved
 #' @param cgs_mask_file comma separated file with positions of cpgs to mask
 #' (e.g. MSP1 sticky ends). Needs to have chrom and start fields with the
@@ -308,7 +168,8 @@ gpatterns.import_from_bam <- function(bams,
                                       run_per_interv = TRUE,
                                       ...){
     gsetroot(groot)
-    all_steps <- c('bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov', 'stats')    
+
+    all_steps <- c('bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'stats')    
 
     if (length(steps) == 1 && steps == 'all'){
         steps <- all_steps
@@ -316,12 +177,9 @@ gpatterns.import_from_bam <- function(bams,
 
     stopifnot(all(steps %in% c(all_steps)))
 
-    if (is.null(workdir) && !is.null(track)){
-        if ('bind_tidy_cpgs' %in% steps){
-            workdir <- paste0(.gpatterns.base_dir(track), '/workdir')        
-        } else {
-            workdir <- .gpatterns.base_dir(track)         
-        }        
+    if (is.null(workdir) && !is.null(track)){        
+        workdir <- paste0(.gpatterns.base_dir(track), '/workdir')                
+        system(qq('mkdir -p @{workdir}'))
     }
 
     if (is.null(workdir) && !is.null(track)){
@@ -402,7 +260,7 @@ gpatterns.import_from_bam <- function(bams,
 
 #' Separate a track by strands (for QC purposes)
 #'
-#' @inheritParams gpatterns::gpatterns.import_from_tidy_cpgs
+#' @inheritParams gpatterns.import_from_tidy_cpgs
 #' @param out_track output track name if NULL \code{track} would be used
 #' @param intervals intervals to extract from tidy_cpgs
 #' @param minus_suffix suffix for the minus strand track
@@ -577,12 +435,12 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
     if (1 == length(tidy_cpgs_dirs)){
         system(qq('ln -sf @{tidy_cpgs_dirs} @{track_path}/tidy_cpgs'))
     } else {
-        system(qq('mkdir -p @{track_path}/tidy_cpgs'))
+        system(qq('mkdir -p @{track_path}/tidy_cpgs'))        
         tidy_cpgs_dirs %>%
             map_df(~ tibble(lib=.x, fn=list.files(.x, pattern='.*\\.tcpgs\\.gz$'))) %>%
             mutate(fn1 = fn) %>%
             group_by(fn) %>%
-            by_slice(~ .collate_gzips(paste0(.x$lib, '/', .x$fn1[1]),
+            purrlyr::by_slice(~ .collate_gzips(paste0(.x$lib, '/', .x$fn1[1]),
                                       qq('@{track_path}/tidy_cpgs/@{.x$fn1[1]}')) )
     }
 }
@@ -602,7 +460,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
                       gintervals.filter(intervals, bind_intervals2 = TRUE) %>%
                       select(chrom1, start1, end1)
                   )
-    tidy_cpgs %>% unite('grp', chrom1, start1, end1, remove=F) %>% group_by(grp) %>% by_slice(
+    tidy_cpgs %>% unite('grp', chrom1, start1, end1, remove=F) %>% group_by(grp) %>% purrlyr::by_slice(
         function(x) {
         tmp <- tempfile()
         x %>%
@@ -641,6 +499,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
         } else {
             intervals <- nbins
         }
+        
         pat_freq <- gpatterns.apply_tidy_cpgs(
                 track,
                 function(x)
