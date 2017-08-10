@@ -182,8 +182,7 @@ gpatterns.import_from_tidy_cpgs <- function(tidy_cpgs,
         steps <- all_steps
     }
 
-    stopifnot(all(steps %in% c(all_steps)))
-
+    stopifnot(all(steps %in% c(all_steps)))    
     if (.is_tidy_cpgs(tidy_cpgs)){
         genomic_bins <- gbin_intervals(intervals = gintervals.all(), nbins)
         .step_invoke(
@@ -377,7 +376,7 @@ gpatterns.import_from_bam <- function(bams,
 
     tidy_cpgs_steps <- c('bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov')
 
-    tidy_cpgs_dirs <- if (import_raw_tcpgs) qq('@{workdir}/tidy_cpgs') else qq('@{workdir}/tidy_cpgs_uniq')
+    tidy_cpgs_dirs <- if (import_raw_tcpgs || !('filter_dups' %in% steps)) qq('@{workdir}/tidy_cpgs') else qq('@{workdir}/tidy_cpgs_uniq')
 
     if (any(steps %in% tidy_cpgs_steps)){
         gpatterns.import_from_tidy_cpgs(tidy_cpgs_dirs,
@@ -592,8 +591,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
 .gpatterns.tidy_cpgs_to_files <- function(tidy_cpgs, intervals, track=NULL, outdir=NULL){
     if (!is.null(track)){
         outdir <- paste0(.gpatterns.base_dir(track), '/tidy_cpgs')
-    }
-
+    }    
     system(qq('mkdir -p @{outdir}'))
     tidy_cpgs <- tidy_cpgs %>%
         bind_cols(tidy_cpgs %>%
