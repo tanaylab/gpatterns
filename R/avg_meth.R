@@ -12,7 +12,7 @@
 #' }
 #' the 'tidy' option is very conveniet in terms of further analysis, but note that for large amount of data it may be too slow. The 'not tidy' version, on the other hand, returns only average methylation and not the raw 'meth' and 'unmeth' calls. In general, choose the mode according to the following guidelines:
 #' \itemize{
-#' \item{For extremly large datasets use the 'not tidy' version with \code{use_disk == TURE}. Note that in general working with huge number of genomic regions is not useful, both in terms of performance (memory consumption, slow algorithms) and analysis (more 'noise'). A good practice is to select the genomic regions carefully, for example by requering minimal coverage (\code{min_cov}) in minimal number of samples (\code{min_samples}), minimal number of CpGs (\code{min_cpgs)}, taking only the most variable regions (\code{min_var}, \code{var_quantile}) or by taking sets of annotated regioins (e.g. promoters, enhancers).}
+#' \item{For extremly large datasets use the 'not tidy' version with \code{use_disk == TRUE}. Note that in general working with huge number of genomic regions is not useful, both in terms of performance (memory consumption, slow algorithms) and analysis (more 'noise'). A good practice is to select the genomic regions carefully, for example by requering minimal coverage (\code{min_cov}) in minimal number of samples (\code{min_samples}), minimal number of CpGs (\code{min_cpgs)}, taking only the most variable regions (\code{min_var}, \code{var_quantile}) or by taking sets of annotated regioins (e.g. promoters, enhancers).}
 #' \item{For large datasets use the 'not tidy' version.}
 #' \item{For intermediate size datasets use the 'tidy' version with \code{pre_screen = TRUE}. This would first filter the CpGs and only then exracts the methylation to memory. }
 #' \item{For small datasets use the 'vanilla' 'tidy' version.}
@@ -152,6 +152,7 @@ gpatterns.get_avg_meth <- function(
     }
     
     message('extracting...')
+    
     avgs <- gvextract(
         c(qq('@{tracks}.meth', collapse=F), qq('@{tracks}.unmeth', collapse=F)),
         intervals = intervals,
@@ -213,10 +214,11 @@ gpatterns.get_avg_meth <- function(
     n_intervals <- distinct(avgs, chrom, start, end) %>% nrow
     message(qq('number of intervals: @{scales::comma(n_intervals)}'))
 
+    avgs <- avgs %>% left_join(tibble(samp = names, track = tracks), by='samp')
 
     return(avgs %>%
-               select(chrom, start, end, intervalID, samp, meth, unmeth, avg, cov) %>%
-               tbl_df())
+               select(chrom, start, end, intervalID, samp, meth, unmeth, avg, cov, track) %>%
+               as.tibble())
 
 }
 
@@ -366,10 +368,10 @@ gpatterns.filter_cpgs <- function(intervals,
                                   min_cpgs,
                                   cgs_track = .gpatterns.genome_cpgs_track) {
     gvtrack.create("cpg_count", cgs_track, func = "sum")
+    on.exit(gvtrack.rm("cpg_count"))
     intervals <- gscreen(qq('cpg_count >= @{min_cpgs}'),
                          intervals = intervals,
-                         iterator = intervals)
-    gvtrack.rm("cpg_count")
+                         iterator = intervals)    
     return(intervals)
 }
 
@@ -526,312 +528,6 @@ gpatterns.intervals_coverage <- function(tracks,
     }
     return(avgs)
 }
-
-# Analysis Functions ------------------------------------------------
-
-
-#' Cluster average methylation of multiple tracks
-#'
-#' @param avgs avgs pre-computed intervals set with average methylation, output of gpatterns.get_avg_meth.
-#' @param K number of clusters for kmeans++
-#' @param verbose display kmeans++ messages
-#' @param clust_order_func order clusters by clust_order_func [default: mean]
-#' @param clust_columns cluster the columns (samples) using hclust
-#' @param column_k cut the hclust of the columns and return an additional
-#' 'samp_clust' column with the column cluster
-#' @param ret_hclust return a list with avgs (the clustering result) and
-#' hc (the hclust object)
-#' @param tidy is the input tidy
-#' @param intra_clust_order order within each cluster using hclust (otherwise, the order would be by genomic position)
-#'
-#' @return if tidy: data frame with the following fields:
-#' \itemize{
-#'      \item{'chrom'}{}
-#'      \item{'start'}{}
-#'      \item{'end'}{}
-#'      \item{'ord'}{order of intervals within the cluster}
-#'      \item{'samp'}{sample id}
-#'      \item{'samp_clust'}{id of the column cluster (hclust cutree)}
-#'      \item{'clust'}{cluster id}
-#'      \item{'original columns'}{original columns of avgs (meth,unmeth,avg,cov)}
-#' }
-#' if not tidy: data frame with the following fields:
-#' \itemize{
-#'      \item{'chrom'}{}
-#'      \item{'start'}{}
-#'      \item{'end'}{}
-#'      \item{'ord'}{order of intervals within the cluster}
-#'      \item{'samp_clust'}{id of the column cluster (hclust cutree)}
-#'      \item{'clust'}{cluster id}
-#'      \item{'original columns'}{original columns of avgs}
-#' }
-#'
-#' @export
-#'
-#' @examples
-gpatterns.cluster_avg_meth <- function(
-    avgs,
-    K,
-    verbose = FALSE,
-    clust_order_func = partial(mean, na.rm=T),
-    clust_columns = FALSE,
-    column_k = NULL,
-    ret_hclust = FALSE,
-    tidy = TRUE,
-    intra_clust_order = TRUE) {
-
-    if (tidy){
-        if (!('samp' %in% names(avgs_mat))){
-            stop('no samp field. is avg tidy?')
-        }
-        avgs_mat <- avgs %>%
-        select(chrom, start, end, samp, avg) %>%
-        spread(samp, avg)
-    } else {
-        avgs_mat <- avgs
-    }
-
-    avgs_mat <- avgs_mat %>%
-        unite('id', chrom, start, end, sep='_') %>%
-        TGL_kmeans(K=K,
-                   verbose=verbose,
-                   id_column=TRUE,
-                   clust_order_func=clust_order_func,
-                   order_rows=TRUE,
-                   row_order_func=NULL,
-                   method='ward.D2',
-                   row_order_column = TRUE) %>%
-        separate(id, c('chrom', 'start', 'end')) %>%
-        mutate_at(vars(start, end), as.numeric)  
-
-    if (tidy){
-        avgs_mat <- avgs_mat %>% gather('samp', 'avg', -(chrom:end), -clust, -ord) %>% select(chrom, start, end, ord, samp, clust, avg)
-        avgs <- avgs_mat %>% left_join(avgs %>% select(-avg), by=c('chrom', 'start', 'end', 'samp')) %>% select(chrom, start, end, ord, clust, avg, everything())
-    } else {
-        avgs <- avgs_mat %>% select(chrom, start, end, ord, clust, everything())
-    }
-
-    if (clust_columns) {
-        return(gpatterns.cluster_columns(avgs, column_k = column_k, ret_hclust=ret_hclust, tidy=tidy))
-    }
-
-    return(avgs %>% ungroup)
-}
-
-#TODO add roxygen
-gpatterns.cluster_columns <- function(avgs, column_k = NULL, ret_hclust=FALSE, tidy=TRUE, method='ward.D2'){
-    if (tidy){
-        avgs_mat <- avgs %>%
-            select(chrom, start, end, clust, ord, samp, avg) %>%
-            spread(samp, avg)
-    } else {
-        avgs_mat <- avgs
-    }
-
-    dist_mat <-  avgs_mat %>%
-        select(-(chrom:clust)) %>%
-        as.matrix() %>%
-        t %>%
-        dist
-
-    hc <- dist_mat %>%
-        hclust(method = method)
-    hc <- dendsort::dendsort(hc)
-    hc <- gclus::reorder.hclust(hc, dist_mat)
-    ord <- hc$order
-
-    samples <- colnames(avgs_mat %>% select(-(chrom:ord)))
-    if (tidy){
-        if (!is.null(column_k)){
-            ct <- cutree(hc, k=column_k)
-            samp_clust <- data_frame(samp = as.character(names(ct)), samp_clust=ct) %>%
-                left_join(data_frame(
-                    samp = samples[ord],
-                    samp_ord = 1:length(samples)), by='samp') %>%
-                arrange(samp_ord)
-            clust_ord <- samp_clust %>%
-                distinct(samp_clust) %>%
-                .$samp_clust
-            samp_clust <- samp_clust %>%
-                mutate(samp_clust = plyr::mapvalues(samp_clust, clust_ord, 1:max(clust_ord))) %>%
-                select(-samp_ord)
-            avgs <- avgs %>%
-                    left_join(samp_clust, by='samp') %>%
-                    select(chrom, start, end, ord, samp, samp_clust, clust, meth, unmeth, avg, cov)
-            avgs$samp <- factor(avgs$samp, levels=samples[ord])
-        }
-    } else {        
-        avgs <- avgs_mat[, c(1:5, ord + 5)]
-    }
-
-    if (ret_hclust){
-        return(list(avgs=avgs, hc=hc))
-    }
-
-    return(avgs)
-}
-
-#' Plot a heatmap of average methylation clustering
-#'
-#' @inheritParams pheatmap::pheatmap
-#' @param avgs output of gpatterns.cluster_avg_meth
-#' @param row_clust_method
-#' @param K
-#' @param cluster_cols
-#' @param show_row_clust
-#' @param annotation
-#' @param annotation_colors
-#' @param annotation_col
-#' @param show_rownames
-#' @param show_colnames
-#' @param cluster_gaps
-#' @param color_pal
-#' @param main
-#' @param device
-#' @param fig_ofn output filename of the figure. if NULL would plot to current device
-#' @param width width ('png' parameter)
-#' @param height height ('png' parameter)
-#' @param plot if FALSE, would only return the clustering
-#' @param ... other pheatmap1 parameters
-#'
-#' @return 
-#' @export
-#'
-#' @examples
-gpatterns.plot_clustering <- function(avgs, rows_clust_method='kmeans', K=NULL, cluster_cols = TRUE, show_row_clust = TRUE, annotation=NULL, annotation_colors=NULL, annotation_col=NULL, show_rownames=FALSE, show_colnames=FALSE, cluster_gaps=FALSE, color_pal = .blue_red_pal, fontsize = 8, fontsize_row = fontsize, fontsize_col = fontsize, main=NULL, device='png', fig_ofn=NULL, width=2100, height=2000, res=300, plot=TRUE, motif_enrich=NULL, cluster_motifs=TRUE, qval_thresh=0.05, show_sig=TRUE, motif_fontsize_col=fontsize*0.8, motif_fontsize_sig=fontsize*1.3, ...){
-
-    if (rows_clust_method == 'kmeans'){
-        clust <- gpatterns.cluster_avg_meth(avgs, K=K, tidy=F)  
-    } else {
-        if ('clust' %in% colnames(avgs)){
-            clust <- avgs %>% mutate(ord=1:n()) %>% select(chrom, start, end, ord, clust, everything())
-        } else {
-            clust <- avgs %>% mutate(clust = NA, ord=1:n()) %>% select(chrom, start, end, ord, clust, everything())
-            if (show_row_clust){
-                show_row_clust <- FALSE
-            }    
-        }        
-    }
-    
-    if (rows_clust_method == 'hclust'){
-        cluster_rows <- TRUE
-    } else {
-        cluster_rows <- FALSE
-    }   
-
-    clust <- clust %>% unite('id', chrom:end, sep='_', remove=T)
-    if (show_row_clust){
-        annotation <- clust %>% mutate(clust = paste0('clust', clust)) %>% select(samp = id, clust) %>% bind_rows(annotation)
-        annotation_row <- 'clust'       
-        annotation_colors <- clust %>% distinct(clust) %>% mutate(variable = paste0('clust', clust), color = get_qual_colors(n())) %>% mutate(type = 'clust') %>% select(type, variable, color)  %>% bind_rows(annotation_colors)        
-    } else {
-        if (!is.null(annotation)){
-            annotation$clust <- NA    
-        }        
-        annotation_row <- NULL
-    }
-
-    if (cluster_gaps){
-        gaps <- clust %>% group_by(clust) %>% filter(row_number() == 1) %>% .$ord
-    } else {
-        gaps <- NULL
-    }
-
-    if (is.null(main)){
-        main <- qq('@{comify(nrow(clust))} loci')
-    } 
-
-    p_mat <- clust %>%        
-        select(-one_of('ord', 'clust')) %>% 
-        pheatmap1(cluster_rows=cluster_rows,
-                  color=color_pal,
-                  breaks=seq(0,1,0.001),
-                  show_rownames=show_rownames,
-                  cluster_cols=cluster_cols,                  
-                  annotation=annotation,
-                  annotation_colors=annotation_colors,
-                  annotation_col = annotation_col,
-                  annotation_row = annotation_row,
-                  show_colnames=show_colnames,                
-                  clustering_method = 'ward.D2',
-                  fontsize = fontsize, 
-                  fontsize_row = fontsize_row, 
-                  fontsize_col = fontsize_col,
-                  gaps_row=gaps,
-                  main=main, silent=TRUE)
-    gmat <- p_mat$gtable
-
-    if (!is.null(motif_enrich)){
-        motifs <- motif_enrich %>% filter(qval <= qval_thresh) %>% .$track %>% unique
-        motif_enrich <- motif_enrich %>% filter(track %in% motifs)
-        
-        motif_mat <- motif_enrich %>% mutate(rel_enrich = log2(1 + rel_enrich)) %>% left_join(clust %>% select(id, ord, clust), by='clust') %>% reshape2::dcast(id + ord + clust~track, value.var='rel_enrich') %>% arrange(clust, ord) %>% select(-ord, -clust)
-        motif_mat_ord <- c(1, order(apply(motif_mat[, -1], 2, which.max)) + 1)
-        motif_mat <- motif_mat[, motif_mat_ord]
-
-        sig_mat <- motif_enrich %>% left_join(clust %>% select(id, ord, clust), by='clust') %>% group_by(clust, track) %>% mutate(sig = if_else(qval <= qval_thresh & row_number() == round(n() / 2), '*', '')) %>% reshape2::dcast(id + ord + clust~track, value.var='sig') %>% arrange(clust, ord) %>% select(-ord, -clust)
-        sig_mat <- sig_mat[, motif_mat_ord]
-        if (cluster_motifs){
-            motif_cols <- c(1, hclust(dist(t(motif_mat[,-1]))) $order + 1)
-            motif_mat <- motif_mat[, motif_cols]
-            sig_mat <- sig_mat[, motif_cols] %>% select(-id) %>% as.matrix
-        }
-
-        if (show_sig){
-            display_numbers <- sig_mat 
-        } else {
-            display_numbers <- FALSE
-        }
-
-        cpal <- colorRampPalette(c('white', 'white', 'white', 'orange', 'yellow'))(1000)
-
-        gmot <- motif_mat %>% pheatmap1(show_rownames=FALSE, cluster_rows=FALSE, cluster_cols=FALSE, show_colnames=TRUE, fontsize = fontsize, fontsize_row = fontsize_row, fontsize_col = motif_fontsize_col, legend=FALSE, silent=TRUE,  display_numbers = display_numbers, fontsize_number=motif_fontsize_sig, border_color='black', color = cpal, gaps_row=gaps)  %>% .$gtable 
-        gmot_breaks <- pheatmap:::generate_breaks(as.vector(motif_mat[, -1]), length(cpal))
-        legend_breaks <- grid::grid.pretty(range(as.vector(gmot_breaks)))
-        legend_labels <- prettyNum(2^legend_breaks - 1, digits=2)
-        gmot1 <- motif_mat %>% pheatmap1(show_rownames=FALSE, cluster_rows=FALSE, cluster_cols=FALSE, fontsize = fontsize, fontsize_row = fontsize_row, fontsize_col = motif_fontsize_col, legend=TRUE, silent=TRUE,  display_numbers = display_numbers, fontsize_number=motif_fontsize_sig, border_color='black', color = cpal, legend_breaks=legend_breaks, legend_labels =legend_labels, gaps_row=gaps) %>% .$gtable       
-        
-        gmot$heights <- gmat$heights
-
-        gmat <- gtable::gtable_add_cols(gmat, unit(20, 'bigpts'), 0)
-
-        gmot <- gtable::gtable_add_cols(gmot, gmot1$widths[5], 0)
-        gmot <- gtable::gtable_add_cols(gmot, unit(20, 'bigpts'), 0)
-        gmot <- gtable::gtable_add_grob(gmot, grobs=gmot1$grobs[[3]], t=4, b=5, l=2, r=4, name='legend')
-
-
-        gmat <- gtable::gtable_add_cols(gmat, unit(20, 'bigpts'), 0)   
-        gmat <- gtable::gtable_add_grob(gmat, grobs=grid::rectGrob(gp = gpar(fill=NA, col=NA)), t=4, b=5, l=1, r=2, name='space')
-
-        gt <- plot_grid(gmot, gmat, align='h', ncol=2, rel_widths=c(1,3))
-        print(gt)
-        
-                 
-    } else {
-        gt <- gmat
-        gt <- plot_grid(gmat)
-    }
-
-
-    if (!is.null(fig_ofn)){
-        if (device == 'png'){
-            png(fig_ofn, width=width, height=height, res=res)        
-        } else {
-            do.call(device, list(width=width, height=height))
-        }        
-    }
-
-    # grid.newpage()
-    # gtable::gtable_show_layout(gt)
-    # grid.draw(gt)    
-    print(gt)
-
-    if (!is.null(fig_ofn)){
-        dev.off()
-    }
-    invisible(clust %>% separate(id, c('chrom', 'start', 'end')) %>% mutate(start = as.numeric(start), end=as.numeric(end)))
-}
-
 
 # Plotting Functions ------------------------------------------------
 #' @export
@@ -1138,7 +834,6 @@ gpatterns.global_meth_trend <- function(tracks,
     return(list(trend=trend, p=p))
 }
 
-
 #' Plots smoothScatter of average methylation of two tracks
 #'
 #' @param samples a vector of 2 sample names as present in 'samp' filed of avgs, or track names if
@@ -1228,7 +923,7 @@ gpatterns.smoothScatter <- function(
 #'
 #' @export
 gpatterns.get_promoters <- function(upstream=500, downstream=50){
-    gintervals.load('intervs.global.tss') %>% mutate(start = ifelse(strand == 1, start - upstream, start - downstream), end = ifelse(strand == 1, end + downstream, end + upstream))
+    gintervals.load('intervs.global.tss') %>% mutate(start = ifelse(strand == 1, start - upstream, start - downstream), end = ifelse(strand == 1, end + downstream, end + upstream)) %>% gintervals.force_range()
 }
 
 

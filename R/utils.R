@@ -9,8 +9,6 @@ qqv <- function(text) {GetoptLong::qq(text, envir=parent.frame(), collapse=FALSE
 #' @export
 fread <- partial(data.table::fread, data.table=FALSE)
 
-#' @export
-fwrite <- data.table::fwrite
 
 #' @export
 comify <- scales::comma
@@ -58,6 +56,16 @@ gpatterns.ls <- function(regex='', ignore.case = FALSE, perl=FALSE, fixed=FALSE,
                              useBytes = useBytes) %>% gsub('\\.unmeth', '', .)
     tracks <- tibble(track = cov_tracks) %>% inner_join(tibble(track = meth_tracks), by='track') %>% inner_join(tibble(track = unmeth_tracks), by='track') %>% .$track
     return(tracks)
+}
+
+#' Remove gpatterns track
+#' @param track track name
+#' @export
+gpatterns.rm <- function(track){
+    for (suffix in c('meth', 'unmeth', 'cov', 'avg')){
+        gtrack.rm(qq('@{track}.@{suffix}'))
+    }
+    system('rm -rf @{.gpatterns.base_dir(track)}')
 }
 
 # Patterns utils -------------------------------------------
@@ -132,7 +140,11 @@ gpatterns.set_parallel <- function(thread_num) {
             insert_len = 'numeric',
             cg_pos = 'numeric',
             meth = 'character',
-            qual = 'numeric')
+            qual = 'numeric')#,
+    #         h = 'numeric', 
+    #         H = 'numeric', 
+    #         x = 'numeric', 
+    #         X = 'numeric')
     }
     return(colClasses)
 }
@@ -148,11 +160,12 @@ gpatterns.set_parallel <- function(thread_num) {
     files <- list.files(gsub('/$', '', dir), full.names=TRUE, pattern='tcpgs.gz')
 
     .get_tcpgs <- function(files){
+        classes <- .gpatterns.tcpgs_colClasses(uniq)
         res <- files %>%
             map_df(function(f) fread(
-                qq('gzip -d -c @{f}'),
-                colClasses = .gpatterns.tcpgs_colClasses(uniq)) %>%
-                    tbl_df %>%
+                qq("gzip -d -c @{f} | cut -d',' -f1-@{length(classes)}"),
+                colClasses = classes) %>%
+                    tbl_df() %>%
                     mutate(cg_pos = cg_pos, meth = ifelse(meth == 'Z', 1, 0)))
         if (0 == nrow(res)){
             return(NULL)
@@ -192,11 +205,6 @@ gpatterns.set_parallel <- function(thread_num) {
     return(.get_tcpgs(files))
 }
 
-
-
-#' @inheritParams gpatterns::gcluster.run2
-#' @export
-gcluster.run3 <- partial(gcluster.run2, script = .gpatterns.sg_script)
 
 #' @export
 .gpatterns.base_dir <- function(track)
@@ -386,6 +394,77 @@ do.call_ellipsis <- function(f, additional_params=list(), ...){
     }
 }
 
+#' @export
+do.call_tibble <- function(f, tbl, additional_params = list(), additional_funcs=list(), use_glue=TRUE){   
+
+    if (length(additional_funcs) == 0){
+        funcs <- c(f)
+    } else {
+        funcs <- c(f, additional_funcs)
+    }
+    func_args <- map(funcs, ~ names(as.list(args(.)))) %>% flatten_chr() %>% unique()
+
+    if (use_glue){      
+        for (arg in func_args){
+            if (has_name(tbl, arg) && is.character(tbl[[arg]]) && length(tbl[[arg]]) == 1){
+                tbl[[arg]] <- tbl %>% glue::glue_data(tbl[[arg]])
+            }
+        }        
+    }
+
+    suppressWarnings(tbl <- tbl %>% select(one_of(func_args)))
+
+    tbl <- as.list(tbl) %>% modify_if(is.tibble, as.list) %>% modify_if(is.list, ~ .x[[1]])
+    tbl <- modify_if(tbl, is.tibble, ~ as.list(.x)[[1]])
+
+    if (length(additional_params) > 0){
+        additional_params <- additional_params[!(names(additional_params) %in% names(tbl))]
+    
+        additional_params <- additional_params[names(additional_params) %in% func_args]
+    }        
+    
+    if (!is.null(names(tbl))){
+        do.call(f, c(additional_params, tbl))
+    } else {
+        do.call(f, additional_params)
+    }
+}
+
+
+do.call_vec <- function(func, args_vec){
+    func_args <- names(args_vec)[names(args_vec) %in% names(as.list(args(func)))]   
+    do.call(func, args_vec[func_args])
+}
+
+
+# build_command <- function(args_vec, funcs, func_name, extra_args=''){
+#     func_args <- map(funcs, ~ names(as.list(args(.)))) %>% flatten_chr() %>% unique()   
+#     func_args <- names(args_vec)[names(args_vec) %in% func_args]    
+#     args_vec <-  modify_if(args_vec, ~ is.tibble(.x) && nrow(.x) == 1, ~ .x[[1]])    
+#     args_vec <-  modify_if(args_vec, ~ is.character(.x) && length(.x) == 1, ~ sprintf('"%s"', .x))    
+#     args_vec <-  modify_if(args_vec, ~ length(.x) > 1, ~ as.character(as.tibble(.x)))          
+#     sprintf("%s(%s%s)", func_name, extra_args, map2_chr(names(args_vec[func_args]), args_vec[func_args], ~ glue('{.x} = {.y}')) %>% paste(collapse=', ') )
+# }
+
+# add_function_args <- function(config, args, funcs){ 
+#     func_args <- map(funcs, ~ names(as.list(args(.)))) %>% flatten_chr() %>% unique()    
+#     args <- args[names(args) %in% func_args]    
+#     for (arg in names(args)){
+#         if(!has_name(config, arg)){
+#             if (length(args[[arg]]) > 1){                
+#                 config[[arg]] <- rep(list(args[[arg]]), nrow(config))
+#             } else {
+#                 if (is.character(args[[arg]])){
+#                     config[[arg]] <- glue::glue_data(config, args[[arg]])       
+#                 } else {
+#                     config[[arg]] <- args[[arg]]   
+#                 }                
+#             }
+#         }
+#     }   
+#     return(config)
+# }
+
 .hclust_order <- function(d, keys, variable, value, tidy=TRUE, ...){
     if (tidy){
         d_mat <- d %>%
@@ -417,295 +496,7 @@ get_qual_colors <- function(n){
     return(col_vector[1:n])
 }
 
-
-
-# # Misha overrides ------------------------------------------------
-
-# #' overrides gtrack.create_sparse without rescaning database
-# #' @export
-# gtrack.create_sparse <- function (track = NULL, description = NULL, intervals = NULL,
-#            values = NULL, rescan = TRUE)
-# {
-#     if (is.null(substitute(track)) || is.null(description) ||
-#         is.null(intervals) || is.null(values))
-#         stop("Usage: gtrack.create_sparse(track, description, intervals, values)",
-#              call. = F)
-#     .gcheckroot()
-#     trackstr <- do.call(.gexpr2str, list(substitute(track)),
-#                         envir = parent.frame())
-#     intervalsstr <- deparse(substitute(intervals), width.cutoff = 500)[1]
-#     valuesstr <- deparse(substitute(values), width.cutoff = 500)[1]
-#     trackdir <- sprintf("%s.track", paste(get("GWD"), gsub("\\.",
-#                                                            "/", trackstr), sep = "/"))
-#     direxisted <- file.exists(trackdir)
-#     if (!is.na(match(trackstr, get("GTRACKS"))))
-#         stop(sprintf("Track %s already exists", trackstr), call. = F)
-#     .gconfirmtrackcreate(trackstr)
-#     success <- FALSE
-#     tryCatch({
-#         .gcall("gtrack_create_sparse", trackstr, intervals, values,
-#                new.env(parent = parent.frame()), silent = TRUE)
-#         gdb.reload(rescan = rescan)
-#         .gtrack.attr.set(trackstr, "created.by", sprintf("gtrack.create_sparse(%s, description, %s, %s)",
-#                                                          trackstr, intervalsstr, valuesstr), T)
-#         .gtrack.attr.set(trackstr, "created.date", date(), T)
-#         .gtrack.attr.set(trackstr, "description", description,
-#                          T)
-#         success <- TRUE
-#     }, finally = {
-#         if (!success && !direxisted) {
-#             unlink(trackdir, recursive = TRUE)
-#             gdb.reload()
-#         }
-#     })
-#     retv <- 0
-# }
-
-# #' @export
-# gtrack.rm <- function (track = NULL, force = FALSE, rescan = TRUE)
-# {
-#     if (is.null(substitute(track)))
-#         stop("Usage: gtrack.rm(track, force = FALSE)", call. = F)
-#     .gcheckroot()
-#     trackname <- do.call(.gexpr2str, list(substitute(track)),
-#                          envir = parent.frame())
-#     if (is.na(match(trackname, get("GTRACKS")))) {
-#         if (force)
-#             return(invisible())
-#         stop(sprintf("Track %s does not exist", trackname), call. = F)
-#     }
-#     answer <- "N"
-#     if (force)
-#         answer <- "Y"
-#     else {
-#         str <- sprintf("Are you sure you want to delete track %s (Y/N)? ",
-#                        trackname)
-#         cat(str)
-#         answer <- toupper(readLines(n = 1))
-#     }
-#     if (answer == "Y" || answer == "YES") {
-#         dirname <- sprintf("%s.track", paste(get("GWD"), gsub("\\.",
-#                                                               "/", trackname), sep = "/"))
-#         unlink(dirname, recursive = TRUE)
-#         if (file.exists(dirname))
-#             cat(sprintf("Failed to delete track %s\n", trackname))
-#         else gdb.reload(rescan = rescan)
-#     }
-# }
-
-# gtrack.array.import <- function (track = NULL, description = NULL, ...)
-# {
-#     args <- as.list(substitute(list(...)))[-1L]
-#     if (is.null(substitute(track)) || is.null(description) ||
-#         !length(args))
-#         stop("Usage: gtrack.array.import(track, description, [src]+)",
-#              call. = F)
-#     .gcheckroot()
-#     trackstr <- do.call(.gexpr2str, list(substitute(track)),
-#                         envir = parent.frame())
-#     srcs <- c()
-#     colnames <- list()
-#     for (src in args) {
-#         src <- do.call(.gexpr2str, list(src), envir = parent.frame())
-#         srcs <- c(srcs, src)
-#         if (is.na(match(src, get("GTRACKS"))))
-#             colnames[[length(colnames) + 1]] <- as.character(NULL)
-#         else {
-#             if (.gcall_noninteractive(gtrack.info, src)$type !=
-#                 "array")
-#                 stop(sprintf("Track %s: only array tracks can be used as a source",
-#                              src), call. = F)
-#             colnames[[length(colnames) + 1]] <- names(.gtrack.array.get_colnames(src))
-#         }
-#     }
-#     trackdir <- sprintf("%s.track", paste(get("GWD"), gsub("\\.",
-#                                                            "/", trackstr), sep = "/"))
-#     direxisted <- file.exists(trackdir)
-#     if (!is.na(match(trackstr, get("GTRACKS"))))
-#         stop(sprintf("Track %s already exists", trackstr), call. = F)
-#     .gconfirmtrackcreate(trackstr)
-#     success <- FALSE
-#     tryCatch({
-#         colnames <- .gcall("garrays_import", trackstr, srcs,
-#                            colnames, new.env(parent = parent.frame()), silent = TRUE)
-#         gdb.reload()
-#         .gtrack.array.set_colnames(trackstr, colnames, FALSE)
-#         created.by <- sprintf("gtrack.array.import(\"%s\", description, src = c(\"%s\"))",
-#                               trackstr, paste(srcs, collapse = "\", \""))
-#         .gtrack.attr.set(trackstr, "created.by", created.by,
-#                          T)
-#         .gtrack.attr.set(trackstr, "created.date", date(), T)
-#         .gtrack.attr.set(trackstr, "description", description,
-#                          T)
-#         success <- TRUE
-#     }, finally = {
-#         if (!success && !direxisted) {
-#             unlink(trackdir, recursive = TRUE)
-#             gdb.reload(rescan=FALSE)
-#             warning('Please run gdb.reload() once finished uploading array tracks')
-#         }
-#     })
-#     retv <- 0
-# }
-
-# gtrack.create <- function (track = NULL, description = NULL, expr = NULL, iterator = NULL,
-#           band = NULL, rescan=TRUE){
-#     if (is.null(substitute(track)) || is.null(description) ||
-#         is.null(substitute(expr)))
-#         stop("Usage: gtrack.create(track, description, expr, iterator = NULL, band = NULL)",
-#              call. = F)
-#     .gcheckroot()
-#     trackstr <- do.call(.gexpr2str, list(substitute(track)),
-#                         envir = parent.frame())
-#     exprstr <- do.call(.gexpr2str, list(substitute(expr)), envir = parent.frame())
-#     .iterator <- do.call(.giterator, list(substitute(iterator)),
-#                          envir = parent.frame())
-#     trackdir <- sprintf("%s.track", paste(get("GWD"), gsub("\\.",
-#                                                            "/", trackstr), sep = "/"))
-#     direxisted <- file.exists(trackdir)
-#     if (!is.na(match(trackstr, get("GTRACKS"))))
-#         stop(sprintf("Track %s already exists", trackstr), call. = F)
-#     .gconfirmtrackcreate(trackstr)
-#     success <- FALSE
-#     tryCatch({
-#         if (.ggetOption("gmultitasking"))
-#             .gcall("gtrackcreate_multitask", trackstr, exprstr,
-#                    .iterator, band, new.env(parent = parent.frame()),
-#                    silent = TRUE)
-#         else .gcall("gtrackcreate", trackstr, exprstr, .iterator,
-#                     band, new.env(parent = parent.frame()), silent = TRUE)
-#         gdb.reload(rescan = rescan)
-#         .gtrack.attr.set(trackstr, "created.by", sprintf("gtrack.create(%s, description, %s, iterator=%s)",
-#                                                          trackstr, exprstr, deparse(substitute(iterator),
-#                                                                                     width.cutoff = 500)[1]), T)
-#         .gtrack.attr.set(trackstr, "created.date", date(), T)
-#         .gtrack.attr.set(trackstr, "description", description,
-#                          T)
-#         success <- TRUE
-#     }, finally = {
-#         if (!success && !direxisted) {
-#             unlink(trackdir, recursive = TRUE)
-#             gdb.reload()
-#         }
-#     })
-#     retv <- 0
-# }
-
-
-
-
-
-
-# .gintervals.apply <- function (chroms, intervals, intervals.set.out, FUN, ...)
-# {
-#     if (!is.null(intervals.set.out))
-#         fullpath <- .gintervals.check_new_set(intervals.set.out)
-#     if (is.data.frame(intervals))
-#         intervals <- list(intervals)
-#     chroms$size <- NULL
-#     if ("chrom" %in% colnames(chroms))
-#         chroms <- data.frame(chrom = chroms[with(chroms, order(chrom)),
-#                                             ])
-#     else chroms <- chroms[with(chroms, order(chrom1, chrom2)),
-#                           ]
-#     if (any(unlist(lapply(intervals, function(intervals) {
-#         .gintervals.is_bigset(intervals) || .gintervals.needs_bigset(intervals)
-#     })))) {
-#         stats <- NULL
-#         zeroline <- NULL
-#         success <- FALSE
-#         t <- Sys.time()
-#         progress.percentage <- -1
-#         tryCatch({
-#             if (!is.null(intervals.set.out))
-#                 dir.create(fullpath, recursive = T, mode = "0777")
-#             if (.gintervals.is1d(intervals[[1]])) {
-#                 mapply(function(chrom) {
-#                     loaded_intervals <- lapply(intervals, function(intervals) {
-#                         .gintervals.load_ext(intervals, chrom = chrom)
-#                     })
-#                     res <- do.call(FUN, list(loaded_intervals,
-#                                              ...))
-#                     if (!is.null(intervals.set.out) && !is.null(res) &&
-#                         nrow(res) > 0) {
-#                         zeroline <<- res[0, ]
-#                         .gintervals.big.save(fullpath, res, chrom = chrom)
-#                         stat <- .gcall("gintervals_stats", res, new.env(parent = parent.frame()))
-#                         stats <<- rbind(stats, data.frame(chrom = chrom,
-#                                                           stat))
-#                     }
-#                     if (as.integer(difftime(Sys.time(), t, units = "secs")) >
-#                         3) {
-#                         t <<- Sys.time()
-#                         percentage <- as.integer(100 * match(chrom,
-#                                                              chroms$chrom)/nrow(chroms))
-#                         if (percentage < 100 && progress.percentage !=
-#                             percentage) {
-#                             cat(sprintf("%d%%...", percentage))
-#                             progress.percentage <<- percentage
-#                         }
-#                     }
-#                 }, chroms$chrom)
-#             }
-#             else {
-#                 mapply(function(chrom1, chrom2) {
-#                     loaded_intervals <- lapply(intervals, function(intervals) {
-#                         .gintervals.load_ext(intervals, chrom1 = chrom1,
-#                                              chrom2 = chrom2)
-#                     })
-#                     res <- do.call(FUN, list(loaded_intervals,
-#                                              ...))
-#                     if (!is.null(intervals.set.out) && !is.null(res) &&
-#                         nrow(res) > 0) {
-#                         zeroline <<- res[0, ]
-#                         .gintervals.big.save(fullpath, res, chrom1 = chrom1,
-#                                              chrom2 = chrom2)
-#                         stat <- .gcall("gintervals_stats", res, new.env(parent = parent.frame()))
-#                         stats <<- rbind(stats, data.frame(chrom1 = chrom1,
-#                                                           chrom2 = chrom2, stat))
-#                     }
-#                     if (as.integer(difftime(Sys.time(), t, units = "secs")) >
-#                         3) {
-#                         t <<- Sys.time()
-#                         percentage <- as.integer(100 * which(chroms$chrom1 ==
-#                                                                  chrom1 & chroms$chrom2 == chrom2)/nrow(chroms))
-#                         if (percentage < 100 && progress.percentage !=
-#                             percentage) {
-#                             cat(sprintf("%d%%...", percentage))
-#                             progress.percentage <<- percentage
-#                         }
-#                     }
-#                 }, chroms$chrom1, chroms$chrom2)
-#             }
-#             if (!is.null(intervals.set.out)) {
-#                 if (is.null(stats))
-#                     return(retv <- NULL)
-#                 .gintervals.big.save_meta(fullpath, stats, zeroline)
-#             }
-#             if (progress.percentage >= 0)
-#                 cat("100%\n")
-#             success <- TRUE
-#             if (!is.null(intervals.set.out) && !.gintervals.needs_bigset(intervals.set.out))
-#                 .gintervals.big2small(intervals.set.out)
-#         }, finally = {
-#             if (!success && !is.null(intervals.set.out))
-#                 unlink(fullpath, recursive = TRUE)
-#         })
-#     }
-#     else {
-#         loaded_intervals <- lapply(intervals, .gintervals.load_ext)
-#         res <- do.call(FUN, list(loaded_intervals, ...))
-#         if (!is.null(intervals.set.out) && !is.null(res) && nrow(res) >
-#             0) {
-#             if (.gintervals.is1d(res))
-#                 res <- res[order(res$chrom), ]
-#             else res <- res[order(res$chrom1, res$chrom2), ]
-#             if (.gintervals.needs_bigset(res))
-#                 .gintervals.small2big(intervals.set.out, res)
-#             else .gintervals.save_file(fullpath, res)
-#         }
-#         else return(NULL)
-#     }
-#     if (!is.null(intervals.set.out))
-#         gdb.reload(rescan = FALSE)
-# }
+untable <- function(df, column){
+    df <- as_tibble(df)    
+    return(df[rep(1:nrow(df), df[[column]]), ])
+}

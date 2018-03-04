@@ -18,7 +18,7 @@ gpatterns.import_from_tidy_cpgs(tidy_cpgs, track, description, steps = "all",
 \item{description}{description of the track to generate}
 
 \item{steps}{steps of the pipeline. Possible options are:
-'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov'}
+'bind_tidy_cpgs', 'pileup', 'pat_freq'}
 
 \item{overwrite}{overwrite existing tracks}
 
