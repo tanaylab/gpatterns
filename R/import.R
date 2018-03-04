@@ -167,6 +167,8 @@ gpatterns.import_from_bam <- function(bams,
                                       run_per_interv = TRUE,
                                       ...){
     gsetroot(groot)
+    opt <- options(scipen = 999)
+    on.exit(options(opt))
 
     all_steps <- c('bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'stats')    
 
@@ -317,7 +319,10 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
                                      bin = .gpatterns.bam2tidy_cpgs_bin,
                                      run_per_interv = TRUE,
                                      add_chr_prefix = FALSE,                                                    
-                                     ...){            
+                                     ...){        
+    opt <- options(scipen = 999)
+    on.exit(options(opt))
+
     walk(c(tidy_cpgs_dir, stats_dir), ~ system(qq('mkdir -p @{.x}')))
     bam_prefix <- if (1 == length(bams)) 'cat' else 'samtools cat'
     single_end <- if (!paired_end) '--single-end' else ''
