@@ -1,6 +1,6 @@
 Package: gpatterns
 Title: Single Molecule Methylation Patterns Analysis Suite
-Version: 0.0.0.9000
+Version: 0.1.9000
 Authors@R: c(person("Aviezer", "Lifshitz", email = "aviezer.lifshitz@weizmann.ac.il",
     role = c("aut", "cre")),
     person("Elad", "Chomsky", role=c("aut")),
@@ -10,8 +10,7 @@ Description: Package for import and analysis of DNA methylation (5mC) data.
     both average methylation and epipolymorphism of multiple samples.
 URL: https://tanaylab.bitbucket.io/gpatterns/
 Depends:
-    R (>= 3.2.2),
-    misha (>= 3.5.6)
+    R (>= 3.2.2)    
 Imports:
     plyr,
     reshape2,
@@ -34,8 +33,14 @@ Imports:
     GetoptLong,
     Rcpp,
     pheatmap (>= 1.0.9),
-    BH
-Remotes: raivokolde/pheatmap
+    BH,
+    logging,
+    misha (>= 3.5.4),
+    glue,
+    tgstat
+Remotes: raivokolde/pheatmap,
+    url::http://www.wisdom.weizmann.ac.il/~aviezerl/gpatterns/misha_3.5.6.tar.gz,
+    bitbucket::tanaylab/tgstat@default
 BinaryFiles: inst/bin/mpms
     inst/bin/TGLKmeans_static
 SystemRequirements: C++11

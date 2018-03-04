@@ -21,7 +21,7 @@ gpatterns.import_from_bam(bams, workdir = NULL, track = NULL,
 \item{track}{name of the track to generate}
 
 \item{steps}{steps of the pipeline to do. Possible options are:
-'bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov'}
+'bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'pat_freq'}
 
 \item{paired_end}{bam files are paired end, with R1 and R2 interleaved}
 

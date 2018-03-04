@@ -12,8 +12,7 @@ gcluster.run2(..., command_list = NULL, opt.flags = "", max.jobs = 400,
   memory_flag = "-l mem_free=@{memory}G",
   threads_flag = "-pe threads @{threads}",
   io_saturation_flag = "-l io_saturation=@{io_saturation}",
-  script = paste(Sys.getenv("ANALYSIS_HOME"), "common", "sgjob.sh", sep =
-  "/"))
+  script = .gpatterns.sg_script)
 }
 \arguments{
 \item{...}{R commands}

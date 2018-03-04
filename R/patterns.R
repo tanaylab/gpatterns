@@ -617,11 +617,13 @@ gpatterns.tidy_cpgs_2_pat_freq <- function(calls, pat_length = 2, min_cov = 1, t
                 return(cls)
             }
 
-            message(qq('cpg num: 1'))
+            # message(qq('cpg num: 1'))
             cls <-  calls %>% mutate(lastpos = start)
             for (i in 1:(pat_length-1)){
-                message(qq('cpg num: @{i+1}'))
-                cls <-  add_pat(calls, cls, i, min_cov=min_cov)
+                # message(qq('cpg num: @{i+1}'))
+                if (nrow(calls) > 0 && nrow(cls) > 0){
+                    cls <-  add_pat(calls, cls, i, min_cov=min_cov)    
+                }             
             }
             cls <- cls %>% select(chrom, start, end, pat=meth)
 
@@ -633,7 +635,7 @@ gpatterns.tidy_cpgs_2_pat_freq <- function(calls, pat_length = 2, min_cov = 1, t
                 mutate(p_pat = n_pat / sum(n_pat)) %>%
                 ungroup %>%
                 mutate(pat = factor(pat))
-
+            
             return(pats_dist)
         }
 
@@ -658,7 +660,7 @@ gpatterns.tidy_cpgs_2_pat_freq <- function(calls, pat_length = 2, min_cov = 1, t
             mutate(start = cg_pos, end = start + 1) %>%
             select(chrom, start, end, read_id, meth)
 
-        message('generating pats...')
+        # message('generating pats...')
         pats_dist <- gen_pats(calls, min_cov=min_cov, pat_length=pat_length)
         if (nrow(pats_dist) == 0){
             return(fill_columns(pats_dist[, c('chrom', 'start', 'end')], pat_length))
@@ -882,8 +884,6 @@ gpatterns.downsample_patterns <- function(patterns, dsn){
         sample_n(dsn) %>%
         ungroup
 }
-
-
 
 
 #' transforms patterns to summary statistics: n,n0,n1,nx,nc,meth and epipoly

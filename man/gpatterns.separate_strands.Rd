@@ -8,6 +8,10 @@ gpatterns.separate_strands(track, description, out_track = NULL,
   intervals = NULL, minus_suffix = ".minus", plus_suffix = ".plus", ...)
 }
 \arguments{
+\item{track}{name of the track to generate}
+
+\item{description}{description of the track to generate}
+
 \item{out_track}{output track name if NULL \code{track} would be used}
 
 \item{intervals}{intervals to extract from tidy_cpgs}

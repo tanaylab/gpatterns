@@ -6,11 +6,11 @@
 
 #' Finds neighbors between two sets of intervals (and does not return conflicting column names)
 #'
-#' @inheritParams misha::gintervals.neighbours
+#' @inheritParams misha::gintervals.neighbors
 #'
 #' @return
 #' @export
-#' @seealso \link[misha]{gintrevals.neighbours}
+#' @seealso \link[misha]{gintrevals.neighbors}
 #'
 #' @examples
 gintervals.neighbors1 <- function(intervals1 = NULL,
@@ -204,9 +204,6 @@ gextract.left_join <- function(expr, intervals = NULL, colnames = NULL, iterator
     return(d)
 }
 
-
-
-
 #' Apply a function on track expression in intervals
 #'
 #' @param f function to apply. First argument would be the result of gfunc
@@ -309,7 +306,8 @@ gseq.rev_comp <- function(s) {
 }
 
 
-sum_ignore_na <- purrr::partial(sum, na.rm=T)
+sum_ignore_na <- function(...) { 
+    purrr::reduce(list(...), ~ as.numeric(ifelse(is.na(.x), ifelse(is.na(.y), NA, .y), ifelse(is.na(.y), .x, .x+.y)))) }
 sum_ignore_na_all <- sum_ignore_na
 
 
@@ -413,8 +411,7 @@ gcluster.run2 <- function (...,
                            memory_flag = '-l mem_free=@{memory}G',
                            threads_flag = '-pe threads @{threads}',
                            io_saturation_flag = '-l io_saturation=@{io_saturation}',
-                           script =paste(Sys.getenv('ANALYSIS_HOME'), 'common', 'sgjob.sh', sep='/')){
-
+                           script =.gpatterns.sg_script){    
     if (!is.null(command_list)){ 
         commands <- purrr::map(command_list, function(x) parse(text=x))
     } else {

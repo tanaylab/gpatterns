@@ -278,19 +278,22 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
     tcpgs_minus <- tcpgs %>% filter(strand == '-')
 
     message(qq('doing plus strand, writing to @{out_track}@{plus_suffix}'))
-    gpatterns.import_from_tidy_cpgs(
-        tcpgs_plus,
-        track = qq('@{out_track}@{plus_suffix}'),
-        description = qq('@{description} plus strand'),
-        ...
-    )
+    do.call_ellipsis(gpatterns.import_from_tidy_cpgs, list(tcpgs_plus, track=qq('@{out_track}@{plus_suffix}'),  description = qq('@{description} plus strand')), ...)
+
+    # gpatterns.import_from_tidy_cpgs(
+    #     tcpgs_plus,
+    #     track = qq('@{out_track}@{plus_suffix}'),
+    #     description = qq('@{description} plus strand'),
+    #     ...
+    # )
     message(qq('doing minus strand, writing to @{out_track}@{minus_suffix}'))
-    gpatterns.import_from_tidy_cpgs(
-        tcpgs_minus,
-        track = qq('@{out_track}@{minus_suffix}'),
-        description = qq('@{description} minus strand'),
-        ...
-    )
+    do.call_ellipsis(gpatterns.import_from_tidy_cpgs, list(tcpgs_minus, track=qq('@{out_track}@{minus_suffix}'),  description = qq('@{description} minus strand')), ...)
+    # gpatterns.import_from_tidy_cpgs(
+    #     tcpgs_minus,
+    #     track = qq('@{out_track}@{minus_suffix}'),
+    #     description = qq('@{description} minus strand'),
+    #     ...
+    # )
 }
 
 
@@ -358,7 +361,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
          @{chr_prefix_str} @{trim_str} @{single_end} @{cgs_mask} @{post_process_str} |
            gzip -c > @{output_fn}') %>%
             gsub('\n', '', .) %>% gsub('  ', ' ', .)
-
+        
         system(cmd)
         tcpgs <- fread(qq('gzip -d -c @{output_fn}'), colClasses=.gpatterns.tcpgs_colClasses(uniq=FALSE)) %>% tbl_df
         .gpatterns.tidy_cpgs_to_files(tcpgs, genomic_bins, outdir=tidy_cpgs_dir)
@@ -440,7 +443,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
             map_df(~ tibble(lib=.x, fn=list.files(.x, pattern='.*\\.tcpgs\\.gz$'))) %>%
             mutate(fn1 = fn) %>%
             group_by(fn) %>%
-            purrlyr::by_slice(~ .collate_gzips(paste0(.x$lib, '/', .x$fn1[1]),
+            purrrlyr::by_slice(~ .collate_gzips(paste0(.x$lib, '/', .x$fn1[1]),
                                       qq('@{track_path}/tidy_cpgs/@{.x$fn1[1]}')) )
     }
 }
@@ -460,7 +463,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
                       gintervals.filter(intervals, bind_intervals2 = TRUE) %>%
                       select(chrom1, start1, end1)
                   )
-    tidy_cpgs %>% unite('grp', chrom1, start1, end1, remove=F) %>% group_by(grp) %>% purrlyr::by_slice(
+    tidy_cpgs %>% unite('grp', chrom1, start1, end1, remove=F) %>% group_by(grp) %>% purrrlyr::by_slice(
         function(x) {
         tmp <- tempfile()
         x %>%
@@ -919,7 +922,7 @@ gpatterns.merge_tracks <- function(tracks, new_track, description, intervals=gin
 
     if (merge_tidy_cpgs){
         tidy_dirs <- .gpatterns.tidy_cpgs_dir(tracks)
-        do.call_ellipsis(gpatterns.import_from_tidy_cpgs, list(tidy_cpgs=tidy_dirs, track=new_track, description=description, steps=c('bind_tidy_cpgs', 'pat_freq', 'pat_cov')), ...)
+        do.call_ellipsis(gpatterns.import_from_tidy_cpgs, list(tidy_cpgs=tidy_dirs, track=new_track, description=description, steps=c('bind_tidy_cpgs', 'pat_freq')), ...)
     }
 
     if (all(.gpatterns.patterns_exist(tracks))){

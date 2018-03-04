@@ -78,7 +78,7 @@ gpatterns.track_stats <- function(track, ...){
     }
     stats_fn <- .gpatterns.stats_file_name(track)
     if (file.exists(stats_fn)){
-        return(fread(stats_fn) %>% tbl_df())
+        return(fread(stats_fn) %>% as.tibble())
     } else {
         stats <- gpatterns.get_pipeline_stats(track, ...)
         write_tsv(stats, stats_fn)
@@ -100,7 +100,7 @@ gpatterns.get_tcpgs_stats <- function(tidy_cpgs_stats_dir, uniq_tidy_cpgs_stats_
         summarise(total_reads = sum(total_reads), uniq_reads = sum(uniq_reads)) %>%
         mutate(uniq_frac = uniq_reads / total_reads)
     tidy_cpgs_stats <- list.files(tidy_cpgs_stats_dir, full.names=T) %>%
-        map_df(~ fread(.x)) %>%
+        map_df(~ fread(.x) %>% mutate(CHH = mean(CHH))) %>%
         slice(1)
     for (f in c('good', 'single_R1', 'single_R2', 'bad_cigar', 'no_conv', 'unmapped', 'discordant')){
         if (!(f %in% colnames(tidy_cpgs_stats))){
@@ -115,11 +115,12 @@ gpatterns.get_tcpgs_stats <- function(tidy_cpgs_stats_dir, uniq_tidy_cpgs_stats_
     
     stats <- bind_cols(stats, uniq_stats %>% rename(good_reads = total_reads)) %>%
         select(one_of('total_reads', 'mapped_reads', 'mapped_frac', 'uniq_reads', 'uniq_frac', 'CHH', 'CHG', 'CpG'))
+
     return(list(stats=stats, mapping_stats=tidy_cpgs_stats))
 }
 
 # total reads     mapped.reads    mapped.uniq    perc mapped % unique overall     on target  perc on target   uniq_1      uniq_2     perc unique on target   perc unique off target   estimated on target complexity      regions not present     total methylation calls     CpGs per read   num of CpGs     average CpG cov 
-
+#' @export
 gpatterns.capture_stats <- function(track, 
                                     bam, 
                                     regions, 
@@ -135,7 +136,15 @@ gpatterns.capture_stats <- function(track,
                                     reads = NULL){    
     if (is.null(reads)){
         message('extrating reads...')
-        reads <- .gpatterns.bam2reads(bams=bam)        
+        reads <- .gpatterns.bam2reads(bams=bam)                
+    } else {
+        if (is.character(reads)){
+            reads <- fread(reads) %>% as.tibble()
+        }
+    }
+
+    if (is.character(regions)){        
+        regions <- gintervals.load(regions)
     }
 
     if (!is.null(dsn)){
@@ -163,8 +172,15 @@ gpatterns.capture_stats <- function(track,
         }        
     }
 
+    message('filtering duplicates for all reads...')
+    f_reads <- .gpatterns.filter_read_dups(reads, use_read2=use_read2)  
+    conv_stats <- f_reads %>% summarise(h = sum(h), H = sum(H), x = sum(x), X = sum(X)) %>% mutate(CHH = H / (H + h), CHG = X / (x + X)) %>% select(CHH, CHG)
+
     message('identifying \'on target\' reads...')
-    on_tar_reads <- .gpatterns.filter_ontar_reads(reads, regions, max_distance=max_distance) %>% tbl_df 
+    on_tar_reads <- .gpatterns.filter_ontar_reads(reads, regions, max_distance=max_distance) %>% as.tibble() 
+    ontar_poss <- .gpatterns.filter_ontar_reads(reads, regions, max_distance=max_distance, return_orig=FALSE) %>% as.tibble() 
+    regsion_not_present <- sum(regions %>% gintervals.neighbors1(ontar_poss) %>% pull(dist) %>% abs(.) >= max_distance)
+
     if (!is.null(dsn) && !sample_raw && sample_ontar){    
         if (nrow(on_tar_reads) >= dsn){
             message(sprintf('sampling %d \'on target\' reads...', dsn))
@@ -182,13 +198,22 @@ gpatterns.capture_stats <- function(track,
     offtar_reads <- reads %>% filter(!(read_id %in% on_tar_reads$read_id))
     f_reads_offtar <- .gpatterns.filter_read_dups(offtar_reads, use_read2=use_read2)
     
-    message('getting other stats...')
+    message('getting other stats...')        
     stats <- gpatterns.get_pipeline_stats(track, tidy_cpgs_stats_dir=tidy_cpgs_stats_dir, uniq_tidy_cpgs_stats_dir=uniq_tidy_cpgs_stats_dir, add_mapping_stats=add_mapping_stats)
     stats[['on_target']] <- nrow(on_tar_reads)
     stats[['frac_ontar']] <- nrow(on_tar_reads) / nrow(reads)
     stats[['frac_uniq_ontar']] <- nrow(f_reads_ontar) / nrow(on_tar_reads)
     stats[['frac_uniq_offtar']] <- nrow(f_reads_offtar) / nrow(offtar_reads)
+    stats[['regsion_not_present']] <- regsion_not_present
 
+    stats <- stats %>% select(-one_of('CHH', 'CHG'))
+
+    stats <- bind_cols(stats, conv_stats)
+
+    if (!is.null(dsn)){
+        stats <- stats %>% mutate(dsn = dsn)
+    }
+    
     return(stats)
 }
 
@@ -201,11 +226,12 @@ gpatterns.capture_stats <- function(track,
     res <- tcpgs_ontar %>%
         mutate(insert_len = abs(insert_len), 
                num = cut(num, reads_umi_breaks, include.lowest=T), 
-               num = forcats::fct_recode(num, break_levels)) %>% 
+               num = do.call(forcats::fct_recode, c(list(f = num), as.list(break_levels) ))) %>% 
         select(insert_len, reads=num)
     return(res)
 }
 
+#' @export
 .gpatterns.filter_ontar_reads <- function(reads, regions, max_distance=200, return_orig=TRUE){
     poss <- reads %>% mutate(end = as.integer(ifelse(end == '-', start + 1, end)), new_start = pmin(start, end), new_end=pmax(start, end), new_end = ifelse(new_end == new_start, new_start + 1, new_end)) %>% select(chrom, start=new_start, end=new_end, read_id) %>% .gpatterns.force_chromosomes() %>% gintervals.filter(regions, max_distance=max_distance)
     if (return_orig){
@@ -245,10 +271,14 @@ gpatterns.capture_stats <- function(track,
 #' @return
 #'
 #' @examples
-.gpatterns.reads_per_umi <- function(track, dsn=NULL){
-    tcpgs <- gpatterns.get_tidy_cpgs(track) %>% distinct(read_id, num)
+.gpatterns.reads_per_umi <- function(track, dsn=NULL, regions=NULL){
+    tcpgs <- gpatterns.get_tidy_cpgs(track) %>% distinct(read_id, num, .keep_all = TRUE)
+    if (!is.null(regions)){        
+        tcpgs <- .gpatterns.filter_ontar_reads(tcpgs, regions)
+    }
     if (!is.null(dsn)){
-        tcpgs <- tcpgs %>% sample_n(dsn)
+        tcpgs_all <- tcpgs %>% untable('num') %>% select(-num)           
+        tcpgs <- tcpgs_all %>% sample_n(dsn) %>% group_by(read_id) %>% summarise(num = n())
     }
     return(tcpgs %>% group_by(reads=num) %>% summarise(n=n()))
 }
@@ -335,11 +365,15 @@ gpatterns.capture_stats <- function(track,
 }
 
 
-
+#' @export
 .gpatterns.bam2reads <- function(bams, paired_end=TRUE, umi1_idx=NULL, umi2_idx=NULL, add_chr_prefix=FALSE, reads_fn=NULL, bismark = FALSE, bin = .gpatterns.bam2tidy_cpgs_bin){
+    return_reads <- FALSE
+
     if (is.null(reads_fn)){
         reads_fn <- tempfile()
+        on.exit(system('rm -f @{reads_fn}'))
     }
+
     bam_prefix <- if (1 == length(bams)) 'cat' else 'samtools cat'
     single_end <- if (!paired_end) '--single-end' else ''        
     umi1_idx_str <- if (is.null(umi1_idx)) '' else qq('--umi1-idx @{umi1_idx}')
@@ -352,9 +386,11 @@ gpatterns.capture_stats <- function(track,
          @{bin} -i - -o /dev/null -s /dev/null -r @{reads_fn} @{bismark_str} @{umi1_idx_str} @{umi2_idx_str}
          @{chr_prefix_str} @{single_end}') %>%
             gsub('\n', '', .) %>% gsub('  ', ' ', .)
-    system(cmd)
+    
+    system(cmd)    
+
     reads <- fread(reads_fn)
-    return(reads)
+    invisible(reads)    
 }
 
 .gpatterns.filter_read_dups <- function(reads, use_read2=TRUE){
@@ -387,7 +423,8 @@ gpatterns.conv_stats <- function(bams, paired_end=TRUE, bismark = FALSE, min_map
 
     cmd <- qq('@{bam_prefix} @{paste(bams, collapse=\' \')} |
          @{bin} -i - -o /dev/null -s @{stats_fn} @{bismark_str} @{single_end} --min_map @{min_mapq}') %>%
-            gsub('\n', '', .) %>% gsub('  ', ' ', .)
+            gsub('\n', '', .) %>%
+            gsub('  ', ' ', .)
     system(cmd)
     stats <- fread(stats_fn)
     return(stats)

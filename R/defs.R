@@ -1,16 +1,3 @@
-#' @useDynLib gpatterns
-#' @importFrom Rcpp sourceCpp
-NULL
-
-# library imports ------------------------------------------------
-#' @import tidyr
-#' @import dplyr
-#' @import purrr
-#' @import ggplot2
-#' @importFrom data.table fwrite
-#' @importFrom GetoptLong qq
-#' @import ggplot2
-
 # Tracks and table names ------------------------------------------------
 .gpatterns.downsampled_track_name <- function(track, dsn) {qqv('@{track}.ds@{dsn}') }
 .gpatterns.cov_track_name <- function(track) { qqv('@{track}.cov') }
@@ -18,7 +5,6 @@ NULL
 .gpatterns.meth_track_name <- function(track) { qqv('@{track}.meth') }
 .gpatterns.unmeth_track_name <- function(track) { qqv('@{track}.unmeth') }
 .gpatterns.frag_cov_track_name     <- function(track) { qqv('@{track}.frag_cov')}
-.gpatterns.pat_cov_track_name <- function(track, pat_len) { paste0(track, '.pat_cov', pat_len) }
 .gpatterns.fid_track_name     <- function(track) { qqv('@{track}.fid')}
 .gpatterns.ncpg_track_name    <- function(track) { qqv('@{track}.ncpg')}
 .gpatterns.n_track_name       <- function(track) { qqv('@{track}.n')}
@@ -115,11 +101,18 @@ NULL
                                         system.file("bin", package="gpatterns"),
                                         'mpms')
 .gpatterns.sg_script <- sprintf("%s/%s",
-                                        system.file("exec", package="gpatterns"),
+                                        system.file("bin", package="gpatterns"),
 	                                'sgjob.sh')
 .gpatterns.conv_stats_bin <- sprintf("%s/%s",
                                         system.file("bin", package="gpatterns"),
                                   'conv_stats.py')
+.gpatterns.map_fastq_bin <- sprintf("%s/%s",
+                                        system.file("import", package="gpatterns"),
+                                  'map_fastq.py')
+.gpatterns.all_indexes <- data.table::fread(sprintf("%s/%s",
+                                        system.file("import", package="gpatterns"),
+                                  'indexes.csv'), data.table=FALSE) %>% as.tibble()
+
 
 # Color palettes ------------------------------------------------
 # .blue_red_pal <- colorRampPalette(c("#87FFFF", "black", "#FF413D"))(1000)
