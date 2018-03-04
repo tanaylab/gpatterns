@@ -627,7 +627,7 @@ gtrack.array.import_from_df <- function(df, track, description) {
         map_reduce_union <- function(x)  alply(x, 1, giterator.intervals, .parallel=TRUE) %>% reduce(gintervals.union)
         iter <- tibble(track=tracks, chunk=ntile(tracks, nchunks)) %>%
             group_by(chunk) %>%
-            by_slice(~map_reduce_union(.x$track), .to='intervs') %>%
+            purrrlyr::by_slice(~map_reduce_union(.x$track), .to='intervs') %>%
             .$intervs %>%
             reduce(gintervals.union)
 
