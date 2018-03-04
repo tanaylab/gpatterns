@@ -656,6 +656,9 @@ gpatterns.tidy_cpgs_2_pat_freq <- function(calls, pat_length = 2, min_cov = 1, t
             return(pats_dist[, c('chrom', 'start', 'end', possible_pats)])
         }
 
+        calls <- calls %>% 
+            arrange(read_id, cg_pos)
+
         calls <-  calls %>%
             mutate(start = cg_pos, end = start + 1) %>%
             select(chrom, start, end, read_id, meth)
