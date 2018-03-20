@@ -11,7 +11,7 @@ gpatterns.import_from_bam(bams, workdir = NULL, track = NULL,
   add_chr_prefix = FALSE, bismark = FALSE, nbins = nrow(gintervals.all()),
   groot = GROOT, import_raw_tcpgs = FALSE, use_sge = FALSE,
   max_jobs = 400, parallel = getOption("gpatterns.parallel"),
-  cmd_prefix = "", run_per_interv = TRUE, ...)
+  cmd_prefix = "", run_per_interv = TRUE, min_qual = 20, ...)
 }
 \arguments{
 \item{bams}{character vector with path of bam files}
@@ -65,6 +65,8 @@ if FALSE - those reads would be left unchanged}
 \item{cmd_prefix}{prefix to run on 'system' commands (e.g. source ~/.bashrc)}
 
 \item{run_per_interv}{split run of bam2tidy_cpgs scripts separatly for each interval.}
+
+\item{min_qual}{minial base quality}
 
 \item{...}{gpatterns.import_from_tidy_cpgs parameters}
 }

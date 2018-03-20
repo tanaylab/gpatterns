@@ -104,7 +104,6 @@ gpatterns.import_from_tidy_cpgs <- function(tidy_cpgs,
         use_sge = use_sge,
         max_jobs = max_jobs,
         parallel = parallel)
-
 }
 
 #' Create a track from bam files.
@@ -133,6 +132,7 @@ gpatterns.import_from_tidy_cpgs <- function(tidy_cpgs,
 #' @param import_raw_tcpgs import raw tidy cpgs to misha (without filtering duplicates)
 #' @param cmd_prefix prefix to run on 'system' commands (e.g. source ~/.bashrc)
 #' @param run_per_interv split run of bam2tidy_cpgs scripts separatly for each interval.
+#' @param min_qual minial base quality
 #' @param ... gpatterns.import_from_tidy_cpgs parameters
 #'
 #' @inheritParams gpatterns.import_from_tidy_cpgs
@@ -165,6 +165,7 @@ gpatterns.import_from_bam <- function(bams,
                                       parallel = getOption('gpatterns.parallel'),
                                       cmd_prefix = '',
                                       run_per_interv = TRUE,
+                                      min_qual = 20,
                                       ...){
     gsetroot(groot)
     opt <- options(scipen = 999)
@@ -215,7 +216,8 @@ gpatterns.import_from_bam <- function(bams,
         max_jobs = max_jobs,
         parallel = parallel,
         cmd_prefix = cmd_prefix,
-        run_per_interv = run_per_interv)
+        run_per_interv = run_per_interv,
+        min_qual = min_qual)
 
     # filter dups
     .step_invoke(
@@ -318,7 +320,8 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
                                      adjust_read_bin = .gpatterns.adjust_read_bin,
                                      bin = .gpatterns.bam2tidy_cpgs_bin,
                                      run_per_interv = TRUE,
-                                     add_chr_prefix = FALSE,                                                    
+                                     add_chr_prefix = FALSE,  
+                                     min_qual = 20,                                                  
                                      ...){        
     opt <- options(scipen = 999)
     on.exit(options(opt))
@@ -349,7 +352,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
             stats_fn <- qq('@{stats_dir}/@{gbins$chrom}_@{gbins$start}_@{gbins$end}.stats')
             output_fn <- qq('@{tidy_cpgs_dir}/@{gbins$chrom}_@{gbins$start}_@{gbins$end}.tcpgs.gz')
             qq('@{bam_prefix} @{paste(bams, collapse=\' \')} |
-         @{bin} --no-progress -i - -o - -s @{stats_fn} @{bismark_str} @{umi1_idx_str} @{umi2_idx_str}
+         @{bin} --no-progress -i - -o - -s @{stats_fn} --min-qual @{min_qual} @{bismark_str} @{umi1_idx_str} @{umi2_idx_str}
          --chrom @{gbins$chrom} --genomic-range @{gbins$start} @{gbins$end}
          @{chr_prefix_str} @{trim_str} @{single_end} @{cgs_mask} @{post_process_str} |
            gzip -c > @{output_fn}') %>%
@@ -361,7 +364,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
         stats_fn <- qq('@{stats_dir}/all.stats')
         output_fn <- sprintf("%s.gz", tempfile())
         cmd <- qq('@{bam_prefix} @{paste(bams, collapse=\' \')} |
-         @{bin} --no-progress -i - -o - -s @{stats_fn} @{bismark_str} @{umi1_idx_str} @{umi2_idx_str}
+         @{bin} --no-progress -i - -o - -s @{stats_fn} --min-qual @{min_qual} @{bismark_str} @{umi1_idx_str} @{umi2_idx_str}
          @{chr_prefix_str} @{trim_str} @{single_end} @{cgs_mask} @{post_process_str} |
            gzip -c > @{output_fn}') %>%
             gsub('\n', '', .) %>% gsub('  ', ' ', .)
