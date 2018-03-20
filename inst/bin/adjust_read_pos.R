@@ -44,4 +44,4 @@ if (nrow(calls) == 0){
 } else {
     res <- gpatterns::gpatterns.adjust_read_pos(calls, frag_intervs=opt$frag_intervs, maxdist=opt$maxdist, rm_off_target=opt$rm_off_target)
 }
-gpatterns::fwrite(res, opt$output, sep=',', quote=FALSE)
+data.table::fwrite(res, opt$output, sep=',', quote=FALSE)
