@@ -120,6 +120,7 @@ gpatterns.get_tcpgs_stats <- function(tidy_cpgs_stats_dir, uniq_tidy_cpgs_stats_
 }
 
 # total reads     mapped.reads    mapped.uniq    perc mapped % unique overall     on target  perc on target   uniq_1      uniq_2     perc unique on target   perc unique off target   estimated on target complexity      regions not present     total methylation calls     CpGs per read   num of CpGs     average CpG cov 
+#' Capture stats
 #' @export
 gpatterns.capture_stats <- function(track, 
                                     bam, 
@@ -231,6 +232,8 @@ gpatterns.capture_stats <- function(track,
     return(res)
 }
 
+#' filter on target reads
+#' Filters on target reads
 #' @export
 .gpatterns.filter_ontar_reads <- function(reads, regions, max_distance=200, return_orig=TRUE){
     poss <- reads %>% mutate(end = as.integer(ifelse(end == '-', start + 1, end)), new_start = pmin(start, end), new_end=pmax(start, end), new_end = ifelse(new_end == new_start, new_start + 1, new_end)) %>% select(chrom, start=new_start, end=new_end, read_id) %>% .gpatterns.force_chromosomes() %>% gintervals.filter(regions, max_distance=max_distance)
@@ -287,6 +290,7 @@ gpatterns.capture_stats <- function(track,
 #dsns = c(2e5, 5e5, 7e5, 1e6, 1.5e6, 2e6, 3e6)
 
 #' ds stats
+#' downsampling stats
 #'
 #' @param track
 #' @param dsns
@@ -365,6 +369,7 @@ gpatterns.capture_stats <- function(track,
 }
 
 
+#' bam 2 reads
 #' @export
 .gpatterns.bam2reads <- function(bams, paired_end=TRUE, umi1_idx=NULL, umi2_idx=NULL, add_chr_prefix=FALSE, reads_fn=NULL, bismark = FALSE, bin = .gpatterns.bam2tidy_cpgs_bin){
     return_reads <- FALSE
@@ -412,6 +417,7 @@ gpatterns.capture_stats <- function(track,
     return(f_reads)
 }
 
+#' converstion stats
 #' @export
 gpatterns.conv_stats <- function(bams, paired_end=TRUE, bismark = FALSE, min_mapq=30, bin = .gpatterns.bam2tidy_cpgs_bin){
     bam_prefix <- if (1 == length(bams)) 'cat' else 'samtools cat'

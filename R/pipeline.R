@@ -1,3 +1,4 @@
+#' Run pipeline
 #' @export
 gpatterns.pipeline <- function(config_file, log_file=NULL, config_dir=NULL, run_commands=TRUE, run_dir = getwd(), overwrite=FALSE){
 	logging::basicConfig()
