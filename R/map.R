@@ -1,11 +1,14 @@
 
-gpatterns.map <- function(config, workdir=NULL, out_bam='{workdir}/{illumina_index}/bam/{fastq_basename}.bam', log_file = '{workdir}/{illumina_index}/bam/log/{fastq_basename}.log', commands_parallel=getOption('gpatterns.parallel'), use_sge=FALSE, run_commands=TRUE, paired_end=TRUE, verify=TRUE, log_prefix=NULL, overwrite=TRUE, ...){
+gpatterns.map <- function(config, workdir=NULL, out_bam='{workdir}/{illumina_index}/bam/{fastq_basename}.bam', log_file = '{workdir}/{illumina_index}/bam/log/{fastq_basename}.log', commands_parallel=getOption('gpatterns.parallel'), use_sge=FALSE, run_commands=TRUE, paired_end=TRUE, verify=TRUE, log_prefix=NULL, overwrite=TRUE, step_file=NULL, ...){
+    # indexes_config <- config %>% distinct(cell_id, row, plate_pos, column, index1, index2)
     
     if (paired_end){
         config <- config %>% mutate(index_exists = file.exists(r1_fastq) & file.exists(r2_fastq) & file.info(r1_fastq)$size != 0 & file.info(r2_fastq)$size != 0)
     } else {
         config <- config %>% mutate(index_exists = file.exists(r1_fastq) & file.info(r1_fastq)$size != 0)
     }
+
+    # fastq_config <- config
 
     config <- config %>% filter(index_exists)
 
@@ -33,10 +36,10 @@ gpatterns.map <- function(config, workdir=NULL, out_bam='{workdir}/{illumina_ind
     if (!overwrite){        
         config <- config %>% mutate(run_map = !file.exists(out_bam))
         cmds <- cmds[which(!file.exists(config$out_bam))]
-        loginfo('skipping %d files that already exist. set overwrite to TRUE to override', nrow(config) - length(cmds))
-    }
+        loginfo(sprintf('skipping %d files that already exist. set overwrite to TRUE to override', nrow(config) - length(cmds)))
+    }    
 
-    if (run_commands){
+    if (run_commands && length(cmds) > 0){
         loginfo('running %s commands', comify(length(cmds)))
         if (use_sge){       
             res <- gcluster.run2(command_list=cmds, ...)
@@ -46,12 +49,16 @@ gpatterns.map <- function(config, workdir=NULL, out_bam='{workdir}/{illumina_ind
         }
         parse_commmands_res(res, cmds, config %>% filter(run_map), use_sge=use_sge, log_prefix=log_prefix, ...)
     }        
+  
 
     config <- config %>% rename(bam_file = out_bam) %>% mutate(bam_exists = file.exists(bam_file)) 
-    failed_bams <- config$out_bam[!config$bam_exists]
+    failed_bams <- config$bam_file[!config$bam_exists]
     if (length(failed_bams) > 0){
+        red_message('The following bam files were not created:')
+        walk(failed_bams, ~ blue_message(.x))
         logerror('some bams were not created: %s', paste(failed_bams, collapse = ', '))
     }
+      
     
     return(config)
 }

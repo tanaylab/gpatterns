@@ -7,6 +7,8 @@
 #' @import dplyr
 #' @import purrr
 #' @import ggplot2
+#' @importFrom crayon red
+#' @importFrom crayon blue
 #' @importFrom data.table fwrite
 #' @importFrom tibble as.tibble
 #' @importFrom GetoptLong qq

@@ -13,6 +13,24 @@ fread <- partial(data.table::fread, data.table=FALSE)
 #' @export
 comify <- scales::comma
 
+#' @export
+red_message <- function(msg, log=TRUE){  
+    msg <- red(glue(msg, .envir = parent.frame(1)))
+    if (log){
+        loginfo(msg)    
+    }
+    message(msg)
+}
+
+#' @export
+blue_message <- function(msg, log=TRUE){ 
+    msg <- blue(glue(msg, .envir = parent.frame(1)))
+    if (log){
+        loginfo(msg)    
+    }
+    message(msg)
+}
+
 
 #' Smoothscatter that works with the pipe operator
 #' @export
