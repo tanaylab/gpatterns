@@ -4,6 +4,7 @@ gpatterns.pipeline <- function(config_file, log_file=NULL, config_dir=NULL, run_
 
     if (!is.null(log_file)){
         logging::addHandler(logging::writeToFile, file=log_file)
+        logging::removeHandler('basic.stdout')
         on.exit(logging::removeHandler('logging::writeToFile'))
     }
 
@@ -27,23 +28,24 @@ gpatterns.pipeline <- function(config_file, log_file=NULL, config_dir=NULL, run_
 	config <- all_cfg
 	
 	for (step in all_steps){
-		config$overwrite <- overwrite		
+		config$overwrite <- overwrite			
 		
 		step_file <- glue('{run_dir}/finished_{step}')			
 		if (!file.exists(step_file) || overwrite){
-			config <- invoke_step(config, yaml$steps, step, exp_steps, run_commands=run_commands)
+			red_message('{step}')	
+			config <- invoke_step(config, yaml$steps, step, exp_steps, step_file=step_file, run_commands=run_commands)
 			if (run_commands){
 				file.create(step_file)		
 			}
 		} else {
-			if (!run_commands){
-				loginfo("skipping %s (to run set run_commands to TRUE)", step)	
+			if (!run_commands){				
+				red_message("skipping {step} (to run set run_commands to TRUE)")
 			}
-			if (!overwrite){
-				loginfo("skipping %s (nothing to do, to override set overwrite to TRUE)", step)	
+			if (!overwrite){				
+				red_message("skipping {step} (to override set overwrite to TRUE)")
 			}
 			
-			config <- invoke_step(config, yaml$steps, step, exp_steps, run_commands=FALSE)
+			config <- invoke_step(config, yaml$steps, step, exp_steps, step_file=step_file, run_commands=FALSE)
 		}
 		
 		if (!is.null(config_dir)){			
@@ -54,7 +56,7 @@ gpatterns.pipeline <- function(config_file, log_file=NULL, config_dir=NULL, run_
 	
 }
 
-invoke_step <- function(config, steps_cfg, step, exp_steps=NULL, run_commands=TRUE){
+invoke_step <- function(config, steps_cfg, step, exp_steps=NULL, step_file=NULL, run_commands=TRUE){
 	if (!is.null(exp_steps)){
 		exp_steps <- exp_steps %>% filter(pipeline_steps == step)
 		step_config <- config %>% filter(experiment %in% exp_steps$experiment)	
@@ -63,16 +65,16 @@ invoke_step <- function(config, steps_cfg, step, exp_steps=NULL, run_commands=TR
     if (nrow(step_config) > 1){
     	if (run_commands){
     		loginfo(steps_cfg[[step]]$description)
-    		run_step(step_config, steps_cfg, step, run_commands) 
+    		run_step(step_config, steps_cfg, step, step_file, run_commands) 
     	}     	
     }
     
     # dry run to get config tibble
-    return(run_step(config, steps_cfg, step, run_commands=FALSE))
+    return(run_step(config, steps_cfg, step, step_file, run_commands=FALSE))
     
 }
 
-run_step <- function(config, steps_cfg, step, run_commands){	
+run_step <- function(config, steps_cfg, step, step_file, run_commands){	
 	func <- eval(parse(text=steps_cfg[[step]]$func))	
 	args_vec <-  steps_cfg[[step]][['params']]
 
@@ -81,9 +83,9 @@ run_step <- function(config, steps_cfg, step, run_commands){
     	walk2(names(args_vec), args_vec, function(x, y) loginfo("%s: %s", x, y))	
     }    
     
-    res <- do.call(func, c(list(config = config, run_commands=run_commands), args_vec))	
-    if (run_commands){
-    	loginfo('finished %s', step)	
+    res <- do.call(func, c(list(config = config, step_file=step_file, run_commands=run_commands), args_vec))	
+    if (run_commands){    	
+    	red_message('finished {step}')
     }    
     return(res)
 }

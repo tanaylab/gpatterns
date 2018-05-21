@@ -35,6 +35,7 @@ Imports:
     pheatmap (>= 1.0.9),
     BH,
     logging,
+    crayon,
     misha (>= 3.5.4),
     glue,
     tgstat

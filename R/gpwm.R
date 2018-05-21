@@ -63,8 +63,7 @@ gpwm.extract <- function(..., intervals=NULL, colnames=NULL, tidy=FALSE,
                            memory_flag = '-l mem_free=@{memory}G',
                            threads_flag = '-pe threads @{threads}',
                            io_saturation_flag = '-l io_saturation=@{io_saturation}',
-                           script =paste(Sys.getenv('ANALYSIS_HOME'), 'common', 'sgjob.sh', sep='/'))
-{
+                           script =paste(Sys.getenv('ANALYSIS_HOME'), 'common', 'sgjob.sh', sep='/')){
     arg_intervals <- NULL
     arg_colnames <- NULL
     arg_parallel <- NULL
@@ -370,10 +369,10 @@ gpwm.add_global_quantiles <- function(motif_intervals, global_quantiles=NULL, pa
 #' @export
 gpwm.motif_enrich <- function(fg, bg, global_quantiles=NULL, pattern=NULL, size=NULL, quantile_thresh=0.99, min_n_fg=4, min_n_bg=5){
     fg <- gpwm.add_global_quantiles(fg, global_quantiles=global_quantiles, pattern=pattern, size=size)
-    bg <- gpwm.add_global_quantiles(bg, global_quantiles=global_quantiles, pattern=pattern, size=size)
+    bg <- gpwm.add_global_quantiles(bg, global_quantiles=global_quantiles, pattern=pattern, size=size)    
 
-    fg_num <- fg %>% group_by(track) %>% summarise(n_fg = n(), n_fg_ok = sum(val >= glob_val))
-    bg_num <- bg %>% group_by(track) %>% summarise(n_bg = n(), n_bg_ok = sum(val >= glob_val))
+    fg_num <- fg %>% group_by(track) %>% summarise(n_fg = n(), n_fg_ok = sum(val >= glob_val, na.rm=TRUE))
+    bg_num <- bg %>% group_by(track) %>% summarise(n_bg = n(), n_bg_ok = sum(val >= glob_val, na.rm=TRUE))
 
     counts <- fg_num %>% left_join(bg_num, by='track')    
     counts <- counts %>% purrrlyr::by_row(~ phyper(.x$n_fg_ok - 1, .x$n_bg_ok, .x$n_bg - .x$n_bg_ok, .x$n_fg, lower.tail=FALSE), .to='pval' ) %>% unnest(pval)
@@ -390,7 +389,7 @@ gpwm.motif_enrich_per_cluster <- function(fg, bg, global_quantiles=NULL, pattern
     if (is.null(global_quantiles)){
         global_quantiles <- gpwm.get_global_quantiles(pattern=pattern, size=size) 
     }    
-    fg %>% plyr::ddply(plyr::.(clust), function(x) gpwm.motif_enrich(x, bg, global_quantiles=global_quantiles, ...), .parallel=parallel, .progress = 'text') %>% mutate(qval =p.adjust(pval)) %>% tbl_df    
+    fg %>% plyr::ddply(plyr::.(clust), function(x) gpwm.motif_enrich(x, bg, global_quantiles=global_quantiles, ...), .parallel=parallel, .progress = 'text') %>% mutate(qval =p.adjust(pval)) %>% as_tibble()    
 }
 
 ########################################################################
@@ -410,6 +409,23 @@ gpwm.plot_cluster_motif_enrich <- function(motif_enrich, qval_thresh=0.05, fig_o
     }
 
     return(p)
+}
+
+########################################################################
+#' @export
+gpwm.create_lowres_motif_tracks <- function(pattern, new_pattern, resolution, ...){
+    src_motifs <- gtrack.ls(pattern)
+    motifs <- gsub(glue('{pattern}\\.'), '', src_motifs)
+    out_motifs <- glue('{new_pattern}.{motifs}')
+    vtracks <- glue('v_max_{motifs}')
+    walk2(src_motifs, vtracks, ~ gvtrack.create(.y, .x, func='max'))
+    on.exit(walk(vtracks, gvtrack.rm))
+    commands <- glue('gtrack.create("{out_motifs}", "xxx", "{vtracks}", iterator={resolution})')
+    
+    gdir.create(new_pattern)
+    res <- gcluster.run2(command_list=commands, ...)
+
+    return(res)
 }
 
 ########################################################################

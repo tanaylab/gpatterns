@@ -24,24 +24,24 @@ pheatmap1(pmat, annotation = NULL, annotation_colors = NULL,
 
 \item{id_column}{TRUE if pmat's first column contains row ids}
 
-\item{border_color}{color of cell borders on heatmap, use NA if no border should be
+\item{border_color}{color of cell borders on heatmap, use NA if no border should be 
 drawn.}
 
-\item{clustering_callback}{callback function to modify the clustering. Is
-called with two parameters: original \code{hclust} object and the matrix
+\item{clustering_callback}{callback function to modify the clustering. Is 
+called with two parameters: original \code{hclust} object and the matrix 
 used for clustering. Must return a \code{hclust} object.}
 
-\item{clustering_distance_rows}{distance measure used in clustering rows. Possible
-values are \code{"correlation"} for Pearson correlation and all the distances
-supported by \code{\link{dist}}, such as \code{"euclidean"}, etc. If the value is none
+\item{clustering_distance_rows}{distance measure used in clustering rows. Possible 
+values are \code{"correlation"} for Pearson correlation and all the distances 
+supported by \code{\link{dist}}, such as \code{"euclidean"}, etc. If the value is none 
 of the above it is assumed that a distance matrix is provided.}
 
-\item{clustering_distance_cols}{distance measure used in clustering columns. Possible
+\item{clustering_distance_cols}{distance measure used in clustering columns. Possible 
 values the same as for clustering_distance_rows.}
 
 \item{na_col}{specify the color of the NA cell in the matrix.}
 
-\item{...}{graphical parameters for the text used in plot. Parameters passed to
+\item{...}{graphical parameters for the text used in plot. Parameters passed to 
 \code{\link{grid.text}}, see \code{\link{gpar}}.}
 }
 \description{

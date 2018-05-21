@@ -26,6 +26,7 @@ gpatterns.demultiplex_fastqs <- function(config,
                                          run_commands=TRUE,
                                          log_prefix=NULL,
                                          run_per_file=TRUE,
+                                         step_file=NULL,
                                          ...){
     if (is.character(config)){
         config <- fread(config) %>% as.tibble()
@@ -50,6 +51,8 @@ gpatterns.demultiplex_fastqs <- function(config,
     if (!has_name(config, 'index2.seq')){
         config <- config %>% left_join(indexes_tab, by=c('index2' = 'index')) %>% rename(index2.seq = seq) %>% mutate(index2.seq = str_sub(start=idx2_pos[1], end=idx2_pos[2], string=index2.seq))
     }
+
+    indexes_config <- config %>% distinct(cell_id, row, plate_pos, column, index1, index2)
         
     fastq_files_pre <-  config %>% distinct(illumina_index, .keep_all=TRUE) %>% select(one_of('illumina_index', 'workdir', 'raw_reads_dir', 'split_dir', 'indexes_file')) %>% mutate(raw_reads_dir = glue(raw_reads_dir[1]), split_dir = glue(split_dir[1]))
     
@@ -58,41 +61,31 @@ gpatterns.demultiplex_fastqs <- function(config,
     fastq_files <- fastq_files %>% mutate(raw_fastq_basename = gsub('R1_', '', gsub('\\.fastq\\.gz$', '', basename(raw_fastq_R1))))
     
     fastq_files <- fastq_files %>% mutate(indexes_file=glue(indexes_file[1]))
-    
-    if (run_per_file){
-        cmd_cfg <- fastq_files %>% distinct(raw_fastq_R1, .keep_all=TRUE) %>% mutate(illu_index=illumina_index, workdir=workdir, raw_fastq_basename = gsub('\\.fastq\\.gz', '', basename(raw_fastq_R1)))
-        cmds <- glue('gpatterns:::do.call_tibble(gpatterns:::demultiplex_per_index, config, c(list(...), list(fastq_files=cmd_cfg[{1:nrow(cmd_cfg)}, ], config=config, run_per_file=run_per_file, idx1_pos=idx1_pos, idx2_pos=idx2_pos, umi1_pos=umi1_pos, umi2_pos=umi2_pos, read1_pos=read1_pos, read2_pos=read2_pos, hamming=hamming, reads_per_file=reads_per_file)))')   
-    } else {
-        cmd_cfg <- config %>% distinct(illumina_index, .keep_all=TRUE) %>% mutate(illu_index=illumina_index, workdir=workdir)    
-        cmds <- glue('gpatterns:::do.call_tibble(gpatterns:::demultiplex_per_index, cmd_cfg[{1:nrow(cmd_cfg)}, ], c(list(...), list(fastq_files=fastq_files, config=config, run_per_file=run_per_file, idx1_pos=idx1_pos, idx2_pos=idx2_pos, umi1_pos=umi1_pos, umi2_pos=umi2_pos, read1_pos=read1_pos, read2_pos=read2_pos, hamming=hamming, reads_per_file=reads_per_file)))')       
-    }
-    
+
     config <- config %>% select(-one_of('raw_reads_dir', 'split_dir', 'indexes_file'))
-    
 
     if (run_commands){
-        loginfo('running %s commands', comify(length(cmds)))
-        if (use_sge){       
-            res <- gcluster.run2(command_list=cmds, ...)            
-        } else {            
-            res <- map(cmds, function(.x) eval(parse(text = .x)))  
-        }        
-        parse_commmands_res(res, cmds, cmd_cfg, use_sge=use_sge, log_prefix=log_prefix, ...)
-    }         
-    
-    if (run_per_file){
-        fastq_files <- fastq_files %>% distinct(illumina_index, raw_reads_dir, split_dir) %>% left_join(fastq_files %>% group_by(illumina_index) %>% nest(raw_fastq_R1, raw_fastq_R2, indexes_file, .key='raw_fastq'), by='illumina_index')
-        config <- config %>% left_join(fastq_files, by='illumina_index')
-    
-        config <- config %>% plyr::adply(1, function(x) tibble(r1_fastq=list.files(x$split_dir, pattern=glue('.+_{x$lib}_good_R1(\\.\\d+)?\\.fastq.gz$'), full.names = TRUE) )) %>% as.tibble()    
-    } else {
-        fastq_files <- fastq_files %>% distinct(illumina_index, raw_reads_dir, split_dir, indexes_file) %>% left_join(fastq_files %>% group_by(illumina_index) %>% nest(raw_fastq_R1, raw_fastq_R2, .key='raw_fastq'), by='illumina_index')
-
-        config <- config %>% left_join(fastq_files, by='illumina_index')
-    
-        config <- config %>% plyr::adply(1, function(x) tibble(r1_fastq=list.files(x$split_dir, pattern=glue('{x$lib}_good_R1(\\.\\d+)?\\.fastq.gz$'), full.names = TRUE) )) %>% as.tibble()    
+        res <- run_demultiplexing_commands(run_per_file, fastq_files, workdir, config, use_sge, log_prefix, idx1_pos, idx2_pos, umi1_pos, umi2_pos, read1_pos, read2_pos, hamming, reads_per_file, ...)
     }    
     
+    config <- list_split_fastq_files(config, fastq_files, run_per_file)
+
+    if (nrow(config) == 0){
+        file.remove(step_file)
+        logerror('No files were generated in demultiplexing. Please make sure that the indexes are correct.')
+        stop('No files were generated in demultiplexing. Please make sure that the indexes are correct.')
+    }
+
+    missing_indexes <- indexes_config %>% left_join(config) %>% filter(is.na(r1_fastq), !empty)
+
+    if (nrow(missing_indexes) > 0){
+        missing_indexes <- missing_indexes %>% mutate(label = glue('{cell_id} ({plate_pos}: {index1}, {index2})')) %>% pull(label)
+        red_message('The following indexes are missing:')
+        walk(missing_indexes, ~ blue_message(.x))
+        red_message('Please make sure that your indexes file is correct and run again with overwrite = TRUE')
+    }
+
+    # Prepare for mapping step    
     if (paired_end){
         config <- config %>% 
             mutate(r2_fastq = gsub(glue('good_{R1_pattern}'), glue('good_{R2_pattern}'), r1_fastq)) %>%
@@ -110,6 +103,42 @@ gpatterns.demultiplex_fastqs <- function(config,
     return(config)  
 }
 
+list_split_fastq_files <- function(indexes_config, fastq_files, run_per_file){
+    indexes_config <- indexes_config %>% select(-one_of('raw_reads_dir', 'split_dir', 'indexes_file'))
+    if (run_per_file){
+        fastq_files <- fastq_files %>% distinct(illumina_index, raw_reads_dir, split_dir) %>% left_join(fastq_files %>% group_by(illumina_index) %>% nest(raw_fastq_R1, raw_fastq_R2, indexes_file, .key='raw_fastq'), by='illumina_index')
+        indexes_config <- indexes_config %>% left_join(fastq_files, by='illumina_index')
+    
+        indexes_config <- indexes_config %>% plyr::adply(1, function(x) tibble(r1_fastq=list.files(x$split_dir, pattern=glue('.+_{x$lib}_good_R1(\\.\\d+)?\\.fastq.gz$'), full.names = TRUE) )) %>% as.tibble()    
+    } else {
+        fastq_files <- fastq_files %>% distinct(illumina_index, raw_reads_dir, split_dir, indexes_file) %>% left_join(fastq_files %>% group_by(illumina_index) %>% nest(raw_fastq_R1, raw_fastq_R2, .key='raw_fastq'), by='illumina_index')
+
+        indexes_config <- indexes_config %>% left_join(fastq_files, by='illumina_index')
+    
+        indexes_config <- indexes_config %>% plyr::adply(1, function(x) tibble(r1_fastq=list.files(x$split_dir, pattern=glue('{x$lib}_good_R1(\\.\\d+)?\\.fastq.gz$'), full.names = TRUE) )) %>% as.tibble()    
+    }    
+    return(indexes_config)
+}
+
+run_demultiplexing_commands <- function(run_per_file, fastq_files, workdir, config, use_sge, log_prefix, idx1_pos, idx2_pos, umi1_pos, umi2_pos, read1_pos, read2_pos, hamming, reads_per_file, ...){
+    if (run_per_file){
+        cmd_cfg <- fastq_files %>% distinct(raw_fastq_R1, .keep_all=TRUE) %>% mutate(illu_index=illumina_index, workdir=workdir, raw_fastq_basename = gsub('\\.fastq\\.gz', '', basename(raw_fastq_R1)))
+        cmds <- glue('gpatterns:::do.call_tibble(gpatterns:::demultiplex_per_index, config, c(list(...), list(fastq_files=cmd_cfg[{1:nrow(cmd_cfg)}, ], config=config, run_per_file=run_per_file, idx1_pos=idx1_pos, idx2_pos=idx2_pos, umi1_pos=umi1_pos, umi2_pos=umi2_pos, read1_pos=read1_pos, read2_pos=read2_pos, hamming=hamming, reads_per_file=reads_per_file)))')   
+    } else {
+        cmd_cfg <- config %>% distinct(illumina_index, .keep_all=TRUE) %>% mutate(illu_index=illumina_index, workdir=workdir)    
+        cmds <- glue('gpatterns:::do.call_tibble(gpatterns:::demultiplex_per_index, cmd_cfg[{1:nrow(cmd_cfg)}, ], c(list(...), list(fastq_files=fastq_files, config=config, run_per_file=run_per_file, idx1_pos=idx1_pos, idx2_pos=idx2_pos, umi1_pos=umi1_pos, umi2_pos=umi2_pos, read1_pos=read1_pos, read2_pos=read2_pos, hamming=hamming, reads_per_file=reads_per_file)))')       
+    }
+
+    loginfo('running %s commands', comify(length(cmds)))
+    if (use_sge){       
+        res <- gcluster.run2(command_list=cmds, ...)            
+    } else {            
+        res <- map(cmds, function(.x) eval(parse(text = .x)))  
+    }        
+    parse_commmands_res(res, cmds, cmd_cfg, use_sge=use_sge, log_prefix=log_prefix, ...)
+    
+    return(res)    
+}
 
 gpatterns.demultiplexing_stats <- function(config, R1_pattern = '.*_R1_.*\\.fastq.gz', R2_pattern = '.*_R2_.*\\.fastq.gz', paired_end=TRUE){
     fastq_files <- get_raw_reads_files(config)
@@ -275,7 +304,7 @@ conf2index <- function(conf, out_fn, targets_pref='', idx1_pos = c(1,8), idx2_po
 
 .expand_hamming <- function(df, column, alphabet, barcode_len, new_column=NULL, ext_columns=NULL){
     df <- .split2char(df, column, ext_columns)
-    adply(alphabet, 1, function(letter) adply(1:barcode_len, 1, function(p) df %>% mutate(char = ifelse(pos == p, letter, char)) %>% .unite_by_char(column, new_column=new_column)) %>% rename(pos = X1) %>% mutate(letter=letter)) %>% select(-X1) %>% select(-pos, -letter)
+    plyr::adply(alphabet, 1, function(letter) plyr::adply(1:barcode_len, 1, function(p) df %>% mutate(char = ifelse(pos == p, letter, char)) %>% .unite_by_char(column, new_column=new_column)) %>% rename(pos = X1) %>% mutate(letter=letter)) %>% select(-X1) %>% select(-pos, -letter)
 }
 
 
