@@ -16,7 +16,6 @@
 #' @param TGL_kmeans_bin TGL_kmeans_bin
 #'
 #' @return
-#' @export
 #'
 #' @examples
 TGL_kmeans <- function(tab,
