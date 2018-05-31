@@ -38,6 +38,9 @@ TGL_kmeans(tab, K, id_column = FALSE, allow_nas = TRUE, verbose = FALSE,
 
 \item{TGL_kmeans_bin}{TGL_kmeans_bin}
 }
+\value{
+
+}
 \description{
 Effiecient implementation of kmeans++ algorithm
 }
