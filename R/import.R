@@ -326,6 +326,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
     opt <- options(scipen = 999)
     on.exit(options(opt))
 
+
     walk(c(tidy_cpgs_dir, stats_dir), ~ system(qq('mkdir -p @{.x}')))
     bam_prefix <- if (1 == length(bams)) 'cat' else 'samtools cat'
     single_end <- if (!paired_end) '--single-end' else ''
@@ -368,7 +369,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
          @{chr_prefix_str} @{trim_str} @{single_end} @{cgs_mask} @{post_process_str} |
            gzip -c > @{output_fn}') %>%
             gsub('\n', '', .) %>% gsub('  ', ' ', .)
-        
+           
         system(cmd)
         tcpgs <- fread(qq('gzip -d -c @{output_fn}'), colClasses=.gpatterns.tcpgs_colClasses(uniq=FALSE)) %>% tbl_df
         .gpatterns.tidy_cpgs_to_files(tcpgs, genomic_bins, outdir=tidy_cpgs_dir)
