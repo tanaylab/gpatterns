@@ -263,7 +263,16 @@ def main(argv):
 
             if args.sort_chunk:
                 cpgs.sort_values(by=['chrom', 'start', 'end', 'strand', 'umi1', 'umi2'], inplace=True)
-            cpgs.to_csv(out_file, header=False, index=False, float_format='%.0f', mode='a')
+
+            
+            # a bug in pandas writes to a file names '<stdout>'' instead of standard output, therefore the following ugly hack
+            if (out_file == sys.stdout):
+                tcpgs_str = cpgs.to_csv(header=False, index=False, float_format='%.0f')            
+                out_file.write(tcpgs_str)
+            else:
+                cpgs.to_csv(out_file, header=False, index=False, float_format='%.0f', mode='a')
+            
+             
 
             if reads_out is not None:
                 ids_df[reads_columns].drop_duplicates(['read_id']).to_csv(reads_out, header=False, index=False, float_format='%.0f', mode='a')
