@@ -394,8 +394,14 @@ gpatterns.capture_stats <- function(track,
     
     system(cmd)    
 
-    reads <- fread(reads_fn)
-    invisible(reads)    
+    invisible(fread(reads_fn))    
+}
+
+#' @export
+gpatterns.bam2uniq_reads <- function(bams, paired_end=TRUE, umi1_idx=NULL, umi2_idx=NULL, add_chr_prefix=FALSE, reads_fn=NULL, bismark = FALSE, use_read2=TRUE){
+    reads <- .gpatterns.bam2reads(bams=bams, paired_end=paired_end, umi1_idx=umi1_idx, umi2_idx=umi2_idx, add_chr_prefix=add_chr_prefix, reads_fn=reads_fn, bismark=bismark)
+    uniq_reads <- .gpatterns.filter_read_dups(reads, use_read2=use_read2)
+    return(uniq_reads)
 }
 
 .gpatterns.filter_read_dups <- function(reads, use_read2=TRUE){
