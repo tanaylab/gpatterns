@@ -7,10 +7,6 @@ qq <- GetoptLong::qq
 qqv <- function(text) {GetoptLong::qq(text, envir=parent.frame(), collapse=FALSE)}
 
 #' @export
-fread <- partial(data.table::fread, data.table=FALSE)
-
-
-#' @export
 comify <- scales::comma
 
 #' @export

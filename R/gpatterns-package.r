@@ -10,6 +10,7 @@
 #' @import ggplot2
 #' @importFrom crayon red
 #' @importFrom crayon blue
+#' @importFrom tgutil fread
 #' @importFrom data.table fwrite
 #' @importFrom tibble as.tibble
 #' @importFrom tibble is.tibble
