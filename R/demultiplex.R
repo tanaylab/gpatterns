@@ -76,6 +76,10 @@ gpatterns.demultiplex_fastqs <- function(config,
         stop('No files were generated in demultiplexing. Please make sure that the indexes are correct.')
     }
 
+   if (!rlang::has_name(config, "empty")){
+	config <- config %>% mutate(empty = TRUE)
+   }
+
     missing_indexes <- indexes_config %>% left_join(config) %>% filter(is.na(r1_fastq), !empty)
 
     if (nrow(missing_indexes) > 0){
