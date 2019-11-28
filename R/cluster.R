@@ -45,7 +45,7 @@ gpatterns.impute <- function(avgs, k_reg=3, min_locus_cov=NULL, tidy=TRUE){
 
 #' Filter loci with low variance across samples
 #'
-#' Clusters the samples with kmeans with a relatively high k, calculates the \code{sd} of each cluster centers, 
+#' Clusters the loci with kmeans with a relatively high k, calculates the \code{sd} of each cluster centers, 
 #' and then removes loci that are within clusters with low variance. 
 #'
 #' @param avgs 'tidy' output of \code{gpatterns.get_avg_meth}. In order to filter using the regularized (imputed) values (output of \code{gpatterns.impute}), set \code{avg_col} to 'avg_reg'

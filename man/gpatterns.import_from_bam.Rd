@@ -5,13 +5,14 @@
 \title{Create a track from bam files.}
 \usage{
 gpatterns.import_from_bam(bams, workdir = NULL, track = NULL,
-  steps = "all", paired_end = TRUE, cgs_mask_file = NULL, trim = NULL,
-  umi1_idx = NULL, umi2_idx = NULL, use_seq = FALSE, only_seq = FALSE,
-  frag_intervs = NULL, maxdist = 0, rm_off_target = TRUE,
-  add_chr_prefix = FALSE, bismark = FALSE, nbins = nrow(gintervals.all()),
-  groot = GROOT, import_raw_tcpgs = FALSE, use_sge = FALSE,
-  max_jobs = 400, parallel = getOption("gpatterns.parallel"),
-  cmd_prefix = "", run_per_interv = TRUE, min_qual = 20, ...)
+  steps = "all", paired_end = TRUE, cgs_mask_file = NULL,
+  trim = NULL, umi1_idx = NULL, umi2_idx = NULL, use_seq = FALSE,
+  only_seq = FALSE, frag_intervs = NULL, maxdist = 0,
+  rm_off_target = TRUE, add_chr_prefix = FALSE, bismark = FALSE,
+  nbins = nrow(gintervals.all()), groot = GROOT,
+  import_raw_tcpgs = FALSE, use_sge = FALSE, max_jobs = 400,
+  parallel = getOption("gpatterns.parallel"), cmd_prefix = "",
+  run_per_interv = TRUE, min_qual = 20, ...)
 }
 \arguments{
 \item{bams}{character vector with path of bam files}

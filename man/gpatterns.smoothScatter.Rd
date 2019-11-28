@@ -6,8 +6,9 @@
 \usage{
 gpatterns.smoothScatter(samples, avgs = NULL, fig_ofn = NULL,
   sample_names = NULL, width = 300, height = 300,
-  color.pal = .smooth_scatter_pal2, device = "png", title_text = NULL,
-  add_n = TRUE, min_cov = NULL, min_samples = 2, iterator = NULL, ...)
+  color.pal = .smooth_scatter_pal2, device = "png",
+  title_text = NULL, add_n = TRUE, min_cov = NULL, min_samples = 2,
+  iterator = NULL, ...)
 }
 \arguments{
 \item{samples}{a vector of 2 sample names as present in 'samp' filed of avgs, or track names if

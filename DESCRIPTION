@@ -1,6 +1,6 @@
 Package: gpatterns
 Title: Single Molecule Methylation Patterns Analysis Suite
-Version: 0.2
+Version: 0.2.1
 Authors@R: c(person("Aviezer", "Lifshitz", email = "aviezer.lifshitz@weizmann.ac.il",
     role = c("aut", "cre")),
     person("Elad", "Chomsky", role=c("aut")),
@@ -47,7 +47,7 @@ SystemRequirements: C++11
 License: GPL
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 6.0.1
+RoxygenNote: 6.1.1
 Suggests:
     testthat,
     knitr,

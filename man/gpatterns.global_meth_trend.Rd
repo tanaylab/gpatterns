@@ -5,8 +5,8 @@
 \title{Plot global methylation stratified on other tracks}
 \usage{
 gpatterns.global_meth_trend(tracks,
-  strat_track = .gpatterns.cg_cont_500_track, strat_breaks = seq(0, 0.08, by
-  = 0.002), intervals = .gpatterns.genome_cpgs_intervals,
+  strat_track = .gpatterns.cg_cont_500_track, strat_breaks = seq(0,
+  0.08, by = 0.002), intervals = .gpatterns.genome_cpgs_intervals,
   iterator = .gpatterns.genome_cpgs_intervals, min_cov = NULL,
   min_cgs = NULL, names = NULL, groups = NULL, group_name = NULL,
   include.lowest = TRUE, ncol = 2, nrow = 2, width = 600,

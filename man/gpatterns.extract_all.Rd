@@ -4,9 +4,9 @@
 \alias{gpatterns.extract_all}
 \title{Extract pattern data from tracks without specifying coordinates}
 \usage{
-gpatterns.extract_all(..., samples = NULL, elements = c("fid", "ncpg", "n",
-  "n0", "n1", "nx", "pat_meth", "epipoly"), add_bipolar_stats = FALSE,
-  dsn = NULL, na.rm = FALSE)
+gpatterns.extract_all(..., samples = NULL, elements = c("fid", "ncpg",
+  "n", "n0", "n1", "nx", "pat_meth", "epipoly"),
+  add_bipolar_stats = FALSE, dsn = NULL, na.rm = FALSE)
 }
 \arguments{
 \item{...}{tracks (comma separated)}

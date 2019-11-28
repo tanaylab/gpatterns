@@ -4,11 +4,12 @@
 \alias{gpatterns.calc_bipolarity}
 \title{Run bipolar model}
 \usage{
-gpatterns.calc_bipolarity(track, uniform_mix = 0.05, max_sampling_n = 1000,
-  min_sampling_n = 100, init_num = 3, min_pat_cov = 5, save_tab = FALSE,
-  overwrite = FALSE, parallel = getOption("gpatterns.parallel"),
-  thread_num = getOption("gpatterns.parallel.thread_num"), verbose = FALSE,
-  use_sge = FALSE, max_jobs = 300, ...)
+gpatterns.calc_bipolarity(track, uniform_mix = 0.05,
+  max_sampling_n = 1000, min_sampling_n = 100, init_num = 3,
+  min_pat_cov = 5, save_tab = FALSE, overwrite = FALSE,
+  parallel = getOption("gpatterns.parallel"),
+  thread_num = getOption("gpatterns.parallel.thread_num"),
+  verbose = FALSE, use_sge = FALSE, max_jobs = 300, ...)
 }
 \arguments{
 \item{track}{track}

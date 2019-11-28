@@ -4,8 +4,8 @@
 \alias{gpatterns.get_pat_cov}
 \title{Calculate pattern coverage for each CpG}
 \usage{
-gpatterns.get_pat_cov(track, pat_len, max_span = 500, by_coord_bin = TRUE,
-  parallel = getOption("gpatterns.parallel"))
+gpatterns.get_pat_cov(track, pat_len, max_span = 500,
+  by_coord_bin = TRUE, parallel = getOption("gpatterns.parallel"))
 }
 \arguments{
 \item{track}{name of track}

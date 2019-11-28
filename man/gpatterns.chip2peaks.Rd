@@ -4,8 +4,8 @@
 \alias{gpatterns.chip2peaks}
 \title{Calculate peaks of chip-seq tracks}
 \usage{
-gpatterns.chip2peaks(chip_tracks, quant_thresh = 0.999, normalize = NULL,
-  logical_gate = "|")
+gpatterns.chip2peaks(chip_tracks, quant_thresh = 0.999,
+  normalize = NULL, logical_gate = "|")
 }
 \arguments{
 \item{chip_tracks}{names of chip-seq tracks}

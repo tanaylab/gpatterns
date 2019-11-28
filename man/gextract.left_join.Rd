@@ -6,8 +6,8 @@
 iterator intervals, and cbinds the intervals (instead of intervalID)}
 \usage{
 gextract.left_join(expr, intervals = NULL, colnames = NULL,
-  iterator = NULL, band = NULL, file = NULL, intervals.set.out = NULL,
-  suffix = "1")
+  iterator = NULL, band = NULL, file = NULL,
+  intervals.set.out = NULL, suffix = "1")
 }
 \arguments{
 \item{expr}{track expression}

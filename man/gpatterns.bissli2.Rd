@@ -4,11 +4,12 @@
 \alias{gpatterns.bissli2}
 \title{Align bisulfite converted reads to a reference genome using bowtie2}
 \usage{
-gpatterns.bissli2(r1_fastq, out_bam, genome_seq, bissli2_idx, r2_fastq = NULL,
-  bissli2_bin = .gpatterns.bissli2_bin, bowtie2 = "bowtie2",
-  samtools = "samtools", maxins = 1000, threads = 10,
-  genome_type = "ct", tmp_dir = NULL, bissli2_params = "",
-  log_file = NULL, run_command = TRUE, create_dirs = FALSE)
+gpatterns.bissli2(r1_fastq, out_bam, genome_seq, bissli2_idx,
+  r2_fastq = NULL, bissli2_bin = .gpatterns.bissli2_bin,
+  bowtie2 = "bowtie2", samtools = "samtools", maxins = 1000,
+  threads = 10, genome_type = "ct", tmp_dir = NULL,
+  bissli2_params = "", log_file = NULL, run_command = TRUE,
+  create_dirs = FALSE)
 }
 \arguments{
 \item{r1_fastq}{a vector of FASTQ files to align (read1)}

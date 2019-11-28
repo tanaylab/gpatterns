@@ -4,12 +4,12 @@
 \alias{gpatterns.get_avg_meth}
 \title{Extract average methylation}
 \usage{
-gpatterns.get_avg_meth(tracks, intervals, iterator = NULL, min_cov = NULL,
-  mask_by_cov = FALSE, use_cpgs = FALSE, min_samples = NULL,
-  min_cpgs = NULL, min_var = NULL, var_quantile = NULL,
-  min_range = NULL, names = NULL, tidy = TRUE, pre_screen = FALSE,
-  use_disk = FALSE, file = NULL, intervals.set.out = NULL,
-  sum_tracks = FALSE)
+gpatterns.get_avg_meth(tracks, intervals, iterator = NULL,
+  min_cov = NULL, mask_by_cov = FALSE, use_cpgs = FALSE,
+  min_samples = NULL, min_cpgs = NULL, min_var = NULL,
+  var_quantile = NULL, min_range = NULL, names = NULL, tidy = TRUE,
+  pre_screen = FALSE, use_disk = FALSE, file = NULL,
+  intervals.set.out = NULL, sum_tracks = FALSE)
 }
 \arguments{
 \item{tracks}{methylation tracks}

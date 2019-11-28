@@ -6,8 +6,9 @@
 \usage{
 gpatterns.plot_cg_cor(tracks, dist_breaks, intervals = gintervals.all(),
   adjacent = FALSE, names = NULL, width = 500, height = 260,
-  fig_fn = NULL, xlab = "Distance between CpGs", ylab = "CpG correlation",
-  colors = NULL, parallel = getOption("gpatterns.parallel"), ...)
+  fig_fn = NULL, xlab = "Distance between CpGs",
+  ylab = "CpG correlation", colors = NULL,
+  parallel = getOption("gpatterns.parallel"), ...)
 }
 \arguments{
 \item{tracks}{tracks to plot}

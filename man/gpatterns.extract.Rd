@@ -5,9 +5,10 @@
 \title{Extract pattern data}
 \usage{
 gpatterns.extract(..., intervals, colnames = NULL, elements = c("fid",
-  "ncpg", "n", "n0", "n1", "nx", "nc", "pat_meth"), add_bipolar_stats = FALSE,
-  add_patterns = FALSE, add_cpg_content = FALSE, cpg_nhood = 500,
-  add_coordinates = TRUE, tidy = TRUE, dsn = NULL, na.rm = TRUE)
+  "ncpg", "n", "n0", "n1", "nx", "nc", "pat_meth"),
+  add_bipolar_stats = FALSE, add_patterns = FALSE,
+  add_cpg_content = FALSE, cpg_nhood = 500, add_coordinates = TRUE,
+  tidy = TRUE, dsn = NULL, na.rm = TRUE)
 }
 \arguments{
 \item{...}{tracks to extract}
