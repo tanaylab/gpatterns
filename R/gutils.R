@@ -407,10 +407,12 @@ gcluster.run2 <- function (...,
                            memory = NULL,
                            threads = NULL,
                            io_saturation = NULL,
+                           num_proc = NULL,
                            queue_flag = '-q @{queue}',
                            memory_flag = '-l mem_free=@{memory}G',
                            threads_flag = '-pe threads @{threads}',
                            io_saturation_flag = '-l io_saturation=@{io_saturation}',
+                           num_proc_flag = '-l num_proc=@{num_proc}',
                            script =.gpatterns.sg_script){    
     if (!is.null(command_list)){ 
         commands <- purrr::map(command_list, function(x) parse(text=x))
@@ -430,6 +432,10 @@ gcluster.run2 <- function (...,
     }
     if (!is.null(io_saturation)){
         opt.flags <- paste(opt.flags, qq(io_saturation_flag))
+    }
+
+    if (!is.null(num_proc)){
+        opt.flags <- paste(opt.flags, qq(num_proc_flag))
     }
 
     if (length(commands) < 1)
