@@ -68,12 +68,14 @@ gpatterns.bam2tracks <- function(config, track_prefix='', track='{track_prefix}{
 
     orig_config <- config
     config <- config %>% distinct(experiment, lib, .keep_all=TRUE) %>% select(-bam_file)
+    
 
-    nested_cfg <- orig_config %>% group_by(experiment, lib) %>% nest(bam_file, .key='bams')
+    # nested_cfg <- orig_config %>% group_by(experiment, lib) %>% nest(bam_file, .key='bams')
+    nested_cfg <- orig_config %>% select(experiment, lib, bam_file) %>% group_by(experiment, lib) %>% nest() %>% rename(bams = data) %>% mutate(bams = map(bams, ~ .x$bam_file))
     config <- config %>% left_join(nested_cfg, by=c('experiment', 'lib'))
     for( .x in c('r1_fastq', 'r2_fastq', 'fastq_basename')) { 
         if (has_name(config, .x)) { 
-            nested_cfg <- orig_config %>% group_by(experiment, lib) %>% nest_(key_col=.x, nest_cols=.x)            
+            nested_cfg <- orig_config %>% select(experiment, lib, !!.x) %>% group_by(experiment, lib) %>% nest() %>% rename(!!.x := data)  %>% ungroup()        
             config <- config %>% select(-one_of(.x)) %>% left_join(nested_cfg, by=c('experiment', 'lib'))
         }
     }
@@ -92,8 +94,7 @@ gpatterns.bam2tracks <- function(config, track_prefix='', track='{track_prefix}{
 
     run_cfg <- config %>% select(-one_of('workdir'))
     
-    cmds <- glue('gpatterns:::do.call_tibble(gpatterns::gpatterns.import_from_bam, run_cfg[{1:nrow(run_cfg)}, ], additional_params=list(...), additional_funcs=c(gpatterns::gpatterns.import_from_tidy_cpgs))')    
-    
+    cmds <- glue('gpatterns:::do.call_tibble(gpatterns::gpatterns.import_from_bam, run_cfg[{1:nrow(run_cfg)}, ], additional_params=list(...), additional_funcs=c(gpatterns::gpatterns.import_from_tidy_cpgs))')        
     
     if (run_commands){
         loginfo('running %s commands', comify(length(cmds)))

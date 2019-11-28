@@ -12,11 +12,12 @@ gpatterns.pipeline <- function(config_file, log_file=NULL, config_dir=NULL, run_
 	yaml <- yaml::yaml.load_file(config_file)
 
 	exp_cfg <- yaml2cfg(yaml)	
-	by_vars <- intersect(names(exp_cfg %>% unnest(config)), names(exp_cfg %>% select(-config)))
+	by_vars <- intersect(names(exp_cfg %>% unnest(config, names_repair = tidyr_legacy)), names(exp_cfg %>% select(-config)))
+    by_vars <- by_vars[!map_lgl(by_vars, ~ is.list(exp_cfg[[.x]]))]
 	
 	all_cfg <- exp_cfg %>% 
-		unnest(config) %>%
-		left_join(exp_cfg %>% select(-config), by=by_vars)
+		unnest(config, names_repair = tidyr_legacy) %>%
+		left_join(exp_cfg %>% select(-config, -pipeline_steps), by=by_vars)
 
 	exp_steps <- all_cfg %>% distinct(experiment, pipeline_steps) %>% unnest(pipeline_steps)
 
@@ -27,6 +28,7 @@ gpatterns.pipeline <- function(config_file, log_file=NULL, config_dir=NULL, run_
 	all_steps <- names(yaml$steps)
 
 	config <- all_cfg
+
 	
 	for (step in all_steps){
 		config$overwrite <- overwrite			
@@ -34,10 +36,11 @@ gpatterns.pipeline <- function(config_file, log_file=NULL, config_dir=NULL, run_
 		step_file <- glue('{run_dir}/finished_{step}')			
 		if (!file.exists(step_file) || overwrite){
 			red_message('{step}')	
+            
 			config <- invoke_step(config, yaml$steps, step, exp_steps, step_file=step_file, run_commands=run_commands)
 			if (run_commands){
 				file.create(step_file)		
-			}
+			}            
 		} else {
 			if (!run_commands){				
 				red_message("skipping {step} (to run set run_commands to TRUE)")
@@ -47,10 +50,11 @@ gpatterns.pipeline <- function(config_file, log_file=NULL, config_dir=NULL, run_
 			}
 			
 			config <- invoke_step(config, yaml$steps, step, exp_steps, step_file=step_file, run_commands=FALSE)
-		}
+		}       
+        
 		
 		if (!is.null(config_dir)){			
-			# write_csv(config, glue('{config_dir}/{step}_config.csv'))
+            readr::write_rds(config, glue("{config_dir}/{step}_config.rds"))			
 		}
 	}	
 		
@@ -68,7 +72,7 @@ invoke_step <- function(config, steps_cfg, step, exp_steps=NULL, step_file=NULL,
     		loginfo(steps_cfg[[step]]$description)
     		run_step(step_config, steps_cfg, step, step_file, run_commands) 
     	}     	
-    }
+    }    
     
     # dry run to get config tibble
     return(run_step(config, steps_cfg, step, step_file, run_commands=FALSE))

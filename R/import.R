@@ -50,7 +50,7 @@ gpatterns.import_from_tidy_cpgs <- function(tidy_cpgs,
                                             max_jobs = 400,
                                             parallel = getOption('gpatterns.parallel')){
     gsetroot(groot)    
-    all_steps <- c('bind_tidy_cpgs', 'pileup', 'pat_freq')
+    all_steps <- c('bind_tidy_cpgs', 'pileup')
 
     if (length(steps) == 1 && steps[1] == 'all'){
         steps <- all_steps
@@ -171,7 +171,7 @@ gpatterns.import_from_bam <- function(bams,
     opt <- options(scipen = 999)
     on.exit(options(opt))
 
-    all_steps <- c('bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'pat_freq', 'stats')    
+    all_steps <- c('bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'stats')    
 
     if (length(steps) == 1 && steps == 'all'){
         steps <- all_steps
@@ -236,7 +236,7 @@ gpatterns.import_from_bam <- function(bams,
         parallel = parallel,
         cmd_prefix = cmd_prefix)
 
-    tidy_cpgs_steps <- c('bind_tidy_cpgs', 'pileup', 'pat_freq', 'pat_cov')
+    tidy_cpgs_steps <- c('bind_tidy_cpgs', 'pileup', 'pat_cov')
 
     tidy_cpgs_dirs <- if (import_raw_tcpgs || !('filter_dups' %in% steps)) qq('@{workdir}/tidy_cpgs') else qq('@{workdir}/tidy_cpgs_uniq')
 

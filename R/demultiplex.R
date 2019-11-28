@@ -32,6 +32,7 @@ gpatterns.demultiplex_fastqs <- function(config,
         config <- fread(config) %>% as.tibble()
     }
 
+
     if (!has_name(config, 'workdir')){
         if (is.null(workdir)){
             stop('Please supply a workdir (as an argument or as a column in config)')
@@ -53,7 +54,7 @@ gpatterns.demultiplex_fastqs <- function(config,
     }
 
     indexes_config <- config %>% distinct(cell_id, row, plate_pos, column, index1, index2)
-        
+
     fastq_files_pre <-  config %>% distinct(illumina_index, .keep_all=TRUE) %>% select(one_of('illumina_index', 'workdir', 'raw_reads_dir', 'split_dir', 'indexes_file')) %>% mutate(raw_reads_dir = glue(raw_reads_dir[1]), split_dir = glue(split_dir[1]))
     
     fastq_files <- get_raw_reads_files(fastq_files_pre, R1_pattern = R1_pattern, R2_pattern = R2_pattern, paired_end=paired_end)
@@ -109,13 +110,17 @@ gpatterns.demultiplex_fastqs <- function(config,
 
 list_split_fastq_files <- function(indexes_config, fastq_files, run_per_file){
     indexes_config <- indexes_config %>% select(-one_of('raw_reads_dir', 'split_dir', 'indexes_file'))
+
     if (run_per_file){
-        fastq_files <- fastq_files %>% distinct(illumina_index, raw_reads_dir, split_dir) %>% left_join(fastq_files %>% group_by(illumina_index) %>% nest(raw_fastq_R1, raw_fastq_R2, indexes_file, .key='raw_fastq'), by='illumina_index')
+        # fastq_files <- fastq_files %>% distinct(illumina_index, raw_reads_dir, split_dir) %>% left_join(fastq_files %>% group_by(illumina_index) %>% nest(raw_fastq_R1, raw_fastq_R2, indexes_file, .key='raw_fastq'), by='illumina_index')
+        fastq_files <- fastq_files %>% select(illumina_index, raw_reads_dir, split_dir, raw_fastq_R1, raw_fastq_R2, indexes_file) %>% group_by(illumina_index, raw_reads_dir, split_dir) %>% nest() %>% rename(raw_fastq = data)  %>% ungroup()
         indexes_config <- indexes_config %>% left_join(fastq_files, by='illumina_index')
     
         indexes_config <- indexes_config %>% plyr::adply(1, function(x) tibble(r1_fastq=list.files(x$split_dir, pattern=glue('.+_{x$lib}_good_R1(\\.\\d+)?\\.fastq.gz$'), full.names = TRUE) )) %>% as.tibble()    
     } else {
-        fastq_files <- fastq_files %>% distinct(illumina_index, raw_reads_dir, split_dir, indexes_file) %>% left_join(fastq_files %>% group_by(illumina_index) %>% nest(raw_fastq_R1, raw_fastq_R2, .key='raw_fastq'), by='illumina_index')
+        # fastq_files <- fastq_files %>% distinct(illumina_index, raw_reads_dir, split_dir, indexes_file) %>% left_join(fastq_files %>% group_by(illumina_index) %>% nest(raw_fastq_R1, raw_fastq_R2, .key='raw_fastq'), by='illumina_index')
+        fastq_files <- fastq_files %>% select(illumina_index, raw_reads_dir, split_dir, raw_fastq_R1, raw_fastq_R2) %>% group_by(illumina_index, raw_reads_dir, split_dir, indexes_file) %>% nest() %>% rename(raw_fastq = data)  %>% ungroup()
+        
 
         indexes_config <- indexes_config %>% left_join(fastq_files, by='illumina_index')
     
