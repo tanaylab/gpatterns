@@ -4,9 +4,13 @@
 \alias{gpatterns.bissli2_build}
 \title{Create an bowtie2 index for a bisulfite converted genome}
 \usage{
-gpatterns.bissli2_build(reference, idx_base, bowtie2_options,
+gpatterns.bissli2_build(
+  reference,
+  idx_base,
+  bowtie2_options,
   bowtie2_build_bin = "bowtie2-build",
-  bissli2_build_bin = .gpatterns.bissli2_build_bin)
+  bissli2_build_bin = .gpatterns.bissli2_build_bin
+)
 }
 \arguments{
 \item{reference}{a vector of FASTA file names holding the reference genome.}
@@ -19,6 +23,9 @@ Note that bissli2-build can only handle FASTA files as input. Therefore the '-f'
 \item{bowtie2_build_bin}{The path of the bowtie2-build executable. [bowtie2-build]}
 
 \item{bissli2_build_bin}{binary of bissli2-build}
+}
+\value{
+
 }
 \description{
 Create an bowtie2 index for a bisulfite converted genome

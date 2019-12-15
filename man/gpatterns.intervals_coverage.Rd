@@ -4,9 +4,15 @@
 \alias{gpatterns.intervals_coverage}
 \title{Get coverage of intervals in multiple tracks}
 \usage{
-gpatterns.intervals_coverage(tracks, intervals, iterator = NULL,
-  file = NULL, intervals.set.out = NULL, pre_screen = TRUE,
-  frag_cov = FALSE)
+gpatterns.intervals_coverage(
+  tracks,
+  intervals,
+  iterator = NULL,
+  file = NULL,
+  intervals.set.out = NULL,
+  pre_screen = TRUE,
+  frag_cov = FALSE
+)
 }
 \arguments{
 \item{tracks}{methylation tracks}

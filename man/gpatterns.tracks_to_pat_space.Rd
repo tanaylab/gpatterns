@@ -4,8 +4,14 @@
 \alias{gpatterns.tracks_to_pat_space}
 \title{Generate pattern space}
 \usage{
-gpatterns.tracks_to_pat_space(tracks, pat_len, max_span = NULL,
-  exclude_intervals = NULL, exclude_cpgs = NULL, min_cov = 1)
+gpatterns.tracks_to_pat_space(
+  tracks,
+  pat_len,
+  max_span = NULL,
+  exclude_intervals = NULL,
+  exclude_cpgs = NULL,
+  min_cov = 1
+)
 }
 \arguments{
 \item{tracks}{tracks}
@@ -19,6 +25,9 @@ gpatterns.tracks_to_pat_space(tracks, pat_len, max_span = NULL,
 \item{exclude_cpgs}{CpGs to exclude}
 
 \item{min_cov}{minimal coverage per CpG}
+}
+\value{
+
 }
 \description{
 Generate pattern space

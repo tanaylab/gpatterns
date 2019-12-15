@@ -4,16 +4,35 @@
 \alias{gpatterns.spatial_meth_trend}
 \title{Plot spatial trend of methylation around intervals}
 \usage{
-gpatterns.spatial_meth_trend(tracks, intervals, method = "extract",
-  dist_breaks = c(-4000000, -1000000, seq(-1000, 1000, 50), 1000000,
-  4000000), iterator = .gpatterns.genome_cpgs_intervals,
-  min_cov = NULL, min_cgs = NULL, names = NULL,
-  include.lowest = TRUE, groups = NULL, group_name = NULL,
-  add_vline = TRUE, ncol = 2, nrow = 2, width = 5, height = 4,
-  units = "in", pointsize = 12, res = 150, fig_fn = NULL,
-  xlab = "Distance (bp)", ylim = c(0, 1), linewidth = 0.8,
-  title = "", legend = TRUE, colors = NULL,
-  parallel = getOption("gpatterns.parallel"))
+gpatterns.spatial_meth_trend(
+  tracks,
+  intervals,
+  method = "extract",
+  dist_breaks = c(-4000000, -1000000, seq(-1000, 1000, 50), 1000000, 4000000),
+  iterator = .gpatterns.genome_cpgs_intervals,
+  min_cov = NULL,
+  min_cgs = NULL,
+  names = NULL,
+  include.lowest = TRUE,
+  groups = NULL,
+  group_name = NULL,
+  add_vline = TRUE,
+  ncol = 2,
+  nrow = 2,
+  width = 5,
+  height = 4,
+  units = "in",
+  pointsize = 12,
+  res = 150,
+  fig_fn = NULL,
+  xlab = "Distance (bp)",
+  ylim = c(0, 1),
+  linewidth = 0.8,
+  title = "",
+  legend = TRUE,
+  colors = NULL,
+  parallel = getOption("gpatterns.parallel")
+)
 }
 \arguments{
 \item{tracks}{tracks to plot}

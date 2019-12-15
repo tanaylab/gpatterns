@@ -4,8 +4,7 @@
 \alias{gpatterns.tidy_cpgs_2_pat_freq}
 \title{Generate CpG pattern frequency from tidy_cpgs}
 \usage{
-gpatterns.tidy_cpgs_2_pat_freq(calls, pat_length = 2, min_cov = 1,
-  tidy = TRUE)
+gpatterns.tidy_cpgs_2_pat_freq(calls, pat_length = 2, min_cov = 1, tidy = TRUE)
 }
 \arguments{
 \item{calls}{tidy_cpgs}
@@ -16,6 +15,9 @@ be 00,01,10,11}
 \item{min_cov}{minimal coverage}
 
 \item{tidy}{tidy}
+}
+\value{
+
 }
 \description{
 Generate CpG pattern frequency from tidy_cpgs

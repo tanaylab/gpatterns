@@ -10,6 +10,7 @@ gpatterns.demultiplex_fastqs <- function(config,
                                          R1_pattern = 'R1',
                                          R2_pattern = 'R2',                           
                                          indexes_tab=.gpatterns.all_indexes,
+                                         indexes = c("index1", "index2"),                                        
                                          idx1_pos = c(1,8),
                                          idx2_pos = c(1,8),
                                          umi1_pos=c(11, 19),
@@ -46,14 +47,22 @@ gpatterns.demultiplex_fastqs <- function(config,
         config <- config %>% filter(illumina_index == illu_index)
     }
 
-    if (!has_name(config, 'index1.seq')){
-        config <- config %>% left_join(indexes_tab, by=c('index1' = 'index')) %>% rename(index1.seq = seq) %>% mutate(index1.seq = str_sub(start=idx1_pos[1], end=idx1_pos[2], string=index1.seq))
-    }
-    if (!has_name(config, 'index2.seq')){
-        config <- config %>% left_join(indexes_tab, by=c('index2' = 'index')) %>% rename(index2.seq = seq) %>% mutate(index2.seq = str_sub(start=idx2_pos[1], end=idx2_pos[2], string=index2.seq))
+    
+
+    if ("index1" %in% indexes){
+        if (!has_name(config, 'index1.seq')){
+            config <- config %>% left_join(indexes_tab, by=c('index1' = 'index')) %>% rename(index1.seq = seq) %>% mutate(index1.seq = str_sub(start=idx1_pos[1], end=idx1_pos[2], string=index1.seq))
+        }        
     }
 
-    indexes_config <- config %>% distinct(cell_id, row, plate_pos, column, index1, index2)
+    if ("index2" %in% indexes){
+        if (!has_name(config, 'index2.seq')){
+            config <- config %>% left_join(indexes_tab, by=c('index2' = 'index')) %>% rename(index2.seq = seq) %>% mutate(index2.seq = str_sub(start=idx2_pos[1], end=idx2_pos[2], string=index2.seq))
+        }
+    }
+
+    
+    indexes_config <- config %>% distinct(!!!rlang::syms(c("cell_id", "row", "plate_pos", "column", indexes)))
 
     fastq_files_pre <-  config %>% distinct(illumina_index, .keep_all=TRUE) %>% select(one_of('illumina_index', 'workdir', 'raw_reads_dir', 'split_dir', 'indexes_file')) %>% mutate(raw_reads_dir = glue(raw_reads_dir[1]), split_dir = glue(split_dir[1]))
     
@@ -64,6 +73,14 @@ gpatterns.demultiplex_fastqs <- function(config,
     fastq_files <- fastq_files %>% mutate(indexes_file=glue(indexes_file[1]))
 
     config <- config %>% select(-one_of('raw_reads_dir', 'split_dir', 'indexes_file'))
+
+    if (!("index1" %in% indexes)) {
+        idx1_pos <- NULL
+    }
+
+    if (!("index2" %in% indexes)) {
+        idx2_pos <- NULL
+    }
 
     if (run_commands){
         res <- run_demultiplexing_commands(run_per_file, fastq_files, workdir, config, use_sge, log_prefix, idx1_pos, idx2_pos, umi1_pos, umi2_pos, read1_pos, read2_pos, hamming, reads_per_file, ...)
@@ -131,17 +148,17 @@ list_split_fastq_files <- function(indexes_config, fastq_files, run_per_file){
 
 run_demultiplexing_commands <- function(run_per_file, fastq_files, workdir, config, use_sge, log_prefix, idx1_pos, idx2_pos, umi1_pos, umi2_pos, read1_pos, read2_pos, hamming, reads_per_file, ...){
     if (run_per_file){
-        cmd_cfg <- fastq_files %>% distinct(raw_fastq_R1, .keep_all=TRUE) %>% mutate(illu_index=illumina_index, workdir=workdir, raw_fastq_basename = gsub('\\.fastq\\.gz', '', basename(raw_fastq_R1)))
-        cmds <- glue('gpatterns:::do.call_tibble(gpatterns:::demultiplex_per_index, config, c(list(...), list(fastq_files=cmd_cfg[{1:nrow(cmd_cfg)}, ], config=config, run_per_file=run_per_file, idx1_pos=idx1_pos, idx2_pos=idx2_pos, umi1_pos=umi1_pos, umi2_pos=umi2_pos, read1_pos=read1_pos, read2_pos=read2_pos, hamming=hamming, reads_per_file=reads_per_file)))')   
+        cmd_cfg <- fastq_files %>% distinct(raw_fastq_R1, .keep_all=TRUE) %>% mutate(illu_index=illumina_index, workdir=workdir, raw_fastq_basename = gsub('\\.fastq\\.gz', '', basename(raw_fastq_R1)))        
+        cmds <- glue('gpatterns:::do.call_tibble(gpatterns:::demultiplex_per_index, config, c(list(...), list(fastq_files=cmd_cfg[{1:nrow(cmd_cfg)}, ], config=config, run_per_file=run_per_file, idx1_pos=idx1_pos, idx2_pos=idx2_pos, umi1_pos=umi1_pos, umi2_pos=umi2_pos, read1_pos=read1_pos, read2_pos=read2_pos, hamming=hamming, reads_per_file=reads_per_file)))')
     } else {
         cmd_cfg <- config %>% distinct(illumina_index, .keep_all=TRUE) %>% mutate(illu_index=illumina_index, workdir=workdir)    
         cmds <- glue('gpatterns:::do.call_tibble(gpatterns:::demultiplex_per_index, cmd_cfg[{1:nrow(cmd_cfg)}, ], c(list(...), list(fastq_files=fastq_files, config=config, run_per_file=run_per_file, idx1_pos=idx1_pos, idx2_pos=idx2_pos, umi1_pos=umi1_pos, umi2_pos=umi2_pos, read1_pos=read1_pos, read2_pos=read2_pos, hamming=hamming, reads_per_file=reads_per_file)))')       
     }
-
+    
     loginfo('running %s commands', comify(length(cmds)))
     if (use_sge){       
         res <- gcluster.run2(command_list=cmds, ...)            
-    } else {            
+    } else {              
         res <- map(cmds, function(.x) eval(parse(text = .x)))  
     }        
     parse_commmands_res(res, cmds, cmd_cfg, use_sge=use_sge, log_prefix=log_prefix, ...)
@@ -170,7 +187,6 @@ get_raw_reads_files <- function(config, raw_fastq_pattern = '.*_{read}_.*\\.fast
 
 
 demultiplex_per_index <- function(fastq_files, config, illu_index=NULL, idx1_pos = c(1,8), idx2_pos = c(1,8), umi1_pos=c(11, 19), umi2_pos=c(11, 19), read1_pos = c(20,80), read2_pos = c(20,80), hamming=1, reads_per_file=4e6, run_per_file=TRUE){
-
     
     if (!is.null(illu_index)){
         fastq_files <- fastq_files %>% filter(illumina_index == illu_index)          
@@ -197,7 +213,7 @@ demultiplex_per_index <- function(fastq_files, config, illu_index=NULL, idx1_pos
         targets_pref <- split_dir
     }   
     
-    conf2index(config, indexes_file, idx1_pos=idx1_pos, idx2_pos=idx2_pos, umi1_pos=umi1_pos, umi2_pos=umi2_pos, read1_pos =read1_pos, read2_pos = read2_pos, hamming=hamming[1], illu_index=illu_index, targets_pref=targets_pref)
+    conf2index(config, indexes_file, idx1_pos=idx1_pos, idx2_pos=idx2_pos, umi1_pos=umi1_pos, umi2_pos=umi2_pos, read1_pos =read1_pos, read2_pos = read2_pos, hamming=hamming[1], illu_index=illu_index, targets_pref=targets_pref)    
 
     demultiplex_fastqs(R1_fastqs=fastq_files[['raw_fastq_R1']], R2_fastqs=fastq_files[['raw_fastq_R2']], indexes_file=indexes_file, reads_per_file=reads_per_file[1])
     
@@ -228,16 +244,19 @@ conf2index <- function(conf, out_fn, targets_pref='', idx1_pos = c(1,8), idx2_po
         conf <- conf %>% filter(illumina_index == illu_index)
     }
 
+
     if (hamming > 0){        
         if (!is.null(idx1_pos)){
-                idxs1 <- fill_hamming(conf, 'index1.seq', hamming=hamming, ext_columns='index1', rm_self=F)
-                idxs1 <- rm_ambig_bcds(idxs1, 'index1.seq_hamming')  
-                idxs1 <- idxs1 %>% full_join(conf %>% select(index1, index2, illumina_index, lib))                
+            idxs1 <- fill_hamming(conf, 'index1.seq', hamming=hamming, ext_columns='index1', rm_self=F)
+            idxs1 <- rm_ambig_bcds(idxs1, 'index1.seq_hamming')  
+            idxs1 <- idxs1 %>% full_join(conf %>% select(one_of(c("index1", "index2", "illumina_index"
+                , "lib"))))
         }
         if (!is.null(idx2_pos)){
-                idxs2 <- fill_hamming(conf, 'index2.seq', hamming=hamming, ext_columns='index2', rm_self=F)
-                idxs2 <- rm_ambig_bcds(idxs2, 'index2.seq_hamming')
-                idxs2 <- idxs2 %>% full_join(conf %>% select(index1, index2, illumina_index, lib))   
+            idxs2 <- fill_hamming(conf, 'index2.seq', hamming=hamming, ext_columns='index2', rm_self=F)
+            idxs2 <- rm_ambig_bcds(idxs2, 'index2.seq_hamming')
+            idxs2 <- idxs2 %>% full_join(conf %>% select(one_of(c("index1", "index2", "illumina_index"
+                , "lib"))))
         }
         
         if(is.null(idx1_pos)){
@@ -252,9 +271,9 @@ conf2index <- function(conf, out_fn, targets_pref='', idx1_pos = c(1,8), idx2_po
             distinct(index1.seq_hamming, index2.seq_hamming, lib, .keep_all=TRUE)
         
     } else {
-        conf <- conf %>% mutate(index1.seq_hamming = index1.seq, index2.seq_hamming = index2.seq)
-    print(conf)
+        conf <- conf %>% mutate(index1.seq_hamming = index1.seq, index2.seq_hamming = index2.seq)        
     }
+
     
     conf <- add_file_path(conf, use_indexes, targets_pref=targets_pref)       
     

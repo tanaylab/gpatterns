@@ -5,8 +5,15 @@
 \title{ds stats
 downsampling stats}
 \usage{
-.gpatterns.ds_stats(track, dsns, bam = NULL, fastq = NULL,
-  tidy_cpgs_dir = NULL, intervals = NULL, sort_rand = FALSE)
+.gpatterns.ds_stats(
+  track,
+  dsns,
+  bam = NULL,
+  fastq = NULL,
+  tidy_cpgs_dir = NULL,
+  intervals = NULL,
+  sort_rand = FALSE
+)
 }
 \arguments{
 \item{sort_rand}{}

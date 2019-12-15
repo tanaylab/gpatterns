@@ -6,12 +6,21 @@
 Returned value is more similar to native R kmeans
 Allows keeping the output of the kmeans exec within the R return value}
 \usage{
-TGL_kmeans2(data, k, keep.log = FALSE, tmpdir = NULL, tmpfn = NULL,
-  TGL.kmeans.bin = sprintf("\%s/\%s", system.file("bin", package =
-  "gpatterns"), "TGLKMeans_static"))
+TGL_kmeans2(
+  data,
+  k,
+  keep.log = FALSE,
+  tmpdir = NULL,
+  tmpfn = NULL,
+  TGL.kmeans.bin = sprintf("\%s/\%s", system.file("bin", package = "gpatterns"),
+    "TGLKMeans_static")
+)
 }
 \arguments{
 \item{TGL.kmeans.bin}{}
+}
+\value{
+
 }
 \description{
 Alternative interface for TGL_kmeans

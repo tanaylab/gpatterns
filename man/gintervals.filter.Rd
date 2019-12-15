@@ -5,8 +5,14 @@
 \title{Filter intervals set by distance to another.
 A wrapper around gintervals.neighbours and filter(dist <= max_distance)}
 \usage{
-gintervals.filter(intervals1, intervals2, max_distance = 0,
-  abs_dist = TRUE, bind_intervals2 = FALSE, ...)
+gintervals.filter(
+  intervals1,
+  intervals2,
+  max_distance = 0,
+  abs_dist = TRUE,
+  bind_intervals2 = FALSE,
+  ...
+)
 }
 \arguments{
 \item{intervals1}{intervals set}
@@ -20,6 +26,9 @@ gintervals.filter(intervals1, intervals2, max_distance = 0,
 \item{bind_intervals2}{cbind add intervals2 to result}
 
 \item{...}{additional parameters to gintervals.neighbours1}
+}
+\value{
+
 }
 \description{
 Filter intervals set by distance to another.

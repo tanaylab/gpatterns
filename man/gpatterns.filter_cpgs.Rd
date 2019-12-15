@@ -4,8 +4,11 @@
 \alias{gpatterns.filter_cpgs}
 \title{Filter intervals by number of CpGs}
 \usage{
-gpatterns.filter_cpgs(intervals, min_cpgs,
-  cgs_track = .gpatterns.genome_cpgs_track)
+gpatterns.filter_cpgs(
+  intervals,
+  min_cpgs,
+  cgs_track = .gpatterns.genome_cpgs_track
+)
 }
 \arguments{
 \item{intervals}{intervals to filter}
@@ -13,6 +16,9 @@ gpatterns.filter_cpgs(intervals, min_cpgs,
 \item{min_cpgs}{minimal number of CpGs}
 
 \item{cgs_track}{cpgs track (has '1' at every CpG in the genome and '0' otherwise)}
+}
+\value{
+
 }
 \description{
 Filter intervals by number of CpGs

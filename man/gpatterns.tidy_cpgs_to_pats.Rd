@@ -4,9 +4,16 @@
 \alias{gpatterns.tidy_cpgs_to_pats}
 \title{Extracts patterns given pattern space}
 \usage{
-gpatterns.tidy_cpgs_to_pats(track, pattern_space = NULL,
-  pattern_space_file = NULL, max_missing = Inf, min_cov = 1,
-  by_coord_bin = TRUE, parallel = getOption("gpatterns.parallel"), ...)
+gpatterns.tidy_cpgs_to_pats(
+  track,
+  pattern_space = NULL,
+  pattern_space_file = NULL,
+  max_missing = Inf,
+  min_cov = 1,
+  by_coord_bin = TRUE,
+  parallel = getOption("gpatterns.parallel"),
+  ...
+)
 }
 \arguments{
 \item{track}{name of track}
@@ -25,6 +32,9 @@ needs to have the following fields: chrom,start,end,fid}
 (for tracks that do not fit into memory)}
 
 \item{...}{additional parameters to gpatterns.apply_tidy_cpgs}
+}
+\value{
+
 }
 \description{
 Extracts patterns given pattern space

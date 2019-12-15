@@ -13,6 +13,9 @@ gtrack.array.import_from_df(df, track, description)
 
 \item{description}{a character string description}
 }
+\value{
+
+}
 \description{
 Import array from data frame
 }

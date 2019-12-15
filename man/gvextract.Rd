@@ -4,9 +4,17 @@
 \alias{gvextract}
 \title{Creates a virtual track and runs gextract}
 \usage{
-gvextract(tracks, intervals, colnames = NULL, iterator = NULL,
-  band = NULL, file = NULL, intervals.set.out = NULL, func = NULL,
-  params = NULL)
+gvextract(
+  tracks,
+  intervals,
+  colnames = NULL,
+  iterator = NULL,
+  band = NULL,
+  file = NULL,
+  intervals.set.out = NULL,
+  func = NULL,
+  params = NULL
+)
 }
 \arguments{
 \item{tracks}{tracks}
@@ -26,6 +34,9 @@ gvextract(tracks, intervals, colnames = NULL, iterator = NULL,
 \item{func}{func}
 
 \item{params}{params}
+}
+\value{
+
 }
 \description{
 Creates a virtual track and runs gextract

@@ -4,9 +4,15 @@
 \alias{gpatterns.separate_strands}
 \title{Separate a track by strands (for QC purposes)}
 \usage{
-gpatterns.separate_strands(track, description, out_track = NULL,
-  intervals = NULL, minus_suffix = ".minus", plus_suffix = ".plus",
-  ...)
+gpatterns.separate_strands(
+  track,
+  description,
+  out_track = NULL,
+  intervals = NULL,
+  minus_suffix = ".minus",
+  plus_suffix = ".plus",
+  ...
+)
 }
 \arguments{
 \item{track}{name of the track to generate}

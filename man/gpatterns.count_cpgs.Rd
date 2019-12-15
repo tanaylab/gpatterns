@@ -11,6 +11,9 @@ gpatterns.count_cpgs(intervals, cgs_track = .gpatterns.genome_cpgs_track)
 
 \item{cgs_track}{cpgs track (has '1' at every CpG in the genome and '0' or NA otherwise)}
 }
+\value{
+
+}
 \description{
 count CpGs in intervals
 }

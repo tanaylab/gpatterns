@@ -13,6 +13,9 @@ gpatterns.get_tidy_cpgs(track, intervals = NULL, only_tcpgs = TRUE)
 
 \item{only_tcpgs}{use also tracks that have only tidy_cpgs (without cov,meth,unmeth tracks)}
 }
+\value{
+
+}
 \description{
 Get tidy cpgs from a track
 }

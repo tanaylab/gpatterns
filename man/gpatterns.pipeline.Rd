@@ -4,8 +4,14 @@
 \alias{gpatterns.pipeline}
 \title{Run pipeline}
 \usage{
-gpatterns.pipeline(config_file, log_file = NULL, config_dir = NULL,
-  run_commands = TRUE, run_dir = getwd(), overwrite = FALSE)
+gpatterns.pipeline(
+  config_file,
+  log_file = NULL,
+  config_dir = NULL,
+  run_commands = TRUE,
+  run_dir = getwd(),
+  overwrite = FALSE
+)
 }
 \description{
 Run pipeline

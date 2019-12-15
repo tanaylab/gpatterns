@@ -4,8 +4,13 @@
 \alias{gpatterns.conv_stats}
 \title{converstion stats}
 \usage{
-gpatterns.conv_stats(bams, paired_end = TRUE, bismark = FALSE,
-  min_mapq = 30, bin = .gpatterns.bam2tidy_cpgs_bin)
+gpatterns.conv_stats(
+  bams,
+  paired_end = TRUE,
+  bismark = FALSE,
+  min_mapq = 30,
+  bin = .gpatterns.bam2tidy_cpgs_bin
+)
 }
 \description{
 converstion stats

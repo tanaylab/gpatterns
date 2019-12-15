@@ -4,8 +4,13 @@
 \alias{gpatterns.putative_enhancers}
 \title{Define putative enhancer regions from chip-seq tracks}
 \usage{
-gpatterns.putative_enhancers(chip_tracks, quant_thresh = 0.999,
-  normalize = NULL, min_tss_dist = 2000, logical_gate = "|")
+gpatterns.putative_enhancers(
+  chip_tracks,
+  quant_thresh = 0.999,
+  normalize = NULL,
+  min_tss_dist = 2000,
+  logical_gate = "|"
+)
 }
 \arguments{
 \item{chip_tracks}{names of chip-seq tracks}

@@ -4,9 +4,18 @@
 \alias{gpatterns.create_patterns_track}
 \title{Creates patterns attributes of track}
 \usage{
-gpatterns.create_patterns_track(track, description, pat_space,
-  patterns_tab = NULL, add_read_id = TRUE, noise_threshold = 0.2,
-  overwrite = TRUE, canonize = FALSE, add_biploar_stats = FALSE, ...)
+gpatterns.create_patterns_track(
+  track,
+  description,
+  pat_space,
+  patterns_tab = NULL,
+  add_read_id = TRUE,
+  noise_threshold = 0.2,
+  overwrite = TRUE,
+  canonize = FALSE,
+  add_biploar_stats = FALSE,
+  ...
+)
 }
 \arguments{
 \item{track}{track name}
@@ -34,6 +43,9 @@ warning: may lose data}
 (warning: heavy computation)}
 
 \item{...}{additional parameters for gpatterns.calc_bipolarity}
+}
+\value{
+
 }
 \description{
 Creates patterns attributes of track

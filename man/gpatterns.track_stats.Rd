@@ -9,14 +9,14 @@ gpatterns.track_stats(track, ...)
 \arguments{
 \item{track}{track name (or mutiple track names)}
 
-\item{...}{Arguments passed on to \code{gpatterns.get_pipeline_stats}
-\describe{
-  \item{track}{track name (or mutiple track names)}
-  \item{tidy_cpgs_stats_dir}{directory with tidy_cpgs stats files (cannot be used with multiple tracks)}
-  \item{uniq_tidy_cpgs_stats_dir}{directory with filter_dups stats files (cannot be used with multiple tracks)}
-  \item{add_mapping_stats}{add full mapping statistics (singles, discordant etc.)}
-  \item{add_insert_length_stats}{add average insert length}
-}}
+\item{...}{
+  Arguments passed on to \code{\link[=gpatterns.get_pipeline_stats]{gpatterns.get_pipeline_stats}}
+  \describe{
+    \item{\code{tidy_cpgs_stats_dir}}{directory with tidy_cpgs stats files (cannot be used with multiple tracks)}
+    \item{\code{uniq_tidy_cpgs_stats_dir}}{directory with filter_dups stats files (cannot be used with multiple tracks)}
+    \item{\code{add_mapping_stats}}{add full mapping statistics (singles, discordant etc.)}
+    \item{\code{add_insert_length_stats}}{add average insert length}
+  }}
 }
 \description{
 Get QC statistics for track

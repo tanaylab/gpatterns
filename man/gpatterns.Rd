@@ -3,7 +3,6 @@
 \docType{package}
 \name{gpatterns}
 \alias{gpatterns}
-\alias{gpatterns-package}
 \title{gpatterns.}
 \description{
 gpatterns.

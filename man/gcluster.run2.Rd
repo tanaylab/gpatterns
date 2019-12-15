@@ -4,15 +4,29 @@
 \alias{gcluster.run2}
 \title{Runs R commands on a cluster that supports SGE}
 \usage{
-gcluster.run2(..., command_list = NULL, opt.flags = "",
-  max.jobs = 400, debug = FALSE, R = paste0(R.home(component =
-  "bin"), "/R"), packages = NULL, jobs_title = NULL,
-  job_names = NULL, collapse_results = FALSE, queue = NULL,
-  memory = NULL, threads = NULL, io_saturation = NULL,
-  queue_flag = "-q @{queue}", memory_flag = "-l mem_free=@{memory}G",
+gcluster.run2(
+  ...,
+  command_list = NULL,
+  opt.flags = "",
+  max.jobs = 400,
+  debug = FALSE,
+  R = paste0(R.home(component = "bin"), "/R"),
+  packages = NULL,
+  jobs_title = NULL,
+  job_names = NULL,
+  collapse_results = FALSE,
+  queue = NULL,
+  memory = NULL,
+  threads = NULL,
+  io_saturation = NULL,
+  num_proc = NULL,
+  queue_flag = "-q @{queue}",
+  memory_flag = "-l mem_free=@{memory}G",
   threads_flag = "-pe threads @{threads}",
   io_saturation_flag = "-l io_saturation=@{io_saturation}",
-  script = .gpatterns.sg_script)
+  num_proc_flag = "-l num_proc=@{num_proc}",
+  script = .gpatterns.sg_script
+)
 }
 \arguments{
 \item{...}{R commands}

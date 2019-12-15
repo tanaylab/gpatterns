@@ -5,9 +5,17 @@
 \alias{gdply}
 \title{Apply a function on track expression in intervals}
 \usage{
-glply(f, expr, intervals = NULL, iterator = NULL, colnames = NULL,
-  nchunks = 1, parallel = FALSE, verbose = FALSE,
-  gfunc = misha::gextract)
+glply(
+  f,
+  expr,
+  intervals = NULL,
+  iterator = NULL,
+  colnames = NULL,
+  nchunks = 1,
+  parallel = FALSE,
+  verbose = FALSE,
+  gfunc = misha::gextract
+)
 
 gdply(...)
 }

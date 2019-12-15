@@ -4,11 +4,19 @@
 \alias{gpatterns.intervs_to_pat_space}
 \title{Generate pattern space for specific genomic loci}
 \usage{
-gpatterns.intervs_to_pat_space(tracks, intervals, pat_len,
-  adjacent = TRUE, add_rest = FALSE, min_cov = 1, max_span = 500,
+gpatterns.intervs_to_pat_space(
+  tracks,
+  intervals,
+  pat_len,
+  adjacent = TRUE,
+  add_rest = FALSE,
+  min_cov = 1,
+  max_span = 500,
   expand_intervals = FALSE,
   nchunks = getOption("gpatterns.parallel.thread_num"),
-  parallel = getOption("gpatterns.parallel"), verbose = FALSE)
+  parallel = getOption("gpatterns.parallel"),
+  verbose = FALSE
+)
 }
 \arguments{
 \item{tracks}{tracks}
@@ -33,6 +41,9 @@ gpatterns.intervs_to_pat_space(tracks, intervals, pat_len,
 \item{parallel}{override global gpatterns.parallel definition}
 
 \item{verbose}{print additional progress messages}
+}
+\value{
+
 }
 \description{
 Generate pattern space for specific genomic loci

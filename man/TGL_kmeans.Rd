@@ -4,12 +4,22 @@
 \alias{TGL_kmeans}
 \title{Effiecient implementation of kmeans++ algorithm}
 \usage{
-TGL_kmeans(tab, K, id_column = FALSE, allow_nas = TRUE,
-  verbose = FALSE, fn = NULL, tab_file = FALSE, order_rows = TRUE,
-  clust_order_func = partial(mean, na.rm = T), row_order_func = NULL,
-  method = "ward.D2", row_order_column = FALSE,
-  TGL_kmeans_bin = sprintf("\%s/\%s", system.file("bin", package =
-  "gpatterns"), "TGLKMeans_static"))
+TGL_kmeans(
+  tab,
+  K,
+  id_column = FALSE,
+  allow_nas = TRUE,
+  verbose = FALSE,
+  fn = NULL,
+  tab_file = FALSE,
+  order_rows = TRUE,
+  clust_order_func = partial(mean, na.rm = T),
+  row_order_func = NULL,
+  method = "ward.D2",
+  row_order_column = FALSE,
+  TGL_kmeans_bin = sprintf("\%s/\%s", system.file("bin", package = "gpatterns"),
+    "TGLKMeans_static")
+)
 }
 \arguments{
 \item{tab}{table}

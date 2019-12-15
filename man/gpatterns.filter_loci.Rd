@@ -4,9 +4,17 @@
 \alias{gpatterns.filter_loci}
 \title{Filter loci with low variance across samples}
 \usage{
-gpatterns.filter_loci(avgs, k = NULL, center_sd_thresh = NULL,
-  min_loci_frac = 0.3, seed = NULL, tidy = TRUE, avg_col = "avg",
-  plot_cluster_sd = FALSE, ret_clust_sd = FALSE)
+gpatterns.filter_loci(
+  avgs,
+  k = NULL,
+  center_sd_thresh = NULL,
+  min_loci_frac = 0.3,
+  seed = NULL,
+  tidy = TRUE,
+  avg_col = "avg",
+  plot_cluster_sd = FALSE,
+  ret_clust_sd = FALSE
+)
 }
 \arguments{
 \item{avgs}{'tidy' output of \code{gpatterns.get_avg_meth}. In order to filter using the regularized (imputed) values (output of \code{gpatterns.impute}), set \code{avg_col} to 'avg_reg'}
@@ -34,6 +42,6 @@ leaves \code{min_loci_frac} loci.}
 see \code{ret_clust_sd}. if \code{tidy}: \code{avgs} data frame without the filtered loci. if \code{tidy == FALSE}: intervals set with additional fields with regularized average methylation for each sample.
 }
 \description{
-Clusters the samples with kmeans with a relatively high k, calculates the \code{sd} of each cluster centers, 
+Clusters the loci with kmeans with a relatively high k, calculates the \code{sd} of each cluster centers, 
 and then removes loci that are within clusters with low variance.
 }

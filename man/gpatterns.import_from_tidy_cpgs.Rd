@@ -4,11 +4,23 @@
 \alias{gpatterns.import_from_tidy_cpgs}
 \title{Create a track from tidy_cpgs files}
 \usage{
-gpatterns.import_from_tidy_cpgs(tidy_cpgs, track, description,
-  steps = "all", overwrite = TRUE, cov_filt_cmd = NULL, dsn = NULL,
-  pat_cov_lens = c(3, 5, 7), max_span = 500, pat_freq_len = 2,
-  nbins = nrow(gintervals.all()), groot = GROOT, use_sge = FALSE,
-  max_jobs = 400, parallel = getOption("gpatterns.parallel"))
+gpatterns.import_from_tidy_cpgs(
+  tidy_cpgs,
+  track,
+  description,
+  steps = "all",
+  overwrite = TRUE,
+  cov_filt_cmd = NULL,
+  dsn = NULL,
+  pat_cov_lens = c(3, 5, 7),
+  max_span = 500,
+  pat_freq_len = 2,
+  nbins = nrow(gintervals.all()),
+  groot = GROOT,
+  use_sge = FALSE,
+  max_jobs = 400,
+  parallel = getOption("gpatterns.parallel")
+)
 }
 \arguments{
 \item{tidy_cpgs}{tidy_cpgs data frame or a vector with directories of tidy_cpgs (use full path)}
@@ -41,6 +53,9 @@ gpatterns.import_from_tidy_cpgs(tidy_cpgs, track, description,
 \item{max_jobs}{maximal number of jobs for sge parallelization}
 
 \item{parallel}{parallelize using threads (number of threads is determined by gpatterns.set_parallel)}
+}
+\value{
+
 }
 \description{
 Create a track from tidy_cpgs files

@@ -4,9 +4,16 @@
 \alias{.gpatterns.bam2reads}
 \title{bam 2 reads}
 \usage{
-.gpatterns.bam2reads(bams, paired_end = TRUE, umi1_idx = NULL,
-  umi2_idx = NULL, add_chr_prefix = FALSE, reads_fn = NULL,
-  bismark = FALSE, bin = .gpatterns.bam2tidy_cpgs_bin)
+.gpatterns.bam2reads(
+  bams,
+  paired_end = TRUE,
+  umi1_idx = NULL,
+  umi2_idx = NULL,
+  add_chr_prefix = FALSE,
+  reads_fn = NULL,
+  bismark = FALSE,
+  bin = .gpatterns.bam2tidy_cpgs_bin
+)
 }
 \description{
 bam 2 reads

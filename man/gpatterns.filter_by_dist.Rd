@@ -4,9 +4,14 @@
 \alias{gpatterns.filter_by_dist}
 \title{Filter intervals set by distance from another intervals set}
 \usage{
-gpatterns.filter_by_dist(intervals, annot_intervs = NULL,
-  annot_intervs_dist = 0, orientation = "upstream", use_tss = FALSE,
-  tss_max_dist = 1000)
+gpatterns.filter_by_dist(
+  intervals,
+  annot_intervs = NULL,
+  annot_intervs_dist = 0,
+  orientation = "upstream",
+  use_tss = FALSE,
+  tss_max_dist = 1000
+)
 }
 \arguments{
 \item{intervals}{intervals to filter}
@@ -20,6 +25,9 @@ gpatterns.filter_by_dist(intervals, annot_intervs = NULL,
 \item{use_tss}{use TSS as annot intervs}
 
 \item{tss_dist}{annot_intervs_dist for TSS}
+}
+\value{
+
 }
 \description{
 Filter intervals set by distance from another intervals set

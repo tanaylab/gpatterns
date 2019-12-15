@@ -4,8 +4,12 @@
 \alias{gpatterns.adjust_read_pos}
 \title{Change tidy_cpgs coordinates to fragments coordinates}
 \usage{
-gpatterns.adjust_read_pos(calls, frag_intervs, maxdist = 0,
-  rm_off_target = TRUE)
+gpatterns.adjust_read_pos(
+  calls,
+  frag_intervs,
+  maxdist = 0,
+  rm_off_target = TRUE
+)
 }
 \arguments{
 \item{calls}{tidy_cpgs data frame}

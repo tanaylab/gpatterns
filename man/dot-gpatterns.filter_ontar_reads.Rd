@@ -5,8 +5,12 @@
 \title{filter on target reads
 Filters on target reads}
 \usage{
-.gpatterns.filter_ontar_reads(reads, regions, max_distance = 200,
-  return_orig = TRUE)
+.gpatterns.filter_ontar_reads(
+  reads,
+  regions,
+  max_distance = 200,
+  return_orig = TRUE
+)
 }
 \description{
 filter on target reads

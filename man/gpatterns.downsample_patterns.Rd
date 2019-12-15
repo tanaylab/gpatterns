@@ -11,6 +11,9 @@ gpatterns.downsample_patterns(patterns, dsn)
 
 \item{dsn}{downsampling n}
 }
+\value{
+
+}
 \description{
 Downsample patterns table
 }

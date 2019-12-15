@@ -4,12 +4,26 @@
 \alias{gpatterns.get_avg_meth}
 \title{Extract average methylation}
 \usage{
-gpatterns.get_avg_meth(tracks, intervals, iterator = NULL,
-  min_cov = NULL, mask_by_cov = FALSE, use_cpgs = FALSE,
-  min_samples = NULL, min_cpgs = NULL, min_var = NULL,
-  var_quantile = NULL, min_range = NULL, names = NULL, tidy = TRUE,
-  pre_screen = FALSE, use_disk = FALSE, file = NULL,
-  intervals.set.out = NULL, sum_tracks = FALSE)
+gpatterns.get_avg_meth(
+  tracks,
+  intervals,
+  iterator = NULL,
+  min_cov = NULL,
+  mask_by_cov = FALSE,
+  use_cpgs = FALSE,
+  min_samples = NULL,
+  min_cpgs = NULL,
+  min_var = NULL,
+  var_quantile = NULL,
+  min_range = NULL,
+  names = NULL,
+  tidy = TRUE,
+  pre_screen = FALSE,
+  use_disk = FALSE,
+  file = NULL,
+  intervals.set.out = NULL,
+  sum_tracks = FALSE
+)
 }
 \arguments{
 \item{tracks}{methylation tracks}
@@ -57,6 +71,9 @@ would not filter by variance)}
 \item{pre}{screen for min_samples and min_cov (for large number of
 tracks / large number of intervals). Note that the intervalID column may be incorrect
 and if use_cpgs is TRUE, the intervals set would become the cpgs.}
+}
+\value{
+
 }
 \description{
 Extracts average methylation data from tracks.

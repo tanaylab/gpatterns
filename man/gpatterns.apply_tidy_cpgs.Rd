@@ -4,9 +4,16 @@
 \alias{gpatterns.apply_tidy_cpgs}
 \title{Apply a function on tidy cpgs (internally separated by coordinates)}
 \usage{
-gpatterns.apply_tidy_cpgs(track, f, split_by_bin = TRUE,
-  parallel = getOption("gpatterns.parallel"), use_sge = FALSE,
-  max_jobs = 300, verbose = FALSE, ...)
+gpatterns.apply_tidy_cpgs(
+  track,
+  f,
+  split_by_bin = TRUE,
+  parallel = getOption("gpatterns.parallel"),
+  use_sge = FALSE,
+  max_jobs = 300,
+  verbose = FALSE,
+  ...
+)
 }
 \arguments{
 \item{track}{name of track}

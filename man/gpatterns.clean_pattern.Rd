@@ -9,6 +9,9 @@ gpatterns.clean_pattern(pattern)
 \arguments{
 \item{pattern}{pattern}
 }
+\value{
+
+}
 \description{
 Returns TRUE if pattern is fully methylated / unmethylated and FALSE if not
 }

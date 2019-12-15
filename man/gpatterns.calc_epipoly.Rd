@@ -9,6 +9,9 @@ gpatterns.calc_epipoly(patterns)
 \arguments{
 \item{patterns}{patterns}
 }
+\value{
+
+}
 \description{
 Calculate epipolymorphism of samples
 }

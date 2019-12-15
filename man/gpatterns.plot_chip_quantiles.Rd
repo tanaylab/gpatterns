@@ -4,8 +4,11 @@
 \alias{gpatterns.plot_chip_quantiles}
 \title{Plot chip-seq singal with quantile lines}
 \usage{
-gpatterns.plot_chip_quantiles(chip_track, intervals, quantiles = c(0.8,
-  0.9, 0.95, 0.99, 0.995, 0.999))
+gpatterns.plot_chip_quantiles(
+  chip_track,
+  intervals,
+  quantiles = c(0.8, 0.9, 0.95, 0.99, 0.995, 0.999)
+)
 }
 \arguments{
 \item{chip_track}{chip-seq track}

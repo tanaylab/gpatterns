@@ -11,6 +11,9 @@ gpatterns.frag_stats(patterns_tab, noise_threshold = 0.2)
 
 \item{noise_threshold}{thershold of a pattern to be considered 'noise'}
 }
+\value{
+
+}
 \description{
 transforms patterns to summary statistics: n,n0,n1,nx,nc,meth and epipoly
 }

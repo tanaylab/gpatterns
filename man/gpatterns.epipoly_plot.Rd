@@ -4,9 +4,19 @@
 \alias{gpatterns.epipoly_plot}
 \title{Plots epipolymorphism}
 \usage{
-gpatterns.epipoly_plot(tracks, intervals, colnames = NULL, pat_len = 5,
-  median_line_binsize = 6, meth_binsize = 0.01, fig_ofn = NULL,
-  width = NULL, height = NULL, ncolumns = 3, separate_figs = FALSE)
+gpatterns.epipoly_plot(
+  tracks,
+  intervals,
+  colnames = NULL,
+  pat_len = 5,
+  median_line_binsize = 6,
+  meth_binsize = 0.01,
+  fig_ofn = NULL,
+  width = NULL,
+  height = NULL,
+  ncolumns = 3,
+  separate_figs = FALSE
+)
 }
 \arguments{
 \item{tracks}{track names}

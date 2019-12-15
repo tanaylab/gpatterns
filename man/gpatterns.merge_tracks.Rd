@@ -4,9 +4,16 @@
 \alias{gpatterns.merge_tracks}
 \title{Merge tracks}
 \usage{
-gpatterns.merge_tracks(tracks, new_track, description,
-  intervals = gintervals.all(), iterator = NULL, add_var = FALSE,
-  merge_tidy_cpgs = TRUE, ...)
+gpatterns.merge_tracks(
+  tracks,
+  new_track,
+  description,
+  intervals = gintervals.all(),
+  iterator = NULL,
+  add_var = FALSE,
+  merge_tidy_cpgs = TRUE,
+  ...
+)
 }
 \arguments{
 \item{tracks}{tracks to merge}

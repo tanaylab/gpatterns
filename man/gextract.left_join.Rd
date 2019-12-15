@@ -5,9 +5,16 @@
 \title{Returns the result of track expressions evaluation for each of the
 iterator intervals, and cbinds the intervals (instead of intervalID)}
 \usage{
-gextract.left_join(expr, intervals = NULL, colnames = NULL,
-  iterator = NULL, band = NULL, file = NULL,
-  intervals.set.out = NULL, suffix = "1")
+gextract.left_join(
+  expr,
+  intervals = NULL,
+  colnames = NULL,
+  iterator = NULL,
+  band = NULL,
+  file = NULL,
+  intervals.set.out = NULL,
+  suffix = "1"
+)
 }
 \arguments{
 \item{expr}{track expression}
@@ -25,6 +32,9 @@ gextract.left_join(expr, intervals = NULL, colnames = NULL,
 \item{intervals.set.out}{intervals set name where the function result is optionally outputed}
 
 \item{suffix}{suffix for conflicting column names}
+}
+\value{
+
 }
 \description{
 Returns the result of track expressions evaluation for each of the

@@ -4,12 +4,22 @@
 \alias{pheatmap1}
 \title{wrapper around pheatmap}
 \usage{
-pheatmap1(pmat, annotation = NULL, annotation_colors = NULL,
-  annotation_col = NULL, annotation_row = NULL, id_column = TRUE,
-  border_color = NA, clustering_callback = function(hc, ...) {    
-  dendsort::dendsort(hc) }, clustering_distance_rows = "euclidean",
-  clustering_distance_cols = "euclidean", min_vals_row = 1,
-  min_vals_col = 1, na_col = "gray", ...)
+pheatmap1(
+  pmat,
+  annotation = NULL,
+  annotation_colors = NULL,
+  annotation_col = NULL,
+  annotation_row = NULL,
+  id_column = TRUE,
+  border_color = NA,
+  clustering_callback = function(hc, ...) {     dendsort::dendsort(hc) },
+  clustering_distance_rows = "euclidean",
+  clustering_distance_cols = "euclidean",
+  min_vals_row = 1,
+  min_vals_col = 1,
+  na_col = "gray",
+  ...
+)
 }
 \arguments{
 \item{pmat}{data frame to plot as matrix. can have an additional id column (if id_column == TRUE)}

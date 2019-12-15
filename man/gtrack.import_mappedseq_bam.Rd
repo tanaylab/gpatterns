@@ -11,6 +11,9 @@ gtrack.import_mappedseq_bam(bam_files, ...)
 
 \item{...}{parameters of gtrack.import_mappedseq}
 }
+\value{
+
+}
 \description{
 Wrapper around gtrack.import_mappedseq for (multiple) bam files
 }

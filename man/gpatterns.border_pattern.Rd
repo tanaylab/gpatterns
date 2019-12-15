@@ -9,6 +9,9 @@ gpatterns.border_pattern(pattern)
 \arguments{
 \item{pattern}{pattern}
 }
+\value{
+
+}
 \description{
 Returns TRUE if pattern is a 'border' pattern
 }

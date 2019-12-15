@@ -4,9 +4,14 @@
 \alias{gpatterns.get_bg_meth}
 \title{Get background trend expected methylation signal}
 \usage{
-gpatterns.get_bg_meth(intervals, tracks = NULL, trend = NULL,
-  cg_cont_track = .gpatterns.cg_cont_500_track, cg_cont_breaks = seq(0,
-  0.15, by = 0.002), ...)
+gpatterns.get_bg_meth(
+  intervals,
+  tracks = NULL,
+  trend = NULL,
+  cg_cont_track = .gpatterns.cg_cont_500_track,
+  cg_cont_breaks = seq(0, 0.15, by = 0.002),
+  ...
+)
 }
 \arguments{
 \item{intervals}{genomic scope for which the function is applied}
@@ -19,33 +24,30 @@ gpatterns.get_bg_meth(intervals, tracks = NULL, trend = NULL,
 
 \item{cg_cont_breaks}{breaks to determine the bins of \code{cg_cont_track}}
 
-\item{...}{additional paramters to \code{gpatterns.global_meth_trend}}
-
-\item{...}{Arguments passed on to \code{gpatterns.global_meth_trend}
-\describe{
-  \item{tracks}{tracks to plot}
-  \item{strat_track}{track to stratify average methylation by. default is CG content}
-  \item{strat_breaks}{breaks to determine the bins of strat_track}
-  \item{intervals}{genomic scope for which the function is applied}
-  \item{iterator}{track expression iterator (of both tracks and strat_track)}
-  \item{min_cov}{minimal coverage of each track}
-  \item{min_cgs}{minimal number of CpGs per bin}
-  \item{names}{alternative names for the track}
-  \item{groups}{a vector the same length of \code{tracks} with group for each track. Each group will on a different facet.}
-  \item{group_name}{name of the grouping variable (e.g. tumor, sample, patient, experiment)}
-  \item{include.lowest}{if 'TRUE', the lowest value of the range determined by breaks is included}
-  \item{ncol}{number of columns}
-  \item{nrow}{number of rows}
-  \item{width}{plot width (if fig_fn is not NULL)}
-  \item{height}{plot height (if fig_fn is not NULL)}
-  \item{fig_fn}{output filename for the figure (if NULL, figure would be returned)}
-  \item{xlab}{label for the x axis}
-  \item{ylim}{ylim of the plot}
-  \item{title}{title for the plot}
-  \item{legend}{add legend}
-  \item{colors}{custom colors}
-  \item{parallel}{get trends parallely}
-}}
+\item{...}{
+  Arguments passed on to \code{\link[=gpatterns.global_meth_trend]{gpatterns.global_meth_trend}}
+  \describe{
+    \item{\code{strat_track}}{track to stratify average methylation by. default is CG content}
+    \item{\code{strat_breaks}}{breaks to determine the bins of strat_track}
+    \item{\code{iterator}}{track expression iterator (of both tracks and strat_track)}
+    \item{\code{min_cov}}{minimal coverage of each track}
+    \item{\code{min_cgs}}{minimal number of CpGs per bin}
+    \item{\code{names}}{alternative names for the track}
+    \item{\code{groups}}{a vector the same length of \code{tracks} with group for each track. Each group will on a different facet.}
+    \item{\code{group_name}}{name of the grouping variable (e.g. tumor, sample, patient, experiment)}
+    \item{\code{include.lowest}}{if 'TRUE', the lowest value of the range determined by breaks is included}
+    \item{\code{ncol}}{number of columns}
+    \item{\code{nrow}}{number of rows}
+    \item{\code{width}}{plot width (if fig_fn is not NULL)}
+    \item{\code{height}}{plot height (if fig_fn is not NULL)}
+    \item{\code{fig_fn}}{output filename for the figure (if NULL, figure would be returned)}
+    \item{\code{xlab}}{label for the x axis}
+    \item{\code{ylim}}{ylim of the plot}
+    \item{\code{title}}{title for the plot}
+    \item{\code{legend}}{add legend}
+    \item{\code{colors}}{custom colors}
+    \item{\code{parallel}}{get trends parallely}
+  }}
 }
 \value{
 intervals set with the additional fields 'exp_meth' 'exp_cov' and 'exp_avg' with the 

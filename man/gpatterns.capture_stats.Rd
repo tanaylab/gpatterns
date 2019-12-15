@@ -4,11 +4,21 @@
 \alias{gpatterns.capture_stats}
 \title{Capture stats}
 \usage{
-gpatterns.capture_stats(track, bam, regions, fastq = NULL,
-  use_read2 = TRUE, max_distance = 200, tidy_cpgs_stats_dir = NULL,
-  uniq_tidy_cpgs_stats_dir = NULL, add_mapping_stats = FALSE,
-  dsn = NULL, sample_raw = FALSE, sample_ontar = TRUE,
-  reads = NULL)
+gpatterns.capture_stats(
+  track,
+  bam,
+  regions,
+  fastq = NULL,
+  use_read2 = TRUE,
+  max_distance = 200,
+  tidy_cpgs_stats_dir = NULL,
+  uniq_tidy_cpgs_stats_dir = NULL,
+  add_mapping_stats = FALSE,
+  dsn = NULL,
+  sample_raw = FALSE,
+  sample_ontar = TRUE,
+  reads = NULL
+)
 }
 \description{
 Capture stats

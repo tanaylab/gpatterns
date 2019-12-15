@@ -4,8 +4,13 @@
 \alias{gpatterns.get_fragment_cov}
 \title{Get fragment coverage}
 \usage{
-gpatterns.get_fragment_cov(track, intervals = NULL, save_track = FALSE,
-  parallel = getOption("gpatterns.parallel"), ...)
+gpatterns.get_fragment_cov(
+  track,
+  intervals = NULL,
+  save_track = FALSE,
+  parallel = getOption("gpatterns.parallel"),
+  ...
+)
 }
 \arguments{
 \item{track}{track}
