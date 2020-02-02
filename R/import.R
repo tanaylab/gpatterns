@@ -51,12 +51,13 @@ gpatterns.import_from_tidy_cpgs <- function(tidy_cpgs,
                                             parallel = getOption('gpatterns.parallel')){
     gsetroot(groot)    
     all_steps <- c('bind_tidy_cpgs', 'pileup')
+    available_steps <- c(all_steps, "pat_freq")
 
     if (length(steps) == 1 && steps[1] == 'all'){
         steps <- all_steps
     }
 
-    stopifnot(all(steps %in% c(all_steps)))    
+    stopifnot(all(steps %in% c(available_steps)))    
     if (.is_tidy_cpgs(tidy_cpgs)){
         genomic_bins <- gbin_intervals(intervals = gintervals.all(), nbins)
         .step_invoke(
@@ -171,13 +172,15 @@ gpatterns.import_from_bam <- function(bams,
     opt <- options(scipen = 999)
     on.exit(options(opt))
 
+
     all_steps <- c('bam2tidy_cpgs', 'filter_dups', 'bind_tidy_cpgs', 'pileup', 'stats')    
+    available_steps <- c(all_steps, 'pat_freq')
 
     if (length(steps) == 1 && steps == 'all'){
         steps <- all_steps
     }
 
-    stopifnot(all(steps %in% c(all_steps)))
+    stopifnot(all(steps %in% c(available_steps)))
 
     if (is.null(workdir) && !is.null(track)){        
         workdir <- paste0(.gpatterns.base_dir(track), '/workdir')                
