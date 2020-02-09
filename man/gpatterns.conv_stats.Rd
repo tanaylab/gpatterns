@@ -9,7 +9,7 @@ gpatterns.conv_stats(
   paired_end = TRUE,
   bismark = FALSE,
   min_mapq = 30,
-  bin = .gpatterns.bam2tidy_cpgs_bin
+  bin = system.file("import", "tidy_cpgs.py", package = "gpatterns")
 )
 }
 \description{

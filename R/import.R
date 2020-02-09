@@ -320,8 +320,8 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
                                      sort_output = FALSE,
                                      only_seq = FALSE,
                                      bismark = FALSE,
-                                     adjust_read_bin = .gpatterns.adjust_read_bin,
-                                     bin = .gpatterns.bam2tidy_cpgs_bin,
+                                     adjust_read_bin =  system.file("bin", "adjust_read_pos.R", package="gpatterns"),
+                                     bin =  system.file("import", "tidy_cpgs.py", package="gpatterns"),
                                      run_per_interv = TRUE,
                                      add_chr_prefix = FALSE,  
                                      min_qual = 20,                                                  
@@ -388,7 +388,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
                                    use_seq = FALSE,
                                    only_seq = FALSE,
                                    sorted = FALSE,
-                                   bin = .gpatterns.filter_dups_bin,
+                                   bin =  system.file("import", "filter_dups_cpgs.py", package="gpatterns"),
                                    ...) {
 
     walk(c(uniq_tidy_cpgs_dir, stats_dir), ~ system(qq('mkdir -p @{.x}')))

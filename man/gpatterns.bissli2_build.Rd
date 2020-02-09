@@ -9,7 +9,7 @@ gpatterns.bissli2_build(
   idx_base,
   bowtie2_options,
   bowtie2_build_bin = "bowtie2-build",
-  bissli2_build_bin = .gpatterns.bissli2_build_bin
+  bissli2_build_bin = system.file("bissli2", "bissli2-build.pl", package = "gpatterns")
 )
 }
 \arguments{

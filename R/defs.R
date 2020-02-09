@@ -81,39 +81,6 @@
 }
 
 
-# Import defs ------------------------------------------------
-.gpatterns.bam2tidy_cpgs_bin <- sprintf("%s/%s",
-                                       system.file("import", package="gpatterns"),
-                                       'tidy_cpgs.py')
-.gpatterns.filter_dups_bin <- sprintf("%s/%s",
-                                       system.file("import", package="gpatterns"),
-                                       'filter_dups_cpgs.py')
-.gpatterns.adjust_read_bin <- sprintf("%s/%s",
-                                        system.file("bin", package="gpatterns"),
-                                        'adjust_read_pos.R')
-.gpatterns.bissli2_bin <-  sprintf("%s/%s",
-                                       system.file("bissli2", package="gpatterns"),
-                                       'bissli2-align.pl')
-.gpatterns.bissli2_build_bin <-  sprintf("%s/%s",
-                                       system.file("bissli2", package="gpatterns"),
-                                       'bissli2-build.pl')
-.gpatterns.bipolar_model_bin <- sprintf("%s/%s",
-                                        system.file("bin", package="gpatterns"),
-                                        'mpms')
-.gpatterns.sg_script <- sprintf("%s/%s",
-                                        system.file("bin", package="gpatterns"),
-	                                'sgjob.sh')
-.gpatterns.conv_stats_bin <- sprintf("%s/%s",
-                                        system.file("bin", package="gpatterns"),
-                                  'conv_stats.py')
-.gpatterns.map_fastq_bin <- sprintf("%s/%s",
-                                        system.file("import", package="gpatterns"),
-                                  'map_fastq.py')
-.gpatterns.all_indexes <- data.table::fread(sprintf("%s/%s",
-                                        system.file("import", package="gpatterns"),
-                                  'indexes.csv'), data.table=FALSE) %>% as.tibble()
-
-
 # Color palettes ------------------------------------------------
 # .blue_red_pal <- colorRampPalette(c("#87FFFF", "black", "#FF413D"))(1000)
 

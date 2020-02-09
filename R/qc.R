@@ -371,7 +371,7 @@ gpatterns.capture_stats <- function(track,
 
 #' bam 2 reads
 #' @export
-.gpatterns.bam2reads <- function(bams, paired_end=TRUE, umi1_idx=NULL, umi2_idx=NULL, add_chr_prefix=FALSE, reads_fn=NULL, bismark = FALSE, bin = .gpatterns.bam2tidy_cpgs_bin){
+.gpatterns.bam2reads <- function(bams, paired_end=TRUE, umi1_idx=NULL, umi2_idx=NULL, add_chr_prefix=FALSE, reads_fn=NULL, bismark = FALSE, bin =  system.file("import", "tidy_cpgs.py", package="gpatterns")){
     return_reads <- FALSE
 
     if (is.null(reads_fn)){
@@ -425,7 +425,7 @@ gpatterns.bam2uniq_reads <- function(bams, paired_end=TRUE, umi1_idx=NULL, umi2_
 
 #' converstion stats
 #' @export
-gpatterns.conv_stats <- function(bams, paired_end=TRUE, bismark = FALSE, min_mapq=30, bin = .gpatterns.bam2tidy_cpgs_bin){
+gpatterns.conv_stats <- function(bams, paired_end=TRUE, bismark = FALSE, min_mapq=30, bin =  system.file("import", "tidy_cpgs.py", package="gpatterns")){
     bam_prefix <- if (1 == length(bams)) 'cat' else 'samtools cat'
     single_end <- if (!paired_end) '--single-end' else ''         
 

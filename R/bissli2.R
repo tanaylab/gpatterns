@@ -38,7 +38,7 @@ gpatterns.bissli2 <- function(r1_fastq,
                               genome_seq,
                               bissli2_idx,
                               r2_fastq=NULL,
-                              bissli2_bin=.gpatterns.bissli2_bin,
+                              bissli2_bin= system.file("bissli2", "bissli2-align.pl", package="gpatterns"),
                               bowtie2='bowtie2',
                               samtools = 'samtools',
                               maxins=1000,
@@ -97,7 +97,7 @@ gpatterns.bissli2_build <- function(reference,
                                     idx_base,
                                     bowtie2_options,
                                     bowtie2_build_bin='bowtie2-build',
-                                    bissli2_build_bin=.gpatterns.bissli2_build_bin){
+                                    bissli2_build_bin= system.file("bissli2", "bissli2-build.pl", package="gpatterns")){
     reference <- paste(reference, collapse=',')
     command <- qq('@{bissli2_build_bin} --bowtie2-build @{bowtie2_build_bin} @{reference} @{idx_base} @{bowtie2_options}')
     system(command)

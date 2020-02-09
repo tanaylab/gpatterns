@@ -9,7 +9,7 @@ gpatterns.demultiplex_fastqs <- function(config,
                                          raw_fastq_pattern = '.*_{read}_.*\\.fastq.gz', 
                                          R1_pattern = 'R1',
                                          R2_pattern = 'R2',                           
-                                         indexes_tab=.gpatterns.all_indexes,
+                                         indexes_tab= system.file("import", "indexes.csv", package="gpatterns"),
                                          indexes = c("index1", "index2"),                                        
                                          idx1_pos = c(1,8),
                                          idx2_pos = c(1,8),
@@ -53,7 +53,7 @@ gpatterns.demultiplex_fastqs <- function(config,
         if (!has_name(config, 'index1.seq')){
             config <- config %>% left_join(indexes_tab, by=c('index1' = 'index')) %>% rename(index1.seq = seq) %>% mutate(index1.seq = str_sub(start=idx1_pos[1], end=idx1_pos[2], string=index1.seq))
         }        
-    }
+    }    
 
     if ("index2" %in% indexes){
         if (!has_name(config, 'index2.seq')){
@@ -89,7 +89,9 @@ gpatterns.demultiplex_fastqs <- function(config,
     config <- list_split_fastq_files(config, fastq_files, run_per_file)
 
     if (nrow(config) == 0){
-        file.remove(step_file)
+        if (file.exists(step_file)) {
+            file.remove(step_file)
+        }
         logerror('No files were generated in demultiplexing. Please make sure that the indexes are correct.')
         stop('No files were generated in demultiplexing. Please make sure that the indexes are correct.')
     }
@@ -219,7 +221,7 @@ demultiplex_per_index <- function(fastq_files, config, illu_index=NULL, idx1_pos
     
 }
 
-demultiplex_fastqs <- function(R1_fastqs, indexes_file, R2_fastqs=NULL,map_fastq_bin=.gpatterns.map_fastq_bin, reads_per_file=NULL){
+demultiplex_fastqs <- function(R1_fastqs, indexes_file, R2_fastqs=NULL,map_fastq_bin= system.file("import", "map_fastq.py", package="gpatterns"), reads_per_file=NULL){
     
     R1_str <- glue('-r1 <(gzip -d -c {paste(R1_fastqs, collapse=" ")})')
     R2_str <- ''

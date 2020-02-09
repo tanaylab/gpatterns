@@ -413,7 +413,7 @@ gcluster.run2 <- function (...,
                            threads_flag = '-pe threads @{threads}',
                            io_saturation_flag = '-l io_saturation=@{io_saturation}',
                            num_proc_flag = '-l num_proc=@{num_proc}',
-                           script =.gpatterns.sg_script){    
+                           script = system.file("bin", "sgjob.sh", package="gpatterns")){    
     if (!is.null(command_list)){ 
         commands <- purrr::map(command_list, function(x) parse(text=x))
     } else {

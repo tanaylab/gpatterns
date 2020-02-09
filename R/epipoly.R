@@ -244,7 +244,7 @@ gpatterns.calc_bipolarity <- function(track,
                                              init_num=@{init_num},
                                              ret_tbl=TRUE,
                                              verbose=@{verbose},
-                                             bipolar_model_bin="@{.gpatterns.bipolar_model_bin}")') %>%
+                                             bipolar_model_bin="@{ system.file("bin", "mpms", package="gpatterns")}")') %>%
                 gsub('\n', ' ', .)
             )
 
@@ -293,7 +293,7 @@ gpatterns.calc_bipolarity <- function(track,
                                          ofn = NULL,
                                          ret_tbl = FALSE,
                                          verbose = FALSE,
-                                         bipolar_model_bin = .gpatterns.bipolar_model_bin){
+                                         bipolar_model_bin =  system.file("bin", "mpms", package="gpatterns")){
     if (is.null(ofn)){
         ofn <- tempfile()
         ret_tbl <- TRUE

@@ -12,7 +12,7 @@
   add_chr_prefix = FALSE,
   reads_fn = NULL,
   bismark = FALSE,
-  bin = .gpatterns.bam2tidy_cpgs_bin
+  bin = system.file("import", "tidy_cpgs.py", package = "gpatterns")
 )
 }
 \description{

@@ -10,7 +10,7 @@ gpatterns.bissli2(
   genome_seq,
   bissli2_idx,
   r2_fastq = NULL,
-  bissli2_bin = .gpatterns.bissli2_bin,
+  bissli2_bin = system.file("bissli2", "bissli2-align.pl", package = "gpatterns"),
   bowtie2 = "bowtie2",
   samtools = "samtools",
   maxins = 1000,
