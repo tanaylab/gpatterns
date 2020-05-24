@@ -1,5 +1,5 @@
-#!/usr/bin/env python2
-from __future__ import print_function
+#!/usr/bin/env python3
+
 import argparse
 from textwrap import dedent
 import sys
@@ -10,8 +10,6 @@ import re
 from collections import defaultdict
 from tqdm import tqdm
 from reads import Read, bam_iter
-
-#TODO: REMEMBER TO REMOVE 772/512 FLAGS BEFORE PRODUCTION
 
 ########################################################################
 PROG = 'tidy_cpgs.py'
@@ -71,8 +69,7 @@ def bam_reader(bam,
                      (add_chr_prefix and chrom == 'chr' + read.chrom)):
                     
                 if (genomic_range is None) \
-                        or (genomic_range[0] <= read.start <= genomic_range[1]) \
-                        or (genomic_range[0] <= read.end <= genomic_range[1]):
+                        or read.in_range(genomic_range):
 
                     conv_stats['h'] += read.h
                     conv_stats['H'] += read.H
@@ -136,13 +133,13 @@ def bam_reader(bam,
         Hs = np.array(Hs, dtype=np.int)
         xs = np.array(xs, dtype=np.int)
         Xs = np.array(Xs, dtype=np.int)
-
+        
         # reshape patts and quals to nXseq_len array, where n=number of patterns 
         # and seq_len is the longest pattern (shorter patterns / quals would be padded)
         seq_len = len(max(patts, key=len))
         patts = np.array(patts)
-        patts = patts.view('S1').reshape((-1, seq_len))
-        quals = np.array(quals).view(np.uint8).reshape((-1, seq_len))
+        patts = patts.view('U1').reshape((-1, seq_len))        
+        quals = np.array(quals).view(np.uint32).reshape((-1, seq_len))
 
         ids_df = pd.DataFrame({
             'read_id': ids,
@@ -222,7 +219,7 @@ def main(argv):
     conv_stats = defaultdict(int)
 
     all_columns = ['read_id', 'chrom', 'start', 'end', 'strand', 'umi1', 'umi2', 'insert_len', 'cg_pos', 'meth', 'qual', 'h', 'H', 'x', 'X']
-#    out_columns = all_columns[0:11]
+
     out_columns = all_columns
     reads_columns = ['read_id', 'chrom', 'start', 'end', 'strand', 'umi1', 'umi2', 'insert_len', 'h', 'H', 'x', 'X']
     
@@ -263,8 +260,9 @@ def main(argv):
 
             if args.sort_chunk:
                 cpgs.sort_values(by=['chrom', 'start', 'end', 'strand', 'umi1', 'umi2'], inplace=True)
-
             
+            # stats['reads_with_cg'] += cpgs['read_id'].nunique()
+
             # a bug in pandas writes to a file names '<stdout>'' instead of standard output, therefore the following ugly hack
             if (out_file == sys.stdout):
                 tcpgs_str = cpgs.to_csv(header=False, index=False, float_format='%.0f')            
@@ -284,7 +282,7 @@ def main(argv):
         stats['CpG'] = np.float64(conv_stats['Z']) / np.float64(conv_stats['Z'] + conv_stats['z'])
 
         stats_out.write(','.join(list(stats.keys())) + '\n')
-        stats_out.write(','.join(str(x) for x in list(stats.viewvalues())))        
+        stats_out.write(','.join(str(x) for x in list(stats.values())))        
 
     return 0
 

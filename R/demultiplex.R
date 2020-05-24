@@ -89,7 +89,7 @@ gpatterns.demultiplex_fastqs <- function(config,
     config <- list_split_fastq_files(config, fastq_files, run_per_file)
 
     if (nrow(config) == 0){
-        if (file.exists(step_file)) {
+        if (!is.null(step_file) && file.exists(step_file)) {
             file.remove(step_file)
         }
         logerror('No files were generated in demultiplexing. Please make sure that the indexes are correct.')

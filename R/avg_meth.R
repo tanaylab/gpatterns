@@ -669,7 +669,7 @@ gpatterns.spatial_meth_trend <- function(tracks,
             gvtrack.create('dist', intervals, 'distance')
             trend <- do.call(.gpatterns.get_global_meth_trend, list('dist', 
                                                       dist_breaks,
-                                                      tracks = tracks,                                                  
+                                                      tracks = tracks,               
                                                       intervals = iterator,
                                                       iterator = iterator,
                                                       min_cov = min_cov,

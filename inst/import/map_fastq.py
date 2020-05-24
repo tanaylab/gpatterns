@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 from __future__ import print_function
 import sys
 import argparse
@@ -10,6 +10,7 @@ import numpy
 import numpy.core.defchararray as npchar
 import pandas
 import pysam
+from functools import reduce
 from tqdm import tqdm
 
 import time
@@ -42,17 +43,18 @@ def main(argv):
     for ids1, seqs1, quals1 in r1:
         if (not r2 is None):
             try:
-                ids2, seqs2, quals2 = r2.next()
+                ids2, seqs2, quals2 = r2.__next__()
                 if (len(ids1) != len(ids2)):
                     raise StopIteration
             except StopIteration:
                 raise ValueError("FASTQs holding read1 and read2 are of unequal length")
-            
+
+
         ids = [ids1, ids2]
         seqs = [seqs1, seqs2]
         quals = [quals1, quals2]
 
-        mapping = extract_seqs(seqs, idx_regions, umi_regions, quals, args.min_qual, df_colname='barcode', keep_components=True)
+        mapping = extract_seqs(seqs, idx_regions, umi_regions, quals, args.min_qual, df_colname='barcode', keep_components=True)        
         mapping['idx'] = numpy.arange(len(mapping))
         mapping = mapping.merge(index, on='barcode', how='left').sort_values(by='idx')
         
@@ -86,7 +88,7 @@ class TargetWriter:
                 else:
                     proc = subprocess.Popen('%s/split_fastq.py -p %s_%s -s fastq -r %s ' % (os.path.dirname(os.path.realpath(__file__)), name, region.name, max_reads), shell=True, stdin=subprocess.PIPE)
                 self.procs.append(proc)
-                sub_targets.append(proc.stdin)
+                sub_targets.append(proc.stdin)                
             self.targets.append(sub_targets)
             
 
@@ -114,7 +116,7 @@ class TargetWriter:
 
         for i, qual in enumerate(quals):
             if (not qual is None):
-                quals[i] = qual.view('S1')
+                quals[i] = qual.view('U1')
 
         for target_idx, sub_targets in enumerate(self.targets):
             pid = os.fork()
@@ -125,23 +127,27 @@ class TargetWriter:
             mask = (mapping['target_idx'] == target_idx).values
             mapping = mapping[mask].drop(['idx', 'target_idx', 'barcode'], 1)
             for i, read in enumerate(self.reads):
-                if (read):
+                if (read):                     
                     ids[i] = ids[i][mask]
                     seqs[i] = seqs[i][mask,:]
                     quals[i] = quals[i][mask,:]             
             for region, target in zip(self.regions, sub_targets):
                 cut_ids = ids[region.read]
                 cut_seqs = extract_seqs(seqs, [region])
-                cut_quals = extract_seqs(quals, [region])
+                cut_quals = extract_seqs(quals, [region])                
                 if (mapping.shape[1]):
                     for id, seq, qual, named in zip(cut_ids, cut_seqs, cut_quals, mapping.itertuples(index=False)):
                         id = ['@', id]
                         for name, value in zip(named._fields, named):
                             id += [':', name, '=', value]
-                        target.writelines(id + ['\n', seq, '\n+\n', qual, '\n'])
+                        l = id + ['\n', seq, '\n+\n', qual, '\n']
+                        l = [x.encode() for x in l]                        
+                        target.writelines(l)
                 else:
-                    for id, seq, qual in zip(cut_ids, cut_seqs, cut_quals):                    
-                        target.writelines(['@', id , '\n', seq, '\n+\n', qual, '\n'])
+                    for id, seq, qual in zip(cut_ids, cut_seqs, cut_quals):    
+                        l = ['@', id , '\n', seq, '\n+\n', qual, '\n']      
+                        l = [x.encode() for x in l]
+                        target.writelines(l)
                 target.flush()
             sys.exit(0)                
 
@@ -222,9 +228,9 @@ def read_index(index_fn):
             continue
         
         if (mode == 'idx'):
-            idx_regions.append(Region(name, read, start, end))
-            index = numpy.array(index_tab[column]).astype('S')
-            if (index.dtype.itemsize != (end-start)):
+            idx_regions.append(Region(name, read, start, end))            
+            index = numpy.array(index_tab[column]).astype('U')            
+            if (len(index[1]) != (end-start)):
                 raise ValueError('Number of bases in index %s does not match its region' % column)
             index_cols.append(index)
 
@@ -252,7 +258,7 @@ def fastq_reader(filename, chunk_size, show_progress=True):
         seqs = []
         quals = []
 
-        for read in tqdm(fastq, unit = 'reads', unit_scale=True, disable=not show_progress):
+        for read in tqdm(fastq, unit = 'reads', unit_scale=True, disable=not show_progress):            
             ids.append(read.name)
             seqs.append(read.sequence)
             quals.append(read.quality)
@@ -262,9 +268,9 @@ def fastq_reader(filename, chunk_size, show_progress=True):
         if (not ids):
             break
 
-        ids = numpy.array(ids, dtype=numpy.object)
-        seqs = numpy.array(seqs)
-        seqs = seqs.view('S1').reshape((seqs.size, -1))
+        ids = numpy.array(ids, dtype=numpy.object)        
+        seqs = numpy.array(seqs)                
+        seqs = seqs.view('U1').reshape((seqs.size, -1))
         quals = numpy.array(quals)
         quals = quals.view(numpy.uint8).reshape((quals.size, -1))
 
@@ -296,7 +302,7 @@ def extract_seqs(seqs, idx_regions, umi_regions=[], quals=None, min_qual=0, df_c
             bases = numpy.copy(bases)
         index.append(bases)
         if (keep_components and name):
-            components[name] = bases.view('S%d'%(end-start)).ravel()
+            components[name] = bases.view('U%d'%(end-start)).ravel()
             
     if (keep_components):
         for region in umi_regions:
@@ -304,14 +310,14 @@ def extract_seqs(seqs, idx_regions, umi_regions=[], quals=None, min_qual=0, df_c
             read = region.read
             start = region.start
             end = region.end
-            components[name] = numpy.copy(seqs[read][:, start:end]).view('S%d'%(end-start)).ravel()
+            components[name] = numpy.copy(seqs[read][:, start:end]).view('U%d'%(end-start)).ravel()
 
     if ((not df_colname is None) or return_array):
         if (len(index) == 1):
             merged = index[0]
         else:
             merged = numpy.hstack(index)
-        merged = merged.view('S%d'%width).ravel()
+        merged = merged.view('U%d'%width).ravel()
         
     if (df_colname is None):
         return merged

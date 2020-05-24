@@ -1,9 +1,10 @@
-#!/usr/bin/env python2
-from __future__ import print_function
+#!/usr/bin/env python3
+
 import pysam
 import pandas as pd
 import numpy as np
 import re
+import numbers
 from collections import defaultdict
 
 ########################################################################
@@ -115,7 +116,7 @@ class Read:
         read_id = read_id.split(':')
         if umi1_idx is None:
             if infer_umi_field:
-                umi1 = filter(lambda x: re.search(r'^umi=', x), read_id)
+                umi1 = [x for x in read_id if re.search(r'^umi=', x)]
                 if len(umi1) == 0:
                     umi1 = '-'
                 else:
@@ -127,7 +128,7 @@ class Read:
 
         if umi2_idx is None:
             if infer_umi_field:
-                umi2 = filter(lambda x: re.search(r'^umi1=', x), read_id)
+                umi2 = [x for x in read_id if re.search(r'^umi1=', x)]
                 if len(umi2) == 0:
                     umi2 = '-'
                 else:
@@ -191,6 +192,11 @@ class Read:
             return 'unmapped'
 
         return 'bad_cigar'
+
+    def in_range(self, genomic_range):
+        start_in_range = isinstance(self.start, numbers.Number) and (genomic_range[0] <= self.start <= genomic_range[1])
+        end_in_range = isinstance(self.end, numbers.Number) and (genomic_range[0] <= self.end <= genomic_range[1])
+        return start_in_range or end_in_range
 
 ########################################################################
 def bam_iter(bam, 

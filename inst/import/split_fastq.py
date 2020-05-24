@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 import sys
 import os
 import argparse
@@ -22,7 +22,7 @@ def main(argv):
     saved_len = 0
     while True:
         # Read lines from input
-        lines = sys.stdin.readlines(CHUNK_SIZE)
+        lines = sys.stdin.buffer.readlines(CHUNK_SIZE)        
         
         # Release any zombies
         while (len(children) > 0):

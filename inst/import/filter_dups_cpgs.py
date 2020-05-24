@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 import argparse
 import sys
 # from tqdm import tqdm
@@ -13,7 +13,7 @@ PROG = 'filter_dups_cpgs.py'
 
 ########################################################################
 def hamming(str1, str2):
-    return sum(itertools.imap(str.__ne__, str1, str2))
+    return sum(map(str.__ne__, str1, str2))
 
 
 ########################################################################
@@ -174,8 +174,8 @@ def main(argv):
         else:
             p = sp.Popen(cmd_prefix + 'awk \'NR==1; NR > 1 {print $0 | "sort --field-separator=, -k' + str(
                 get_sort_fields(args.only_seq)) + ' -k1 -k9"}\'', stdin=in_file, stdout=sp.PIPE, shell=True,
-                         universal_newlines=True)
-            in_file_sorted = p.communicate()[0].decode(args.encoding).splitlines()
+                         universal_newlines=True, encoding=args.encoding)
+            in_file_sorted = p.communicate()[0].splitlines()
 
         first_read = True
         n_umis = 0
@@ -217,7 +217,7 @@ def main(argv):
              uniq_frac
              ]) + '\n')
 
-    print >> sys.stderr, 'Unique mols: %d/%d' % (stats['uniq_reads'], stats['total_reads'])
+    print('Unique mols: %d/%d' % (stats['uniq_reads'], stats['total_reads']), file=sys.stderr)
     return 0
 
 

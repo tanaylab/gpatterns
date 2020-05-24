@@ -48,7 +48,9 @@ gpatterns.import_from_tidy_cpgs <- function(tidy_cpgs,
                                             groot = GROOT,
                                             use_sge = FALSE,
                                             max_jobs = 400,
-                                            parallel = getOption('gpatterns.parallel')){
+                                            parallel = getOption('gpatterns.parallel'),
+                                            ...
+                                            ){    
     gsetroot(groot)    
     all_steps <- c('bind_tidy_cpgs', 'pileup')
     available_steps <- c(all_steps, "pat_freq")
@@ -361,8 +363,8 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
          @{chr_prefix_str} @{trim_str} @{single_end} @{cgs_mask} @{post_process_str} |
            gzip -c > @{output_fn}') %>%
                 gsub('\n', '', .) %>% gsub('  ', ' ', .)
-        }, .collate =  'cols', .to = 'cmd')
-                
+        }, .collate =  'cols', .to = 'cmd')   
+           
         .gpatterns.run_commands(commands, jobs_title = 'bam2tidy_cpgs', ...)
     } else {
         stats_fn <- qq('@{stats_dir}/all.stats')
@@ -410,6 +412,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
         output_fn <- qq('@{uniq_tidy_cpgs_dir}/@{gbins$chrom}_@{gbins$start}_@{gbins$end}.tcpgs.gz')
         qq('@{bin} -i @{input_fn} -o - -s @{stats_fn} @{single_end} @{use_seq} @{only_seq} @{sorted_str} | gzip -c > @{output_fn}')
         }, .collate =  'cols', .to = 'cmd')
+
     .gpatterns.run_commands(commands, jobs_title = 'filter_dups', ...)
 
 }
@@ -489,8 +492,8 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
 
 #' @export
 .gpatterns.pileup <- function(track, description, dsn = NULL, columns = c('meth', 'unmeth', 'cov', 'avg'), overwrite=TRUE, cov_filt_cmd = NULL, ...){
-    message('calculating pileup...')        
-    pileup <- gpatterns.apply_tidy_cpgs(track, function(x) gpatterns.tidy_cpgs_2_pileup(x, dsn=dsn), ...) %>% ungroup
+    message('calculating pileup...')         
+    pileup <- gpatterns.apply_tidy_cpgs(track, function(x) gpatterns.tidy_cpgs_2_pileup(x, dsn=dsn), ...) %>% ungroup()
 
     if (!is.null(cov_filt_cmd)){
         message(qq('filtering using the following rule: cov <= @{cov_filt_cmd}'))        

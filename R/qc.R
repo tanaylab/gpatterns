@@ -63,7 +63,7 @@ gpatterns.get_pipeline_stats <- function(track,
         stats <- stats %>% bind_cols(s$mapping_stats)
     }
 
-    stats <- stats %>% mutate(track = track) %>% select(track, everything())
+    stats <- stats %>% mutate(track = track) %>% select(track, everything()) %>% mutate(meth_call_per_read = meth_calls / total_reads)    
 
     return(stats)
 }
@@ -95,27 +95,32 @@ gpatterns.get_tcpgs_stats <- function(tidy_cpgs_stats_dir, uniq_tidy_cpgs_stats_
     stopifnot(dir.exists(tidy_cpgs_stats_dir))
     stopifnot(dir.exists(uniq_tidy_cpgs_stats_dir))
     
-    uniq_stats <- list.files(uniq_tidy_cpgs_stats_dir, full.names=T) %>%
+    uniq_stats <- list.files(uniq_tidy_cpgs_stats_dir, full.names=TRUE) %>%
         map_df(~ fread(.x)) %>%
-        summarise(total_reads = sum(total_reads), uniq_reads = sum(uniq_reads)) %>%
+        summarise(total_reads = sum(total_reads, na.rm=TRUE), uniq_reads = sum(uniq_reads, na.rm=TRUE)) %>%
         mutate(uniq_frac = uniq_reads / total_reads)
-    tidy_cpgs_stats <- list.files(tidy_cpgs_stats_dir, full.names=T) %>%
-        map_df(~ fread(.x) %>% mutate(CHH = mean(CHH))) %>%
+    tidy_cpgs_stats <- list.files(tidy_cpgs_stats_dir, full.names=TRUE) %>%
+        map_df(~ fread(.x)) %>% mutate(CHH = mean(CHH, na.rm=TRUE), CpG = mean(CpG, na.rm=TRUE)) %>%
         slice(1)
+
+    tidy_cpgs_stats <- tidy_cpgs_stats %>% select(-one_of("reads_with_cg"))
+    # if ("reads_with_cg" %in% colnames(tidy_cpgs_stats)) {
+    #     tidy_cpgs_stats$reads_with_cg <-  list.files(tidy_cpgs_stats_dir, full.names=TRUE) %>% map_df(~ fread(.x)) %>% pull(reads_with_cg) %>% sum(na.rm=TRUE)        
+    # }
     for (f in c('good', 'single_R1', 'single_R2', 'bad_cigar', 'no_conv', 'unmapped', 'discordant')){
         if (!(f %in% colnames(tidy_cpgs_stats))){
             tidy_cpgs_stats[[f]] <- 0
         }
-    }
+    }    
     
     stats <- tidy_cpgs_stats %>%
         mutate(total_reads = good + single_R1 + single_R2 + bad_cigar + no_conv + unmapped + discordant,
                   mapped_reads = good + single_R1 + single_R2,
                   mapped_frac = mapped_reads / total_reads)
     
-    stats <- bind_cols(stats, uniq_stats %>% rename(good_reads = total_reads)) %>%
-        select(one_of('total_reads', 'mapped_reads', 'mapped_frac', 'uniq_reads', 'uniq_frac', 'CHH', 'CHG', 'CpG'))
-
+    stats <- bind_cols(stats, uniq_stats %>% rename(reads_with_cg = total_reads, uniq_reads_with_cg = uniq_reads)) %>%
+        select(one_of('total_reads', 'mapped_reads', 'mapped_frac', 'reads_with_cg', 'uniq_reads_with_cg', 'uniq_frac', 'CHH', 'CHG', 'CpG')) 
+    
     return(list(stats=stats, mapping_stats=tidy_cpgs_stats))
 }
 
