@@ -1,3 +1,5 @@
 *.o
 *.so
 inst/import/reads.pyc
+*.bak
+__pycache__
