@@ -194,9 +194,14 @@ class Read:
         return 'bad_cigar'
 
     def in_range(self, genomic_range):
-        start_in_range = isinstance(self.start, numbers.Number) and (genomic_range[0] <= self.start <= genomic_range[1])
-        end_in_range = isinstance(self.end, numbers.Number) and (genomic_range[0] <= self.end <= genomic_range[1])
-        return start_in_range or end_in_range
+        if (isinstance(self.start, numbers.Number) and isinstance(self.end, numbers.Number)):
+            min_pos = min(self.start, self.end)
+        if (isinstance(self.start, numbers.Number) and not isinstance(self.end, numbers.Number)):
+            min_pos = self.start
+        if (not isinstance(self.start, numbers.Number) and isinstance(self.end, numbers.Number)):
+            min_pos = self.end
+
+        return (genomic_range[0] <= min_pos <= genomic_range[1])        
 
 ########################################################################
 def bam_iter(bam, 
