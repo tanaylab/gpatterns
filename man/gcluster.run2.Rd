@@ -17,11 +17,13 @@ gcluster.run2(
   collapse_results = FALSE,
   queue = NULL,
   memory = NULL,
+  mem_tot = NULL,
   threads = NULL,
   io_saturation = NULL,
   num_proc = NULL,
   queue_flag = "-q @{queue}",
   memory_flag = "-l mem_free=@{memory}G",
+  mem_tot_flag = "-l mem_total=@{mem_tot}G",
   threads_flag = "-pe threads @{threads}",
   io_saturation_flag = "-l io_saturation=@{io_saturation}",
   num_proc_flag = "-l num_proc=@{num_proc}",
@@ -52,6 +54,8 @@ by a serial number}
 if not possible - would return the usual list.}
 
 \item{memory}{memory requirments (would be called using \code{memory_flag})}
+
+\item{mem_tot}{memory requirments for the machine (non-consumable)}
 
 \item{threads}{threads requirments (would be called using \code{threads_flag})}
 

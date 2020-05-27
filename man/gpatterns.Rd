@@ -4,6 +4,3 @@
 \name{gpatterns}
 \alias{gpatterns}
 \title{gpatterns.}
-\description{
-gpatterns.
-}

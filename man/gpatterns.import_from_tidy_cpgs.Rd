@@ -19,7 +19,8 @@ gpatterns.import_from_tidy_cpgs(
   groot = GROOT,
   use_sge = FALSE,
   max_jobs = 400,
-  parallel = getOption("gpatterns.parallel")
+  parallel = getOption("gpatterns.parallel"),
+  ...
 )
 }
 \arguments{
