@@ -49,7 +49,7 @@ gpatterns.chip2peaks <- function(chip_tracks,
     }
 
 
-    return(tbl_df(peaks))
+    return(as_tibble(peaks))
 }
 
 #' Plot chip-seq singal with quantile lines

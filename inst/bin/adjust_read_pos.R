@@ -38,7 +38,7 @@ if (opt$output == '-'){
 }
  
 misha::gsetroot(opt$groot)
-calls <- dplyr::tbl_df(gpatterns::fread(opt$input, header=TRUE, showProgress = FALSE, verbose=FALSE))
+calls <- dplyr::as_tibble(gpatterns::fread(opt$input, header=TRUE, showProgress = FALSE, verbose=FALSE))
 if (nrow(calls) == 0){
     res <- calls
 } else {

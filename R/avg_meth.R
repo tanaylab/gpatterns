@@ -218,7 +218,7 @@ gpatterns.get_avg_meth <- function(
 
     return(avgs %>%
                select(chrom, start, end, intervalID, samp, meth, unmeth, avg, cov, track) %>%
-               as.tibble())
+               as_tibble())
 
 }
 
@@ -264,10 +264,10 @@ gpatterns.get_avg_meth <- function(
         cov_expr <- qqv('@{vtracks_cov}')
     }    
 
-    avgs <- gextract(expr, intervals=intervals, iterator=iterator, colnames=names, file=file, intervals.set.out = intervals.set.out) %>% as.tibble()
+    avgs <- gextract(expr, intervals=intervals, iterator=iterator, colnames=names, file=file, intervals.set.out = intervals.set.out) %>% as_tibble()
     
     if (mask_by_cov){
-        covs <- gextract(cov_expr, intervals=intervals, iterator=iterator, colnames=names) %>% as.tibble()
+        covs <- gextract(cov_expr, intervals=intervals, iterator=iterator, colnames=names) %>% as_tibble()
         for (x in names){
             avgs[[x]] <- ifelse(covs[[x]] < min_cov | is.na(covs[[x]]), NA, avgs[[x]])
         }        
@@ -279,7 +279,7 @@ gpatterns.get_avg_meth <- function(
     }
 
     if (sum_tracks){
-        return(avgs %>% tbl_df)
+        return(avgs %>% as_tibble)
     }
 
     if (!is.null(min_var) || !is.null(var_quantile)) {
@@ -304,7 +304,7 @@ gpatterns.get_avg_meth <- function(
         gintervals.rm(intervals, force = TRUE)
     }
 
-    return(avgs %>% tbl_df)
+    return(avgs %>% as_tibble)
 }
 
 #' screen intervals by coverage in multiple tracks
@@ -387,7 +387,7 @@ gpatterns.filter_cpgs <- function(intervals,
 gpatterns.count_cpgs <- function(intervals,
                                   cgs_track = .gpatterns.genome_cpgs_track) {
     gvtrack.create("cpg_count", cgs_track, func = "sum")
-    cgs <- gextract.left_join('cpg_count', intervals=intervals, iterator=intervals, colnames=('cpg_num')) %>% select(one_of(c(colnames(intervals), 'cpg_num'))) %>% tbl_df
+    cgs <- gextract.left_join('cpg_count', intervals=intervals, iterator=intervals, colnames=('cpg_num')) %>% select(one_of(c(colnames(intervals), 'cpg_num'))) %>% as_tibble
     gvtrack.rm("cpg_count")
     return(cgs)
 }
@@ -509,7 +509,7 @@ gpatterns.intervals_coverage <- function(tracks,
 
     covs <- covs %>% filter(sum > 0)
 
-    return(covs %>% tbl_df)
+    return(covs %>% as_tibble)
 }
 
 .gpatterns.filter_coverage <- function(avgs,
@@ -568,12 +568,12 @@ gpatterns.intervals_coverage <- function(tracks,
         gm <- gbins.summary(..., .gpatterns.meth_track_name(track), iterator=iterator, intervals=intervs, include.lowest=include.lowest)
         gm <- plyr::adply(gm, 1:length(dim(gm)))
         colnames(gm) <- c(paste0('breaks', 1:nstrat_tracks), 'stat', 'val')
-        gm <- gm %>% spread('stat', 'val', -1:nstrat_tracks) %>% mutate(meth = Sum, cg_num=`Total intervals` - `NaN intervals`) %>% select(one_of(c(paste0('breaks', 1:nstrat_tracks), 'meth', 'cg_num'))) %>% tbl_df
+        gm <- gm %>% spread('stat', 'val', -1:nstrat_tracks) %>% mutate(meth = Sum, cg_num=`Total intervals` - `NaN intervals`) %>% select(one_of(c(paste0('breaks', 1:nstrat_tracks), 'meth', 'cg_num'))) %>% as_tibble
         
-        gum <- gbins.summary(..., .gpatterns.unmeth_track_name(track), iterator=iterator, intervals=intervs, include.lowest=include.lowest) #%>% tbl_df
+        gum <- gbins.summary(..., .gpatterns.unmeth_track_name(track), iterator=iterator, intervals=intervs, include.lowest=include.lowest) #%>% as_tibble
         gum <- plyr::adply(gum, 1:length(dim(gum)))
         colnames(gum) <- c(paste0('breaks', 1:nstrat_tracks), 'stat', 'val')
-        gum <- gum %>% spread('stat', 'val', -1:nstrat_tracks) %>% mutate(unmeth = Sum, cg_num=`Total intervals` - `NaN intervals`) %>% select(one_of(c(paste0('breaks', 1:nstrat_tracks), 'unmeth', 'cg_num'))) %>% tbl_df
+        gum <- gum %>% spread('stat', 'val', -1:nstrat_tracks) %>% mutate(unmeth = Sum, cg_num=`Total intervals` - `NaN intervals`) %>% select(one_of(c(paste0('breaks', 1:nstrat_tracks), 'unmeth', 'cg_num'))) %>% as_tibble
 
         if (nstrat_tracks == 1){            
             res <- tibble(samp = name,
@@ -595,7 +595,7 @@ gpatterns.intervals_coverage <- function(tracks,
         trend <- trend %>% filter(cg_num >= min_cgs)
     }
 
-    return(trend %>% tbl_df())
+    return(trend %>% as_tibble())
 }
 
 
@@ -940,7 +940,7 @@ gpatterns.get_meth_quantile <- function(tracks,
                                         width=800,
                                         height=600){
     names <- names %||% tracks
-    res <- paste0(tracks, '.avg') %>% plyr::adply(1, function(x) gquantiles(x, intervals=intervals, iterator=iterator, percentiles=percentiles), .parallel=parallel) %>% tbl_df %>% mutate(sample = names) %>% select(-X1) %>% gather('quant', 'avg', 1:length(percentiles))
+    res <- paste0(tracks, '.avg') %>% plyr::adply(1, function(x) gquantiles(x, intervals=intervals, iterator=iterator, percentiles=percentiles), .parallel=parallel) %>% as_tibble %>% mutate(sample = names) %>% select(-X1) %>% gather('quant', 'avg', 1:length(percentiles))
     return(res)
 }
 

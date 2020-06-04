@@ -12,8 +12,8 @@
 #' @export
 #'
 gpatterns.impute <- function(avgs, k_reg=3, min_locus_cov=NULL, tidy=TRUE){
-    meth_tab <- reshape2::dcast(avgs, chrom + start + end  ~ samp, value.var='meth', fill=0) %>% as.tibble()
-    cov_tab <- reshape2::dcast(avgs, chrom + start + end  ~ samp, value.var='cov', fill=0) %>% as.tibble()
+    meth_tab <- reshape2::dcast(avgs, chrom + start + end  ~ samp, value.var='meth', fill=0) %>% as_tibble()
+    cov_tab <- reshape2::dcast(avgs, chrom + start + end  ~ samp, value.var='cov', fill=0) %>% as_tibble()
 
     if (!is.null(min_locus_cov)){
         message(glue('taking only that are covered >= {min_locus_cov}'))
@@ -145,7 +145,7 @@ gpatterns.get_bg_meth <- function(intervals, tracks=NULL, trend=NULL, cg_cont_tr
 
     intervs <- intervals %>% distinct(chrom, start, end)
   
-    covs <- gextract.left_join1(c(paste0(tracks, '.cov'), cg_cont_track), intervals=intervs, iterator=.gpatterns.genome_cpgs_intervals, colnames=c(tracks, 'cg_cont')) %>% as.tibble()   
+    covs <- gextract.left_join1(c(paste0(tracks, '.cov'), cg_cont_track), intervals=intervs, iterator=.gpatterns.genome_cpgs_intervals, colnames=c(tracks, 'cg_cont')) %>% as_tibble()   
 
     exp_avgs <- covs %>%
         mutate(breaks = cut(cg_cont, breaks=cg_cont_breaks, include.lowest=TRUE),
@@ -204,7 +204,7 @@ gpatterns.cluster <- function(avgs, min_locus_cov = 5, k_reg=3, center_sd_thresh
     met_reg_f <- met_reg_f$avgs
 
     message('Clustering...')
-    met_diff <- met_reg_f %>% reshape2::dcast(chrom + start + end ~ samp, value.var = diff_col, fill=0) %>% as.tibble()
+    met_diff <- met_reg_f %>% reshape2::dcast(chrom + start + end ~ samp, value.var = diff_col, fill=0) %>% as_tibble()
 
     met_mat <- met_diff[, -1:-3]    
     bt <- bootclust(met_mat, N_boot=N_boot, boot_ratio=boot_ratio, id_column=FALSE, seed=seed)
@@ -285,7 +285,7 @@ gpatterns.cutree <- function(avgs, k, min_coclust=0.5, reg_by_cluster = TRUE, k_
 gpatterns.plot_clustering <- function(clust, fig_fn=NULL, width=7, height=14, device='pdf', samp_ord=NULL, top_annotation=NULL, bottom_annotation=NULL, annotation_colors=NULL, show_gene_names=FALSE, points=NULL, col=circlize::colorRamp2(c(-1,-0.25, 0, 0.25, 1), c("black", "#00688B", "white", "#FF413D", "yellow")), cluster_rows = TRUE, cluster_columns=TRUE, show_column_names=FALSE, show_row_dend = FALSE, use_raster=FALSE, row_names_gp = gpar(fontsize = 4), column_order=NULL, draw_hm=TRUE, split_by_cluster=TRUE, ...){
 
     if (tibble::has_name(clust, 'avgs_reg')){
-        met_diff <- clust[['avgs_reg']] %>% reshape2::dcast(chrom + start + end + clust ~ samp, value.var = 'norm_diff_reg', fill=0) %>% as.tibble()
+        met_diff <- clust[['avgs_reg']] %>% reshape2::dcast(chrom + start + end + clust ~ samp, value.var = 'norm_diff_reg', fill=0) %>% as_tibble()
     } else {
         met_diff <- clust[['met_diff']]
     }

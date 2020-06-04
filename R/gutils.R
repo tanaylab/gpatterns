@@ -31,7 +31,7 @@ gintervals.neighbors1 <- function(intervals1 = NULL,
         ) %>%
         tibble::repair_names()
 
-    return(res %>% tbl_df)
+    return(res %>% as_tibble)
 }
 
 
@@ -134,7 +134,7 @@ gintervals.center <- function(intervals1, intervals2, max_dist=0, size=NULL){
         filter(abs(dist) <= max_dist) %>% 
         select(chrom=chrom1, start=start1, end=end1, chrom_orig=chrom, start_orig=start, end_orig=end)
     if (!is.null(size)){
-        res <- res %>% gintervals.normalize(size) %>% tbl_df
+        res <- res %>% gintervals.normalize(size) %>% as_tibble
     }
     return(res)    
 }
@@ -267,7 +267,7 @@ glply <- function(f, expr, intervals = NULL, iterator = NULL, colnames = NULL, n
 #' @rdname glply
 #' @export
 gdply <- function(...){
-    res <- glply(...) %>% map_df(~ .x) %>% tbl_df
+    res <- glply(...) %>% map_df(~ .x) %>% as_tibble
     return(res)
 }
 

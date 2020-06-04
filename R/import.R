@@ -376,7 +376,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
             gsub('\n', '', .) %>% gsub('  ', ' ', .)
            
         system(cmd)
-        tcpgs <- fread(qq('gzip -d -c @{output_fn}'), colClasses=.gpatterns.tcpgs_colClasses(uniq=FALSE)) %>% tbl_df
+        tcpgs <- fread(qq('gzip -d -c @{output_fn}'), colClasses=.gpatterns.tcpgs_colClasses(uniq=FALSE)) %>% as_tibble
         .gpatterns.tidy_cpgs_to_files(tcpgs, genomic_bins, outdir=tidy_cpgs_dir)
     }
 
@@ -572,7 +572,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
 
 #' @export
 .gpatterns.import_intervs_table <- function(track_pref, description, tab, columns = NULL, overwrite = FALSE){
-    tab <- tbl_df(tab)
+    tab <- as_tibble(tab)
     tracks_dir <- .gpatterns.base_dir(track_pref)
     if (!dir.exists(tracks_dir)){
         system(qq('mkdir -p @{tracks_dir}'))
@@ -945,7 +945,7 @@ gpatterns.merge_tracks <- function(tracks, new_track, description, intervals=gin
     }
 
     if (all(.gpatterns.patterns_exist(tracks))){
-         pat_space <- reduce(.gpatterns.pat_space_intervs_name(tracks), function(x, y) gintervals.load(x) %>% full_join(gintervals.load(y), by=c('chrom', 'start', 'end', 'fid'))) %>% tbl_df
+         pat_space <- reduce(.gpatterns.pat_space_intervs_name(tracks), function(x, y) gintervals.load(x) %>% full_join(gintervals.load(y), by=c('chrom', 'start', 'end', 'fid'))) %>% as_tibble
          gpatterns.create_patterns_track(new_track, description, pat_space=pat_space, ...)
     }
 

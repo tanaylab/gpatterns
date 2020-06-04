@@ -40,7 +40,7 @@ gpatterns.get_tidy_cpgs <- function(track,
                     cg_pos = 'numeric',
                     meth = 'character',
                     qual = 'numeric')) %>%
-                    tbl_df %>%
+                    as_tibble %>%
                     mutate(cg_pos = cg_pos, meth = ifelse(meth == 'Z', 1, 0)))
         if (0 == nrow(res)){
             return(NULL)
@@ -255,7 +255,7 @@ gpatterns.tidy_cpgs_to_pats <- function(track,
 
         pats <- pats %>%
             reshape2::dcast(read_id + fid ~ pat_pos, value.var='meth', fill='*') %>%
-            tbl_df
+            as_tibble
         for (i in paste(1:max_pat_len)){
             if(!(i %in% colnames(pats))){
                 pats[[i]] <- '*'
@@ -459,7 +459,7 @@ gpatterns.intervs_to_pat_space <- function(tracks,
                                            parallel=getOption('gpatterns.parallel'),
                                            verbose = FALSE){
     if (class(intervals) == 'character'){
-            intervals <- gintervals.load(intervals) %>% tbl_df
+            intervals <- gintervals.load(intervals) %>% as_tibble
     }
     if (expand_intervals){
         exp_intervs <- intervals %>%
@@ -736,7 +736,7 @@ gpatterns.tidy_cpgs_2_pileup <- function(calls, dsn = NULL){
                               slice = NULL,
                               intervals = intervals) %>%
         select(-intervalID) %>%
-        tbl_df %>%
+        as_tibble %>%
         gintervals.neighbors1(.gpatterns.genome_next_cpg_intervals) %>%
         select(-(chrom1:end1), dist) %>%
         mutate(dist  = abs(nextcg - start))
@@ -847,7 +847,7 @@ gpatterns.plot_cg_cor <- function(tracks,
         mutate(dist_numeric = as.numeric(as.character(dist_numeric))) %>%
         left_join(tibble(track=tracks, samp=names), by='track') %>%
         select(samp, dist, dist_numeric, cr) %>%
-        tbl_df
+        as_tibble
 
     if (length(tracks) == 1){
         p <- cors %>% ggplot(aes(x=dist_numeric, y=cr, group=1)) + geom_line() + xlab(xlab) + ylab(ylab)
@@ -945,7 +945,7 @@ gpatterns.extract_patterns <- function(track, fids = NULL, tidy = TRUE, dsn = NU
         warning('no patterns in fid')
     }
     if (tidy){
-        return(patterns_tab %>% tbl_df)
+        return(patterns_tab %>% as_tibble)
     }
 
     patterns_tab <- patterns_tab %>%
@@ -1161,7 +1161,7 @@ gpatterns.extract <- function(...,
 .gpatterns.load_table <- function(saved_name, file)
 {
     load(file)
-    return(get(saved_name) %>% tbl_df())
+    return(get(saved_name) %>% as_tibble())
 }
 
 

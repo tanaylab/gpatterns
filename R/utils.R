@@ -179,7 +179,7 @@ gpatterns.set_parallel <- function(thread_num) {
             map_df(function(f) fread(
                 qq("gzip -d -c @{f} | cut -d',' -f1-@{length(classes)}"),
                 colClasses = classes) %>%
-                    tbl_df() %>%
+                    as_tibble() %>%
                     mutate(cg_pos = cg_pos, meth = ifelse(meth == 'Z', 1, 0)))
         if (0 == nrow(res)){
             return(NULL)
@@ -456,7 +456,7 @@ do.call_vec <- function(func, args_vec){
 #     func_args <- names(args_vec)[names(args_vec) %in% func_args]    
 #     args_vec <-  modify_if(args_vec, ~ is.tibble(.x) && nrow(.x) == 1, ~ .x[[1]])    
 #     args_vec <-  modify_if(args_vec, ~ is.character(.x) && length(.x) == 1, ~ sprintf('"%s"', .x))    
-#     args_vec <-  modify_if(args_vec, ~ length(.x) > 1, ~ as.character(as.tibble(.x)))          
+#     args_vec <-  modify_if(args_vec, ~ length(.x) > 1, ~ as.character(as_tibble(.x)))          
 #     sprintf("%s(%s%s)", func_name, extra_args, map2_chr(names(args_vec[func_args]), args_vec[func_args], ~ glue('{.x} = {.y}')) %>% paste(collapse=', ') )
 # }
 

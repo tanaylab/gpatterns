@@ -106,12 +106,12 @@ yaml2cfg <- function(conf){
 					  ~ .x %>% 
 					  	keep(~ !is.null(.x)) %>% 					  	
 					  	modify_at(list_columns, ~ list(.x)) %>%
-					  	as.tibble() %>%
+					  	as_tibble() %>%
 					  	mutate(experiment=.y))
 
 	# get indexes
 	exp_cfg <- exp_cfg %>% mutate(config = map(config_file, ~ { 
-			df <- fread(.x) %>% as.tibble() %>% mutate_if(is.numeric, as.character)
+			df <- fread(.x) %>% as_tibble() %>% mutate_if(is.numeric, as.character)
 			if (!has_name(df, 'lib') && has_name(df, 'sample')){
 				df <- df %>% unite('lib', contains('sample'), remove=FALSE)
 			}

@@ -78,7 +78,7 @@ gpatterns.track_stats <- function(track, ...){
     }
     stats_fn <- .gpatterns.stats_file_name(track)
     if (file.exists(stats_fn)){
-        return(fread(stats_fn) %>% as.tibble())
+        return(fread(stats_fn) %>% as_tibble())
     } else {
         stats <- gpatterns.get_pipeline_stats(track, ...)
         write_tsv(stats, stats_fn)
@@ -145,7 +145,7 @@ gpatterns.capture_stats <- function(track,
         reads <- .gpatterns.bam2reads(bams=bam)                
     } else {
         if (is.character(reads)){
-            reads <- fread(reads) %>% as.tibble()
+            reads <- fread(reads) %>% as_tibble()
         }
     }
 
@@ -183,8 +183,8 @@ gpatterns.capture_stats <- function(track,
     conv_stats <- f_reads %>% summarise(h = sum(h), H = sum(H), x = sum(x), X = sum(X)) %>% mutate(CHH = H / (H + h), CHG = X / (x + X)) %>% select(CHH, CHG)
 
     message('identifying \'on target\' reads...')
-    on_tar_reads <- .gpatterns.filter_ontar_reads(reads, regions, max_distance=max_distance) %>% as.tibble() 
-    ontar_poss <- .gpatterns.filter_ontar_reads(reads, regions, max_distance=max_distance, return_orig=FALSE) %>% as.tibble() 
+    on_tar_reads <- .gpatterns.filter_ontar_reads(reads, regions, max_distance=max_distance) %>% as_tibble() 
+    ontar_poss <- .gpatterns.filter_ontar_reads(reads, regions, max_distance=max_distance, return_orig=FALSE) %>% as_tibble() 
     regsion_not_present <- sum(regions %>% gintervals.neighbors1(ontar_poss) %>% pull(dist) %>% abs(.) >= max_distance)
 
     if (!is.null(dsn) && !sample_raw && sample_ontar){    

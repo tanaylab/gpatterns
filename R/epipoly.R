@@ -273,7 +273,7 @@ gpatterns.calc_bipolarity <- function(track,
 
 
     res <- res %>% mutate(qval = p.adjust(pval)) %>%
-        tbl_df()
+        as_tibble()
 
     if (save_tab){
         .gpatterns.save_bipolar_stats(track, res, overwrite = overwrite)
@@ -335,7 +335,7 @@ gpatterns.calc_bipolarity <- function(track,
                                   loss.uni = 'numeric',
                                   uni.mix2 = 'numeric')) %>%
             rename(fid = frag_id) %>%
-            tbl_df %>%
+            as_tibble %>%
             .gpatterns.arrange_biploar_model_output()
 
 
@@ -395,7 +395,7 @@ gpatterns.calc_bipolarity <- function(track,
         saved_name=.gpatterns.fids_tab_name(track),
         file=.gpatterns.fids_file_name(track)
     ) %>%
-        tbl_df()
+        as_tibble()
 
     bipolar_tab <- fids_tab %>%
         select(chrom, start, end, fid) %>%
@@ -711,7 +711,7 @@ gpatterns.theta_matrix_sampling <- function(tracks, samples=NULL, parallel=FALSE
           .[,-1] %>% 
           as.matrix() %>% 
           cor(use=use, method=method) %>% reshape2::melt() %>% rename(samp1=Var1, samp2=Var2, corr=value) %>%
-          tbl_df
+          as_tibble
         theta <- theta %>% left_join(theta_cor)
     }
 
@@ -719,7 +719,7 @@ gpatterns.theta_matrix_sampling <- function(tracks, samples=NULL, parallel=FALSE
         theta <- theta %>% filter(samp1 != samp2)
     }
 
-    return(tbl_df(theta))
+    return(as_tibble(theta))
 }
 
 # c(rep('white', 5), '#ffffd4','#fed98e','#fe9929','#d95f0e','#993404', 'black')
