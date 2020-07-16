@@ -61,8 +61,11 @@ gpatterns.demultiplex_fastqs <- function(config,
         }
     }
 
-    
-    indexes_config <- config %>% distinct(!!!rlang::syms(c("cell_id", "row", "plate_pos", "column", indexes)))
+    distinct_vars <- intersect(c("cell_id", "row", "plate_pos", "column", indexes), colnames(config))
+    indexes_config <- config
+    if (length(distinct_vars) > 0){
+        indexes_config <- indexes_config %>% distinct(!!!rlang::syms(distinct_vars))
+    }     
 
     fastq_files_pre <-  config %>% distinct(illumina_index, .keep_all=TRUE) %>% select(one_of('illumina_index', 'workdir', 'raw_reads_dir', 'split_dir', 'indexes_file')) %>% mutate(raw_reads_dir = glue(raw_reads_dir[1]), split_dir = glue(split_dir[1]))
     

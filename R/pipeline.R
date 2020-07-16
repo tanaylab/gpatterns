@@ -12,7 +12,7 @@ gpatterns.pipeline <- function(config_file, log_file=NULL, config_dir=NULL, run_
 	yaml <- yaml::yaml.load_file(config_file)
 
 	exp_cfg <- yaml2cfg(yaml)	
-	by_vars <- intersect(names(exp_cfg %>% unnest(config, names_repair = tidyr_legacy)), names(exp_cfg %>% select(-config)))
+	by_vars <- intersect(names(exp_cfg %>% unnest(config, names_repair = tidyr_legacy)), names(exp_cfg %>% select(-config, -pipeline_steps)))
     by_vars <- by_vars[!map_lgl(by_vars, ~ is.list(exp_cfg[[.x]]))]
 	
 	all_cfg <- exp_cfg %>% 
