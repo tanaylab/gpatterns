@@ -241,7 +241,7 @@ gpatterns.import_from_bam <- function(bams,
         parallel = parallel,
         cmd_prefix = cmd_prefix)
 
-    tidy_cpgs_steps <- c('bind_tidy_cpgs', 'pileup', 'pat_cov')
+    tidy_cpgs_steps <- c('bind_tidy_cpgs', 'pileup', 'pat_cov', 'pat_freq')
 
     tidy_cpgs_dirs <- if (import_raw_tcpgs || !('filter_dups' %in% steps)) qq('@{workdir}/tidy_cpgs') else qq('@{workdir}/tidy_cpgs_uniq')
 
