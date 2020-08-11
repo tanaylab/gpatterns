@@ -881,6 +881,15 @@ gpatterns.adjust_read_pos <- function(calls, frag_intervs, maxdist=0, rm_off_tar
     return(calls)
 }
 
+psum <- function (..., na.rm = FALSE)
+{
+    dat <- do.call(cbind, list(...))
+    res <- rowSums(dat, na.rm = na.rm)
+    idx_na <- !rowSums(!is.na(dat))
+    res[idx_na] <- NA
+    return(res)
+}
+
 #' Merge tracks
 #'
 #' @description Creates a track called \code{new_track} that is the sum of the methylation calls in \code{tracks}.
@@ -919,7 +928,7 @@ gpatterns.merge_tracks <- function(tracks, new_track, description, intervals=gin
         if (!all(gtrack.exists(qqv('@{tracks}.@{suffix}')))){
             stop('not all tracks exist')
         }
-        expr <- sprintf("sum(%s, na.rm=T)", paste(qqv('@{tracks}.@{suffix}'), collapse=', '))
+        expr <- sprintf("psum(%s, na.rm=T)", paste(qqv('@{tracks}.@{suffix}'), collapse=', '))
         if (!gtrack.exists(qq('@{new_track}.@{suffix}'))){
             gtrack.create(qq('@{new_track}.@{suffix}'), description, expr, iterator=iterator)
         }
