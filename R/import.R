@@ -725,10 +725,10 @@ gpatterns.create_downsampled_track <- function(track,
     patterns_tab <- patterns_tab %>% gpatterns.downsample_patterns(dsn)
 
 
-    track_ds <- gpatterns.downsampled_track_name(track, dsn)
+    track_ds <- .gpatterns.downsampled_track_name(track, dsn)
 
     # Create base dir for tracks
-    if (!dir.exists(.gpatterns.base_dir(track))){
+    if (!dir.exists(.gpatterns.base_dir(track_ds))){
         dir.create(.gpatterns.base_dir(track_ds), showWarnings=FALSE, recursive=TRUE)
     }
 
@@ -920,7 +920,7 @@ gpatterns.merge_tracks <- function(tracks, new_track, description, intervals=gin
         expr <- paste(qqv('!is.na(@{tracks}.cov)'), collapse=' | ')
         iterator <- gscreen(expr, intervals=intervals, iterator=.gpatterns.genome_cpgs_intervals)
     }
-
+    
     gdir.create(gsub('\\.', '/', new_track), showWarnings=FALSE)
 
     for (suffix in c('cov', 'meth', 'unmeth')){

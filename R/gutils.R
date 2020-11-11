@@ -237,7 +237,8 @@ glply <- function(f, expr, intervals = NULL, iterator = NULL, colnames = NULL, n
         if (verbose){
             message(qq('starting chunk @{chunk_num}'))
         }
-        suppressMessages(capture.output(ext <- gfunc(expr, intervals=intervs, iterator=iterator, colnames=colnames)))
+        ext <- gfunc(expr, intervals=intervs, iterator=iterator, colnames=colnames)
+        # suppressMessages(capture.output(ext <- gfunc(expr, intervals=intervs, iterator=iterator, colnames=colnames)))
         if (verbose){
             message(qq('finished extracting chunk @{chunk_num}'))
         }
@@ -254,7 +255,7 @@ glply <- function(f, expr, intervals = NULL, iterator = NULL, colnames = NULL, n
 
     res <- intervals %>%
         mutate(chunk = ntile(chrom, nchunks)) %>%
-        plyr::dlply(.(chunk), function(y)
+        plyr::dlply("chunk", function(y)
             run_chunk(y %>% select(-chunk), y$chunk[1]),
             .parallel = parallel,
             .progress = 'text')

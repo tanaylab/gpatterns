@@ -468,7 +468,7 @@ gpatterns.intervs_to_pat_space <- function(tracks,
     } else {
         exp_intervs <- intervals
     }
-
+    
     if (adjacent){
         cov_tracks <- .gpatterns.pat_cov_track_name(tracks, pat_len)
         cov_tracks_exist <- gtrack.exists(cov_tracks)
