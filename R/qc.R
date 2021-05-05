@@ -81,7 +81,7 @@ gpatterns.track_stats <- function(track, ...){
         return(fread(stats_fn) %>% as_tibble())
     } else {
         stats <- gpatterns.get_pipeline_stats(track, ...)
-        write_tsv(stats, stats_fn)
+        tgutil::fwrite(stats, stats_fn, sep="\t")
     }
     return(stats)
 }

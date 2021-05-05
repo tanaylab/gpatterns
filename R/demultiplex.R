@@ -84,7 +84,7 @@ gpatterns.demultiplex_fastqs <- function(config,
     if (!("index2" %in% indexes)) {
         idx2_pos <- NULL
     }
-
+    
     if (run_commands){
         res <- run_demultiplexing_commands(run_per_file, fastq_files, workdir, config, use_sge, log_prefix, idx1_pos, idx2_pos, umi1_pos, umi2_pos, read1_pos, read2_pos, hamming, reads_per_file, ...)
     }    
@@ -313,7 +313,7 @@ conf2index <- function(conf, out_fn, targets_pref='', idx1_pos = c(1,8), idx2_po
     }    
     
     loginfo('writing to %s', out_fn)  
-    write_tsv(conf, out_fn)        
+    tgutil::fwrite(conf, out_fn, sep="\t")
 }
 
 

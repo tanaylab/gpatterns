@@ -350,7 +350,7 @@ gpwm.get_global_quantiles <- function(pattern, size, quantiles=c(0.9,
                                                             size = col_integer()))
     } else {
         res <- gpwm.max_val_quantile_all(pattern, size, quantiles, ...)
-        write_csv(res, global_quantiles_fn)
+        tgutil::fwrite(res, global_quantiles_fn)
     }
     return(res)
 }
