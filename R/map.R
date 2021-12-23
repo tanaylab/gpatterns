@@ -37,7 +37,9 @@ gpatterns.map <- function(config, workdir=NULL, out_bam='{workdir}/{illumina_ind
         config <- config %>% mutate(run_map = !file.exists(out_bam))
         cmds <- cmds[which(!file.exists(config$out_bam))]
         loginfo(sprintf('skipping %d files that already exist. set overwrite to TRUE to override', nrow(config) - length(cmds)))
-    }    
+    } else {
+        config <- config %>% mutate(run_map = TRUE)
+    }
 
     if (run_commands && length(cmds) > 0){
         loginfo('running %s commands', comify(length(cmds)))

@@ -376,7 +376,7 @@ gpatterns.separate_strands <- function(track, description, out_track=NULL, inter
             gsub('\n', '', .) %>% gsub('  ', ' ', .)
            
         system(cmd)
-        tcpgs <- fread(qq('gzip -d -c @{output_fn}'), colClasses=.gpatterns.tcpgs_colClasses(uniq=FALSE)) %>% as_tibble
+        tcpgs <- fread(qq('gzip -d -c @{output_fn}'), colClasses=.gpatterns.tcpgs_colClasses(uniq=FALSE)) %>% as_tibble()
         .gpatterns.tidy_cpgs_to_files(tcpgs, genomic_bins, outdir=tidy_cpgs_dir)
     }
 

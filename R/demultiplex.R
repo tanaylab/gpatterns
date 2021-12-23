@@ -324,7 +324,7 @@ conf2index <- function(conf, out_fn, targets_pref='', idx1_pos = c(1,8), idx2_po
     } else {
         df <- df %>% select_(column)
     }
-    df %>% distinct_(column, .keep_all=TRUE) %>% mutate_(.dots = setNames(list(lazyeval::interp(~ as.character(a), a = as.name(column))), column)) %>% separate_(column, as.character(1:barcode_len), 1:(barcode_len-1), remove=F) %>% gather_('pos', 'char', paste(1:barcode_len)) %>% arrange_(column)
+    df %>% distinct_(column, .keep_all=TRUE) %>% mutate_(.dots = setNames(list(lazyeval::interp(~ as.character(a), a = as.name(column))), column)) %>% separate_(column, as.character(1:barcode_len), 1:(barcode_len-1), remove=F) %>% gather_('pos', 'char', paste(1:barcode_len)) %>% arrange(!!column)
 }
 
 .unite_by_char <- function(df, column, new_column=NULL){

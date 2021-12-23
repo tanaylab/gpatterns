@@ -119,20 +119,20 @@ def bam_reader(bam,
         if not chroms:
             break
 
-        ids = np.array(ids, dtype=np.str)
-        chroms = np.array(chroms, dtype=np.str)
-        starts = np.array(starts, dtype=np.int)
-        ends = np.array(ends, dtype=np.str)
-        strands = np.array(strands, dtype=np.str)
-        umis1 = np.array(umis1, dtype=np.str)
-        umis2 = np.array(umis2, dtype=np.str)
-        insert_lengths = np.array(insert_lengths, dtype=np.int)
-        read_starts = np.array(read_starts, dtype=np.int)
+        ids = np.array(ids, dtype=str)
+        chroms = np.array(chroms, dtype=str)
+        starts = np.array(starts, dtype=int)
+        ends = np.array(ends, dtype=str)
+        strands = np.array(strands, dtype=str)
+        umis1 = np.array(umis1, dtype=str)
+        umis2 = np.array(umis2, dtype=str)
+        insert_lengths = np.array(insert_lengths, dtype=int)
+        read_starts = np.array(read_starts, dtype=int)
 
-        hs = np.array(hs, dtype=np.int)
-        Hs = np.array(Hs, dtype=np.int)
-        xs = np.array(xs, dtype=np.int)
-        Xs = np.array(Xs, dtype=np.int)
+        hs = np.array(hs, dtype=int)
+        Hs = np.array(Hs, dtype=int)
+        xs = np.array(xs, dtype=int)
+        Xs = np.array(Xs, dtype=int)
         
         # reshape patts and quals to nXseq_len array, where n=number of patterns 
         # and seq_len is the longest pattern (shorter patterns / quals would be padded)

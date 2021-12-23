@@ -268,7 +268,7 @@ def fastq_reader(filename, chunk_size, show_progress=True):
         if (not ids):
             break
 
-        ids = numpy.array(ids, dtype=numpy.object)        
+        ids = numpy.array(ids, dtype=object)        
         seqs = numpy.array(seqs)                
         seqs = seqs.view('U1').reshape((seqs.size, -1))
         quals = numpy.array(quals)
