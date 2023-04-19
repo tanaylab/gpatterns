@@ -125,7 +125,7 @@ class TargetWriter:
                 continue
             
             mask = (mapping['target_idx'] == target_idx).values
-            mapping = mapping[mask].drop(['idx', 'target_idx', 'barcode'], 1)
+            mapping = mapping[mask].drop(columns=['idx', 'target_idx', 'barcode'])
             for i, read in enumerate(self.reads):
                 if (read):                     
                     ids[i] = ids[i][mask]
