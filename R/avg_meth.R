@@ -568,12 +568,12 @@ gpatterns.intervals_coverage <- function(tracks,
         gm <- gbins.summary(..., .gpatterns.meth_track_name(track), iterator=iterator, intervals=intervs, include.lowest=include.lowest)
         gm <- plyr::adply(gm, 1:length(dim(gm)))
         colnames(gm) <- c(paste0('breaks', 1:nstrat_tracks), 'stat', 'val')
-        gm <- gm %>% spread('stat', 'val', -1:nstrat_tracks) %>% mutate(meth = Sum, cg_num=`Total intervals` - `NaN intervals`) %>% select(one_of(c(paste0('breaks', 1:nstrat_tracks), 'meth', 'cg_num'))) %>% as_tibble
+        gm <- gm %>% spread('stat', 'val') %>% mutate(meth = Sum, cg_num=`Total intervals` - `NaN intervals`) %>% select(one_of(c(paste0('breaks', 1:nstrat_tracks), 'meth', 'cg_num'))) %>% as_tibble
         
         gum <- gbins.summary(..., .gpatterns.unmeth_track_name(track), iterator=iterator, intervals=intervs, include.lowest=include.lowest) #%>% as_tibble
         gum <- plyr::adply(gum, 1:length(dim(gum)))
         colnames(gum) <- c(paste0('breaks', 1:nstrat_tracks), 'stat', 'val')
-        gum <- gum %>% spread('stat', 'val', -1:nstrat_tracks) %>% mutate(unmeth = Sum, cg_num=`Total intervals` - `NaN intervals`) %>% select(one_of(c(paste0('breaks', 1:nstrat_tracks), 'unmeth', 'cg_num'))) %>% as_tibble
+        gum <- gum %>% spread('stat', 'val') %>% mutate(unmeth = Sum, cg_num=`Total intervals` - `NaN intervals`) %>% select(one_of(c(paste0('breaks', 1:nstrat_tracks), 'unmeth', 'cg_num'))) %>% as_tibble
 
         if (nstrat_tracks == 1){            
             res <- tibble(samp = name,
