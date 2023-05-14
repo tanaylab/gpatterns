@@ -84,6 +84,7 @@ class TargetWriter:
             sub_targets = []
             for region in self.regions:
                 if max_reads == None:
+                    print('gzip -c > %s_%s.fastq.gz' % (name, region.name))
                     proc = subprocess.Popen('gzip -c > %s_%s.fastq.gz' % (name, region.name), shell=True, stdin=subprocess.PIPE)
                 else:
                     proc = subprocess.Popen('%s/split_fastq.py -p %s_%s -s fastq -r %s ' % (os.path.dirname(os.path.realpath(__file__)), name, region.name, max_reads), shell=True, stdin=subprocess.PIPE)
@@ -125,7 +126,7 @@ class TargetWriter:
                 continue
             
             mask = (mapping['target_idx'] == target_idx).values
-            mapping = mapping[mask].drop(['idx', 'target_idx', 'barcode'], 1)
+            mapping = mapping[mask].drop(columns=['idx', 'target_idx', 'barcode'])
             for i, read in enumerate(self.reads):
                 if (read):                     
                     ids[i] = ids[i][mask]
@@ -230,7 +231,7 @@ def read_index(index_fn):
         if (mode == 'idx'):
             idx_regions.append(Region(name, read, start, end))            
             index = numpy.array(index_tab[column]).astype('U')            
-            if (len(index[1]) != (end-start)):
+            if (len(index[0]) != (end-start)):
                 raise ValueError('Number of bases in index %s does not match its region' % column)
             index_cols.append(index)
 
